@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -13,8 +13,9 @@ import {
   LogOut,
   Menu,
   X,
+  Shield,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const sidebarLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -31,11 +32,41 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (pathname === "/admin/login") {
+      setAuthenticated(true);
+      return;
+    }
+    const isAuth = sessionStorage.getItem("hima_admin_auth") === "1";
+    setAuthenticated(isAuth);
+    if (!isAuth) {
+      router.replace("/admin/login");
+    }
+  }, [pathname, router]);
 
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
+
+  if (authenticated === null || authenticated === false) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <Shield className="w-8 h-8 text-gray-300 mx-auto mb-2 animate-pulse" />
+          <p className="text-sm text-gray-400">Memverifikasi akses...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("hima_admin_auth");
+    router.replace("/admin/login");
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -103,13 +134,13 @@ export default function AdminLayout({
                 <div className="text-xs text-gray-400">admin@himatl.com</div>
               </div>
             </div>
-            <Link
-              href="/admin/login"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors w-full"
             >
               <LogOut className="w-4 h-4" />
               Keluar
-            </Link>
+            </button>
           </div>
         </div>
       </aside>

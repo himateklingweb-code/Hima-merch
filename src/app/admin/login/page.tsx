@@ -25,6 +25,7 @@ export default function AdminLoginPage() {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
+              sessionStorage.setItem("hima_admin_auth", "1");
               window.location.href = "/admin";
             }}
           >
