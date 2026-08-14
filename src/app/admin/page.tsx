@@ -9,7 +9,6 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  XCircle,
 } from "lucide-react";
 
 export default function AdminDashboard() {

@@ -1,5 +1,3 @@
-"use client";
-
 import { products, getProductBadge, formatPrice } from "@/data/products";
 import { Plus, Pencil, Eye } from "lucide-react";
 import Link from "next/link";
