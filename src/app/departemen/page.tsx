@@ -1,0 +1,52 @@
+import Link from "next/link";
+import { Metadata } from "next";
+import { departments } from "@/data/departments";
+import { ArrowRight } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Departemen",
+  description: "6 departemen HIMA Teknik Lingkungan UNTAN yang menjalankan program kerja organisasi.",
+};
+
+export default function DepartemenPage() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
+      <div className="max-w-2xl mb-5 sm:mb-10">
+        <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Departemen</h1>
+        <p className="text-gray-500 mt-1 sm:mt-3 text-sm sm:text-lg">
+          6 departemen yang menjalankan program kerja organisasi.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+        {departments.map((dept) => {
+          const activePeriod = dept.periods.find((p) => p.is_active);
+          return (
+            <Link
+              key={dept.id}
+              href={`/departemen/${dept.slug}`}
+              className="group bg-white rounded-xl p-4 sm:p-6 border border-gray-200 hover:border-emerald-300 active:scale-[0.98] hover:shadow-lg transition-all"
+            >
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="text-2xl sm:text-4xl flex-shrink-0">{dept.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base sm:text-xl font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">
+                    {dept.name}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 line-clamp-2">{dept.description}</p>
+                  <div className="mt-2 sm:mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-400">
+                      <span>{activePeriod?.members.length ?? 0} pengurus</span>
+                      <span>Periode {activePeriod?.period_label}</span>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
