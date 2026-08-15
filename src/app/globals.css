@@ -133,6 +133,9 @@ body { background: #f3f2f2; color: #201e1d; -webkit-font-smoothing: antialiased;
 /* ── Responsive ── */
 @media (max-width: 1079px) {
   .nav-desktop { display: none !important; }
+  /* Hamburger menu carries navigation on tablet/mobile; the header
+     CTA is relocated into the mobile menu panel to prevent overflow. */
+  .site-nav-cta { display: none !important; }
 }
 @media (min-width: 1080px) {
   .nav-mobile-toggle { display: none !important; }
@@ -145,6 +148,14 @@ body { background: #f3f2f2; color: #201e1d; -webkit-font-smoothing: antialiased;
   .news-row-cat { justify-self: start !important; }
   .footer-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
   .stats-grid > div { border-right: none !important; }
+}
+
+/* ── Homepage: stacked grid (desktop) ↔ carousel (mobile) ── */
+@media (max-width: 767px) {
+  .home-desktop-cards { display: none !important; }
+}
+@media (min-width: 768px) {
+  .home-mobile-carousel { display: none !important; }
 }
 
 /* ── Article prose ── */

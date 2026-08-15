@@ -1,3 +1,5 @@
+import { CheckCircle2, Clock, XCircle, Ban, type LucideIcon } from "lucide-react";
+
 export type StockType = "ready_stock" | "pre_order";
 
 export interface Product {
@@ -108,13 +110,13 @@ export const products: Product[] = [
 export function getProductBadge(product: Product): {
   label: string;
   color: string;
-  emoji: string;
+  icon: LucideIcon;
 } {
   if (product.stock_type === "ready_stock") {
     if (product.stock - product.stock_reserved > 0) {
-      return { label: "Tersedia — Bisa Pesan Langsung", color: "green", emoji: "🟢" };
+      return { label: "Tersedia — Bisa Pesan Langsung", color: "green", icon: CheckCircle2 };
     }
-    return { label: "Stok Habis", color: "gray", emoji: "⚪" };
+    return { label: "Stok Habis", color: "gray", icon: Ban };
   }
 
   if (product.po_deadline && new Date(product.po_deadline) > new Date()) {
@@ -122,10 +124,10 @@ export function getProductBadge(product: Product): {
     return {
       label: `Pre-Order Dibuka (${filled}/${product.po_quota} sudah pesan)`,
       color: "yellow",
-      emoji: "🟡",
+      icon: Clock,
     };
   }
-  return { label: "Pre-Order Ditutup", color: "red", emoji: "🔴" };
+  return { label: "Pre-Order Ditutup", color: "red", icon: XCircle };
 }
 
 export function formatPrice(price: number): string {

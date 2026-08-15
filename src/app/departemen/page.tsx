@@ -21,6 +21,7 @@ export default function DepartemenPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
         {departments.map((dept) => {
           const activePeriod = dept.periods.find((p) => p.is_active);
+          const Icon = dept.icon;
           return (
             <Link
               key={dept.id}
@@ -28,7 +29,9 @@ export default function DepartemenPage() {
               className="group bg-white rounded-xl p-4 sm:p-6 border border-gray-200 hover:border-emerald-300 active:scale-[0.98] hover:shadow-lg transition-all"
             >
               <div className="flex items-start gap-3 sm:gap-4">
-                <div className="text-2xl sm:text-4xl flex-shrink-0">{dept.icon}</div>
+                <div className="flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                  <Icon className="w-5 h-5 sm:w-7 sm:h-7" strokeWidth={1.75} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="text-base sm:text-xl font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">
                     {dept.name}

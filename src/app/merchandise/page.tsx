@@ -22,6 +22,7 @@ export default function MerchandisePage() {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {products.map((product) => {
           const badge = getProductBadge(product);
+          const BadgeIcon = badge.icon;
           const available =
             product.stock_type === "ready_stock"
               ? product.stock - product.stock_reserved
@@ -51,7 +52,8 @@ export default function MerchandisePage() {
                         : "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {badge.emoji} <span className="hidden sm:inline">{badge.label}</span>
+                    <BadgeIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" strokeWidth={2} />
+                    <span className="hidden sm:inline">{badge.label}</span>
                     <span className="sm:hidden">
                       {badge.color === "green" ? "Tersedia" : badge.color === "yellow" ? "Pre-Order" : badge.color === "red" ? "Ditutup" : "Habis"}
                     </span>

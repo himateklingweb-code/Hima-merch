@@ -33,6 +33,7 @@ export default async function DepartemenDetailPage({
 
   const activePeriod = dept.periods.find((p) => p.is_active);
   const pastPeriods = dept.periods.filter((p) => !p.is_active);
+  const Icon = dept.icon;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-12 lg:py-16">
@@ -45,7 +46,9 @@ export default async function DepartemenDetailPage({
       </Link>
 
       <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="text-3xl sm:text-5xl">{dept.icon}</div>
+        <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+          <Icon className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.75} />
+        </div>
         <div>
           <h1 className="text-xl sm:text-4xl font-bold text-gray-900">Dept. {dept.name}</h1>
           <p className="text-xs sm:text-base text-gray-500 mt-0.5">HIMA Teknik Lingkungan UNTAN</p>

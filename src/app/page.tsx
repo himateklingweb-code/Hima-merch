@@ -4,6 +4,7 @@ import { departments } from "@/data/departments";
 import { articles } from "@/data/news";
 import { products, formatPrice } from "@/data/products";
 import StatsCounter from "@/components/StatsCounter";
+import HomeCarousels from "@/components/HomeCarousels";
 
 function badgeOf(p: (typeof products)[0], now: number) {
   if (p.stock_type === "ready_stock") {
@@ -665,6 +666,7 @@ export default function HomePage() {
               display: "flex",
               alignItems: "baseline",
               gap: 20,
+              flexWrap: "wrap" as const,
               marginBottom: 40,
             }}
           >
@@ -781,6 +783,7 @@ export default function HomePage() {
               display: "flex",
               alignItems: "baseline",
               gap: 20,
+              flexWrap: "wrap" as const,
               marginBottom: 40,
             }}
           >
@@ -809,6 +812,7 @@ export default function HomePage() {
                 letterSpacing: ".16em",
                 textTransform: "uppercase" as const,
                 flex: "none",
+                marginLeft: "auto",
                 color: "#201e1d",
               }}
             >
@@ -816,6 +820,7 @@ export default function HomePage() {
             </Link>
           </div>
           <div
+            className="home-desktop-cards"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))",
@@ -928,6 +933,9 @@ export default function HomePage() {
               </Link>
             ))}
           </div>
+          <div className="home-mobile-carousel">
+            <HomeCarousels type="products" />
+          </div>
         </div>
       </section>
 
@@ -946,6 +954,7 @@ export default function HomePage() {
               display: "flex",
               alignItems: "baseline",
               gap: 20,
+              flexWrap: "wrap" as const,
               marginBottom: 12,
             }}
           >
@@ -974,12 +983,14 @@ export default function HomePage() {
                 letterSpacing: ".16em",
                 textTransform: "uppercase" as const,
                 flex: "none",
+                marginLeft: "auto",
                 color: "#201e1d",
               }}
             >
               Semua berita &rarr;
             </Link>
           </div>
+          <div className="home-desktop-cards">
           {latest.map((a) => (
             <Link
               key={a.slug}
@@ -1042,6 +1053,10 @@ export default function HomePage() {
               </span>
             </Link>
           ))}
+          </div>
+          <div className="home-mobile-carousel">
+            <HomeCarousels type="news" />
+          </div>
         </div>
       </section>
     </div>

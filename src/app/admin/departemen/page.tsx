@@ -143,6 +143,7 @@ export default function AdminDepartemenPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {regularDepts.map((dept) => {
           const activePeriod = dept.periods.find((p) => p.is_active);
+          const Icon = dept.icon;
           return (
             <div
               key={dept.id}
@@ -150,7 +151,9 @@ export default function AdminDepartemenPage() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="text-3xl">{dept.icon}</div>
+                  <div className="w-11 h-11 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-5 h-5" strokeWidth={1.75} />
+                  </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">
                       {dept.name}

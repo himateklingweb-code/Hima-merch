@@ -2,134 +2,269 @@
 
 import Link from "next/link";
 import Carousel from "./Carousel";
-import { getProductBadge, formatPrice, type Product } from "@/data/products";
-import type { Department } from "@/data/departments";
-import type { Article } from "@/data/news";
-import { ShoppingBag, Newspaper } from "lucide-react";
+import { products, getProductBadge, formatPrice } from "@/data/products";
+import { departments } from "@/data/departments";
+import { articles } from "@/data/news";
 
 interface Props {
   type: "departments" | "products" | "news";
-  departments: Department[];
-  products: Product[];
-  articles: Article[];
 }
 
-export default function HomeCarousels({ type, departments, products, articles }: Props) {
+const LINE = "1px solid rgba(32,30,29,.16)";
+const PLATES = ["#d7d3d3", "#cbeeff", "#ffdee6", "#444141"];
+
+const BADGE_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
+  green: { bg: "#0088b0", fg: "#f3f2f2", short: "Tersedia" },
+  yellow: { bg: "#edbb00", fg: "#201e1d", short: "Pre-Order" },
+  red: { bg: "#aa0b56", fg: "#f3f2f2", short: "Ditutup" },
+  gray: { bg: "#7d7979", fg: "#f3f2f2", short: "Habis" },
+};
+
+export default function HomeCarousels({ type }: Props) {
   if (type === "departments") {
     return (
-      <div className="sm:hidden px-4">
-        <Carousel
-          options={{ align: "start", dragFree: true }}
-          slideClassName="basis-[70%] pr-3"
-          showDots={false}
-        >
-          {departments.map((dept) => (
+      <Carousel
+        options={{ align: "start", dragFree: true }}
+        slideClassName="basis-[72%] pr-3"
+        showDots={false}
+      >
+        {departments.map((dept) => {
+          const Icon = dept.icon;
+          const activeCount = dept.periods.find((p) => p.is_active)?.members.length ?? 0;
+          return (
             <Link
               key={dept.id}
               href={`/departemen/${dept.slug}`}
-              className="block bg-white rounded-xl p-4 border border-gray-200 active:border-emerald-300 h-full"
+              style={{
+                display: "block",
+                height: "100%",
+                border: LINE,
+                borderRadius: 2,
+                background: "#f3f2f2",
+                padding: 18,
+              }}
             >
-              <div className="flex items-center gap-2.5 mb-2">
-                <span className="text-2xl">{dept.icon}</span>
-                <h3 className="font-semibold text-gray-900 text-sm">{dept.name}</h3>
-              </div>
-              <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{dept.description}</p>
-              <div className="mt-2.5 text-[11px] text-emerald-600 font-medium">
-                {dept.periods.find((p) => p.is_active)?.members.length ?? 0} pengurus aktif
-              </div>
+              <span style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
+                <span
+                  style={{
+                    width: 38,
+                    height: 38,
+                    flexShrink: 0,
+                    border: LINE,
+                    borderRadius: 2,
+                    background: "#fff",
+                    color: "#0088b0",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <Icon size={19} strokeWidth={1.75} />
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.15, letterSpacing: "-.01em" }}>
+                  {dept.name}
+                </span>
+              </span>
+              <span
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  color: "#605d5d",
+                }}
+              >
+                {dept.description}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  marginTop: 12,
+                  fontSize: "10px",
+                  letterSpacing: ".14em",
+                  textTransform: "uppercase",
+                  color: "#0088b0",
+                }}
+              >
+                {activeCount} pengurus aktif
+              </span>
             </Link>
-          ))}
-        </Carousel>
-      </div>
+          );
+        })}
+      </Carousel>
     );
   }
 
   if (type === "products") {
     return (
-      <div className="sm:hidden px-4">
-        <Carousel
-          options={{ align: "start", dragFree: true }}
-          slideClassName="basis-[75%] pr-3"
-        >
-          {products.slice(0, 4).map((product) => {
-            const badge = getProductBadge(product);
-            return (
-              <Link
-                key={product.id}
-                href={`/merchandise/${product.slug}`}
-                className="block bg-white rounded-xl border border-gray-200 overflow-hidden h-full"
+      <Carousel options={{ align: "start", dragFree: true }} slideClassName="basis-[76%] pr-3">
+        {products.slice(0, 4).map((product, i) => {
+          const badge = getProductBadge(product);
+          const BadgeIcon = badge.icon;
+          const bs = BADGE_STYLE[badge.color] ?? BADGE_STYLE.gray;
+          return (
+            <Link
+              key={product.id}
+              href={`/merchandise/${product.slug}`}
+              style={{
+                display: "block",
+                height: "100%",
+                border: LINE,
+                borderRadius: 2,
+                overflow: "hidden",
+                background: "#f3f2f2",
+              }}
+            >
+              <span
+                style={{
+                  position: "relative",
+                  display: "grid",
+                  placeItems: "center",
+                  aspectRatio: "4/3",
+                  background: PLATES[i] ?? "#d7d3d3",
+                  borderBottom: LINE,
+                  overflow: "hidden",
+                }}
               >
-                <div className="aspect-[3/2] bg-gray-100 relative">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-                    <ShoppingBag className="w-10 h-10" />
-                  </div>
-                  <div className="absolute top-2 left-2">
-                    <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                        badge.color === "green"
-                          ? "bg-green-100 text-green-800"
-                          : badge.color === "yellow"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : badge.color === "red"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {badge.emoji} {badge.label}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-3.5">
-                  <h3 className="font-semibold text-gray-900 text-sm line-clamp-1">{product.name}</h3>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{product.description}</p>
-                  <div className="mt-2 text-base font-bold text-emerald-700">{formatPrice(product.price)}</div>
-                </div>
-              </Link>
-            );
-          })}
-        </Carousel>
-      </div>
+                <span
+                  style={{
+                    fontSize: 60,
+                    fontWeight: 700,
+                    color: "rgba(32,30,29,.16)",
+                    letterSpacing: "-.04em",
+                  }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    backgroundImage:
+                      "radial-gradient(circle,rgba(0,0,0,.22) 30%,transparent 32%)",
+                    backgroundSize: "3px 3px",
+                    mixBlendMode: "multiply",
+                  }}
+                />
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 10,
+                    top: 10,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: "9.5px",
+                    letterSpacing: ".12em",
+                    textTransform: "uppercase",
+                    background: bs.bg,
+                    color: bs.fg,
+                    padding: "4px 8px",
+                    borderRadius: 2,
+                  }}
+                >
+                  <BadgeIcon size={11} strokeWidth={2.25} />
+                  {bs.short}
+                </span>
+              </span>
+              <span style={{ display: "block", padding: "15px 16px 17px" }}>
+                <span
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    fontSize: 15.5,
+                    fontWeight: 600,
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {product.name}
+                </span>
+                <span
+                  style={{
+                    display: "block",
+                    marginTop: 12,
+                    borderTop: LINE,
+                    paddingTop: 11,
+                    fontSize: 18,
+                    fontWeight: 700,
+                    letterSpacing: "-.02em",
+                    fontFeatureSettings: "'tnum'",
+                  }}
+                >
+                  {formatPrice(product.price)}
+                </span>
+              </span>
+            </Link>
+          );
+        })}
+      </Carousel>
     );
   }
 
   if (type === "news") {
     return (
-      <div className="sm:hidden px-4">
-        <Carousel
-          options={{ align: "start", dragFree: true }}
-          slideClassName="basis-[80%] pr-3"
-        >
-          {articles.slice(0, 4).map((article) => (
-            <Link
-              key={article.id}
-              href={`/berita/${article.slug}`}
-              className="block bg-white rounded-xl border border-gray-200 overflow-hidden h-full"
+      <Carousel options={{ align: "start", dragFree: true }} slideClassName="basis-[82%] pr-3">
+        {articles.slice(0, 4).map((article) => (
+          <Link
+            key={article.id}
+            href={`/berita/${article.slug}`}
+            style={{
+              display: "block",
+              height: "100%",
+              border: LINE,
+              borderRadius: 2,
+              background: "#f3f2f2",
+              padding: "18px 18px 20px",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <span
+                style={{
+                  fontSize: "9.5px",
+                  letterSpacing: ".14em",
+                  textTransform: "uppercase",
+                  border: "1px solid rgba(32,30,29,.35)",
+                  padding: "4px 8px",
+                  borderRadius: 2,
+                  color: "#201e1d",
+                }}
+              >
+                {article.category}
+              </span>
+              <span
+                style={{
+                  fontSize: "10.5px",
+                  letterSpacing: ".1em",
+                  textTransform: "uppercase",
+                  color: "#605d5d",
+                }}
+              >
+                {new Date(article.published_at).toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            </span>
+            <span
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+                fontSize: 17,
+                fontWeight: 600,
+                lineHeight: 1.3,
+                letterSpacing: "-.01em",
+              }}
             >
-              <div className="aspect-[2/1] bg-gray-100 relative">
-                <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-                  <Newspaper className="w-8 h-8" />
-                </div>
-              </div>
-              <div className="p-3.5">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                    {article.category}
-                  </span>
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(article.published_at).toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
-                </div>
-                <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-snug">
-                  {article.title}
-                </h3>
-              </div>
-            </Link>
-          ))}
-        </Carousel>
-      </div>
+              {article.title}
+            </span>
+          </Link>
+        ))}
+      </Carousel>
     );
   }
 

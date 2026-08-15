@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
 
 const navLinks = [
   { href: "/", label: "Beranda", key: "beranda" },
@@ -70,7 +71,7 @@ export default function Navbar() {
             display: "flex",
             alignItems: "center",
             gap: 11,
-            flexShrink: 0,
+            flexShrink: 1,
             minWidth: 0,
           }}
         >
@@ -91,13 +92,15 @@ export default function Navbar() {
           >
             TL
           </span>
-          <span style={{ display: "grid", lineHeight: 1.05 }}>
+          <span style={{ display: "grid", lineHeight: 1.05, minWidth: 0 }}>
             <span
               style={{
                 fontSize: 15,
                 fontWeight: 700,
                 letterSpacing: "-.01em",
                 whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               HIMA Teknik Lingkungan
@@ -109,6 +112,8 @@ export default function Navbar() {
                 textTransform: "uppercase",
                 color: "#605d5d",
                 whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               Universitas Tanjungpura
@@ -176,29 +181,11 @@ export default function Navbar() {
               transition: "background .2s, color .2s",
             }}
           >
-            <span style={{ display: "grid", gap: 3, width: 14 }}>
-              <span
-                style={{
-                  height: 1.5,
-                  background: "currentColor",
-                  display: "block",
-                }}
-              />
-              <span
-                style={{
-                  height: 1.5,
-                  background: "currentColor",
-                  display: "block",
-                }}
-              />
-              <span
-                style={{
-                  height: 1.5,
-                  background: "currentColor",
-                  display: "block",
-                }}
-              />
-            </span>
+            {menuOpen ? (
+              <X size={15} strokeWidth={2} />
+            ) : (
+              <Menu size={15} strokeWidth={2} />
+            )}
             Menu
           </button>
         </div>
@@ -254,6 +241,23 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <Link
+              href="/merchandise"
+              onClick={() => setMenuOpen(false)}
+              style={{
+                marginTop: 10,
+                textAlign: "center",
+                background: "#201e1d",
+                color: "#f3f2f2",
+                padding: "14px 16px",
+                borderRadius: 2,
+                fontSize: "12.5px",
+                letterSpacing: ".08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Pesan Merch
+            </Link>
           </nav>
         </div>
       )}

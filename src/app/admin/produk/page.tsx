@@ -32,6 +32,7 @@ export default function AdminProdukPage() {
             <tbody className="divide-y divide-gray-100">
               {products.map((product) => {
                 const badge = getProductBadge(product);
+                const BadgeIcon = badge.icon;
                 return (
                   <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3">
@@ -67,7 +68,8 @@ export default function AdminProdukPage() {
                             : "bg-gray-100 text-gray-500"
                         }`}
                       >
-                        {badge.emoji} {badge.color === "green" ? "Tersedia" : badge.color === "yellow" ? "PO Dibuka" : badge.color === "red" ? "PO Ditutup" : "Habis"}
+                        <BadgeIcon className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={2} />
+                        {badge.color === "green" ? "Tersedia" : badge.color === "yellow" ? "PO Dibuka" : badge.color === "red" ? "PO Ditutup" : "Habis"}
                       </span>
                     </td>
                     <td className="px-5 py-3">

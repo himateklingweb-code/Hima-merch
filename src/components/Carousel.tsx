@@ -95,8 +95,8 @@ export default function Carousel({
               onClick={() => scrollTo(i)}
               className={`rounded-full transition-all ${
                 i === selectedIndex
-                  ? "w-6 h-2 bg-emerald-600"
-                  : "w-2 h-2 bg-gray-300"
+                  ? "w-6 h-2 bg-[#201e1d]"
+                  : "w-2 h-2 bg-[#c9c5c5]"
               }`}
             />
           ))}

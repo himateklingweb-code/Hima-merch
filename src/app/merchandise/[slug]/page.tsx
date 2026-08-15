@@ -26,6 +26,7 @@ export default function ProductDetailPage() {
   }
 
   const badge = getProductBadge(product);
+  const BadgeIcon = badge.icon;
   const isPreOrder = product.stock_type === "pre_order";
   const available = isPreOrder
     ? (product.po_quota ?? 0) - (product.po_filled ?? 0) - (product.po_reserved ?? 0)
@@ -68,7 +69,8 @@ export default function ProductDetailPage() {
                   : "bg-gray-100 text-gray-600"
               }`}
             >
-              {badge.emoji} {badge.label}
+              <BadgeIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" strokeWidth={2} />
+              {badge.label}
             </span>
           </div>
         </div>
