@@ -23,6 +23,7 @@ const sidebarLinks = [
   { href: "/admin/pesanan", label: "Pesanan", icon: ShoppingCart },
   { href: "/admin/departemen", label: "Departemen", icon: Building2 },
   { href: "/admin/berita", label: "Berita", icon: FileText },
+  { href: "/admin/seo", label: "SEO", icon: Settings },
   { href: "/admin/pengguna", label: "Pengguna", icon: Users },
 ];
 

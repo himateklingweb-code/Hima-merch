@@ -28,6 +28,29 @@ export interface Department {
 
 export const departments: Department[] = [
   {
+    id: "dept-bph",
+    name: "Badan Pengurus Harian",
+    slug: "bph",
+    description:
+      "Badan Pengurus Harian (BPH) merupakan pengurus inti HIMA TL UNTAN yang terdiri dari Ketua, Sekretaris, dan Bendahara. BPH bertanggung jawab atas koordinasi seluruh kegiatan organisasi dan pengambilan keputusan strategis.",
+    icon: "⭐",
+    periods: [
+      {
+        id: "period-bph-1",
+        department_id: "dept-bph",
+        period_label: "2025/2026",
+        is_active: true,
+        start_date: "2025-01-01",
+        end_date: "2025-12-31",
+        members: [
+          { id: "bph1", name: "Ketua HIMA", position: "Ketua", photo: "/placeholder-avatar.png", order_index: 1 },
+          { id: "bph2", name: "Sekretaris HIMA", position: "Sekretaris", photo: "/placeholder-avatar.png", order_index: 2 },
+          { id: "bph3", name: "Bendahara HIMA", position: "Bendahara", photo: "/placeholder-avatar.png", order_index: 3 },
+        ],
+      },
+    ],
+  },
+  {
     id: "dept-1",
     name: "Dalam Negeri",
     slug: "dagri",

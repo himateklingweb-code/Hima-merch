@@ -1,167 +1,262 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X, ChevronDown, ChevronRight } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
 const navLinks = [
-  { href: "/", label: "Beranda" },
-  {
-    label: "Tentang",
-    children: [
-      { href: "/tentang", label: "Tentang Kami" },
-      { href: "/tentang#visi-misi", label: "Visi & Misi" },
-      { href: "/tentang#sejarah", label: "Sejarah" },
-    ],
-  },
-  { href: "/departemen", label: "Departemen" },
-  { href: "/kemitraan", label: "Kemitraan" },
-  { href: "/merchandise", label: "Merchandise" },
-  { href: "/berita", label: "Berita" },
-  { href: "/kontak", label: "Kontak" },
+  { href: "/", label: "Beranda", key: "beranda" },
+  { href: "/tentang", label: "Tentang", key: "tentang" },
+  { href: "/departemen", label: "Departemen", key: "departemen" },
+  { href: "/merchandise", label: "Merchandise", key: "merch" },
+  { href: "/berita", label: "Berita", key: "berita" },
+  { href: "/pesanan/cek", label: "Cek Pesanan", key: "pesanan" },
+  { href: "/kontak", label: "Kontak", key: "kontak" },
 ];
 
 export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const activeKey =
+    navLinks.find((l) => l.href === pathname)?.key || "";
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    const onResize = () => {
+      if (window.innerWidth >= 1080) setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
 
   return (
-    <>
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 lg:h-16">
-            <Link href="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
-              <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xs lg:text-sm">
-                TL
-              </div>
-              <div>
-                <div className="font-bold text-emerald-800 text-xs lg:text-sm leading-tight">HIMA Teknik Lingkungan</div>
-                <div className="text-[10px] lg:text-[11px] text-gray-500 leading-tight hidden sm:block">Universitas Tanjungpura</div>
-              </div>
-            </Link>
-
-            {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-1">
-              {navLinks.map((link) =>
-                "children" in link && link.children ? (
-                  <div
-                    key={link.label}
-                    className="relative"
-                    onMouseEnter={() => setDropdownOpen(link.label)}
-                    onMouseLeave={() => setDropdownOpen(null)}
-                  >
-                    <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1">
-                      {link.label}
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                    {dropdownOpen === link.label && (
-                      <div className="absolute top-full left-0 mt-0.5 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
-                        {link.children.map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
-                          >
-                            {child.label}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Link
-                    key={link.href}
-                    href={link.href!}
-                    className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                )
-              )}
-            </div>
-
-            {/* Mobile burger */}
-            <button
-              className="lg:hidden p-2 -mr-1 rounded-lg text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Toggle menu"
+    <header
+      data-nav=""
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 100,
+        background: "rgba(243,242,242,.92)",
+        backdropFilter: "blur(10px) saturate(1.2)",
+        borderBottom: "1px solid rgba(32,30,29,.16)",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: "12px clamp(16px,3vw,40px)",
+          display: "flex",
+          alignItems: "center",
+          gap: "clamp(12px,2vw,32px)",
+        }}
+      >
+        {/* Logo */}
+        <Link
+          href="/"
+          onClick={() => setMenuOpen(false)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 11,
+            flexShrink: 0,
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              width: 30,
+              height: 30,
+              border: "1.5px solid #201e1d",
+              borderRadius: 2,
+              display: "grid",
+              placeItems: "center",
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "-.02em",
+              background: "#edbb00",
+              flexShrink: 0,
+            }}
+          >
+            TL
+          </span>
+          <span style={{ display: "grid", lineHeight: 1.05 }}>
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                letterSpacing: "-.01em",
+                whiteSpace: "nowrap",
+              }}
             >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
+              HIMA Teknik Lingkungan
+            </span>
+            <span
+              style={{
+                fontSize: "9.5px",
+                letterSpacing: ".19em",
+                textTransform: "uppercase",
+                color: "#605d5d",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Universitas Tanjungpura
+            </span>
+          </span>
+        </Link>
+
+        {/* Desktop nav */}
+        <nav
+          className="nav-desktop"
+          style={{
+            display: "flex",
+            gap: 2,
+            flex: "1 1 auto",
+            minWidth: 0,
+            justifyContent: "center",
+            fontSize: "12.5px",
+            letterSpacing: ".03em",
+          }}
+        >
+          {navLinks.map((link) => (
+            <Link
+              key={link.key}
+              href={link.href}
+              aria-current={activeKey === link.key ? "page" : undefined}
+              className="site-nav-link"
+              style={{
+                padding: "7px 11px",
+                borderRadius: 2,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              {link.label}
+            </Link>
+          ))}
         </nav>
-      </header>
 
-      {/* Mobile menu - full overlay, rendered outside header to avoid backdrop-blur containing block */}
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 top-14 z-40 bg-white overflow-y-auto">
-          <nav className="px-4 py-3 space-y-1">
-            {navLinks.map((link) =>
-              "children" in link && link.children ? (
-                <div key={link.label}>
-                  <button
-                    className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-base font-medium text-gray-800 active:bg-gray-100"
-                    onClick={() =>
-                      setDropdownOpen(dropdownOpen === link.label ? null : link.label)
-                    }
-                  >
-                    {link.label}
-                    <ChevronDown
-                      className={`w-4 h-4 text-gray-400 transition-transform ${
-                        dropdownOpen === link.label ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-                  {dropdownOpen === link.label && (
-                    <div className="ml-3 border-l-2 border-emerald-200 pl-3 space-y-0.5 mb-1">
-                      {link.children.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-gray-600 active:bg-emerald-50"
-                          onClick={() => setMobileOpen(false)}
-                        >
-                          <ChevronRight className="w-3.5 h-3.5 text-emerald-500" />
-                          {child.label}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link
-                  key={link.href}
-                  href={link.href!}
-                  className="block px-3 py-3 rounded-xl text-base font-medium text-gray-800 active:bg-gray-100"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              )
-            )}
+        {/* Mobile menu button */}
+        <div
+          className="nav-mobile-toggle"
+          style={{
+            flex: "1 1 auto",
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-expanded={menuOpen}
+            aria-label="Menu navigasi"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 9,
+              border: "1px solid #201e1d",
+              background: menuOpen ? "#201e1d" : "transparent",
+              color: menuOpen ? "#f3f2f2" : "#201e1d",
+              padding: "9px 15px",
+              borderRadius: 2,
+              fontSize: "11.5px",
+              letterSpacing: ".12em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              transition: "background .2s, color .2s",
+            }}
+          >
+            <span style={{ display: "grid", gap: 3, width: 14 }}>
+              <span
+                style={{
+                  height: 1.5,
+                  background: "currentColor",
+                  display: "block",
+                }}
+              />
+              <span
+                style={{
+                  height: 1.5,
+                  background: "currentColor",
+                  display: "block",
+                }}
+              />
+              <span
+                style={{
+                  height: 1.5,
+                  background: "currentColor",
+                  display: "block",
+                }}
+              />
+            </span>
+            Menu
+          </button>
+        </div>
+
+        {/* CTA */}
+        <Link
+          href="/merchandise"
+          className="site-nav-cta"
+          style={{
+            flexShrink: 0,
+            whiteSpace: "nowrap",
+            padding: "9px clamp(12px,1.4vw,18px)",
+            borderRadius: 2,
+            fontSize: "12.5px",
+            letterSpacing: ".06em",
+            textTransform: "uppercase",
+          }}
+        >
+          Pesan Merch
+        </Link>
+      </div>
+
+      {/* Mobile menu panel */}
+      {menuOpen && (
+        <div
+          style={{
+            borderTop: "1px solid rgba(32,30,29,.16)",
+            background: "#f3f2f2",
+            animation: "popIn .28s ease-out both",
+          }}
+        >
+          <nav
+            style={{
+              maxWidth: 1280,
+              margin: "0 auto",
+              padding: "10px clamp(16px,3vw,40px) 18px",
+              display: "grid",
+              gap: 2,
+              fontSize: 15,
+            }}
+          >
+            {navLinks.map((link) => (
+              <Link
+                key={link.key}
+                href={link.href}
+                aria-current={
+                  activeKey === link.key ? "page" : undefined
+                }
+                className="site-nav-mobile-link"
+                onClick={() => setMenuOpen(false)}
+                style={{ padding: "12px 14px", borderRadius: 2 }}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
-
-          {/* Mobile quick links */}
-          <div className="px-4 pt-4 pb-6 border-t border-gray-100 mt-2">
-            <div className="grid grid-cols-2 gap-2">
-              <Link
-                href="/pesanan/cek"
-                className="flex items-center justify-center gap-1.5 py-3 bg-emerald-50 rounded-xl text-sm font-medium text-emerald-700 active:bg-emerald-100"
-                onClick={() => setMobileOpen(false)}
-              >
-                Cek Pesanan
-              </Link>
-              <Link
-                href="/admin/login"
-                className="flex items-center justify-center gap-1.5 py-3 bg-gray-100 rounded-xl text-sm font-medium text-gray-600 active:bg-gray-200"
-                onClick={() => setMobileOpen(false)}
-              >
-                Admin
-              </Link>
-            </div>
-          </div>
         </div>
       )}
-    </>
+    </header>
   );
 }

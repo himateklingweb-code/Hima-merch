@@ -11,6 +11,22 @@ export interface Article {
   published_at: string;
 }
 
+export function gdriveThumbnail(url: string, width = 800): string {
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return `https://lh3.googleusercontent.com/d/${match[1]}=w${width}`;
+  if (url.includes("lh3.googleusercontent.com")) return url;
+  return url;
+}
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
+}
+
 export const articles: Article[] = [
   {
     id: "news-1",

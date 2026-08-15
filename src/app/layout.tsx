@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Source_Serif_4 } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import LayoutShell from "@/components/LayoutShell";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sourceSerif = Source_Serif_4({
+  variable: "--font-serif",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -20,7 +22,11 @@ export const metadata: Metadata = {
   },
   description:
     "Website resmi Himpunan Mahasiswa Teknik Lingkungan, Universitas Tanjungpura, Pontianak.",
-  keywords: ["himatl untan", "teknik lingkungan untan", "hima teknik lingkungan pontianak"],
+  keywords: [
+    "himatl untan",
+    "teknik lingkungan untan",
+    "hima teknik lingkungan pontianak",
+  ],
 };
 
 export default function RootLayout({
@@ -29,8 +35,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-white text-gray-900 font-sans">
+    <html
+      lang="id"
+      className={`${sourceSerif.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">
         <LayoutShell>{children}</LayoutShell>
       </body>
     </html>

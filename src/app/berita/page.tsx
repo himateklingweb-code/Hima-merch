@@ -1,67 +1,325 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { Metadata } from "next";
-import { articles } from "@/data/news";
-import { Newspaper } from "lucide-react";
+import { articles, gdriveThumbnail } from "@/data/news";
 
 export const metadata: Metadata = {
   title: "Berita",
-  description: "Berita dan kabar terbaru dari HIMA Teknik Lingkungan Universitas Tanjungpura.",
+  description:
+    "Berita dan kabar terbaru dari HIMA Teknik Lingkungan Universitas Tanjungpura.",
 };
 
 export default function BeritaPage() {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
-      <div className="max-w-2xl mb-5 sm:mb-10">
-        <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Berita</h1>
-        <p className="text-gray-500 mt-1 sm:mt-3 text-sm sm:text-lg">
-          Kabar terbaru dari HIMA TL UNTAN.
-        </p>
-      </div>
+  const sorted = [...articles].sort(
+    (a, b) =>
+      new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+  );
 
-      <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6">
-        {articles.map((article, index) => (
-          <Link
-            key={article.id}
-            href={`/berita/${article.slug}`}
-            className={`group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg active:scale-[0.99] transition-all ${
-              index === 0 ? "sm:col-span-2" : ""
-            }`}
+  return (
+    <div
+      style={{
+        background: "#f3f2f2",
+        minHeight: "100vh",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: "64px clamp(16px,3vw,40px) 88px",
+        }}
+      >
+        {/* Header */}
+        <div className="scroll-reveal" style={{ marginBottom: 48 }}>
+          <p
+            style={{
+              margin: "0 0 14px",
+              fontSize: 11,
+              letterSpacing: ".22em",
+              textTransform: "uppercase",
+              color: "#0088b0",
+            }}
           >
-            {/* Mobile: horizontal card, Desktop: vertical */}
-            <div className={`flex sm:block ${index === 0 ? "sm:flex" : ""}`}>
-              <div
-                className={`w-28 sm:w-auto flex-shrink-0 ${
-                  index === 0 ? "sm:w-1/2" : ""
-                } aspect-square sm:aspect-video bg-gray-100 relative`}
-              >
-                <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-                  <Newspaper className="w-8 h-8 sm:w-12 sm:h-12" />
+            Berita &amp; Kegiatan
+          </p>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(36px,5vw,64px)",
+              fontWeight: 700,
+              letterSpacing: "-.03em",
+              lineHeight: 0.95,
+            }}
+          >
+            Kabar Terbaru
+          </h1>
+          <p
+            style={{
+              margin: "18px 0 0",
+              fontSize: 18,
+              lineHeight: 1.55,
+              color: "#605d5d",
+              maxWidth: "52ch",
+            }}
+          >
+            Liputan kegiatan, prestasi, dan informasi terkini dari HIMA
+            Teknik Lingkungan UNTAN.
+          </p>
+        </div>
+
+        {/* Featured (first article) */}
+        {sorted[0] && (
+          <Link
+            href={`/berita/${sorted[0].slug}`}
+            className="beranda-product-card scroll-rise"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0,1.1fr) minmax(0,.9fr)",
+              gap: 0,
+              borderRadius: 2,
+              overflow: "hidden",
+              marginBottom: 32,
+            }}
+          >
+            <div
+              style={{
+                aspectRatio: "16/10",
+                background: "#e0dede",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {sorted[0].image && sorted[0].image !== "/placeholder-news.png" ? (
+                <img
+                  src={gdriveThumbnail(sorted[0].image)}
+                  alt={sorted[0].image_alt}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 48,
+                    color: "rgba(32,30,29,.16)",
+                    fontWeight: 700,
+                  }}
+                >
+                  TL
                 </div>
+              )}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundImage:
+                    "radial-gradient(circle,rgba(0,0,0,.18) 30%,transparent 32%)",
+                  backgroundSize: "3px 3px",
+                  mixBlendMode: "multiply",
+                }}
+              />
+            </div>
+            <div style={{ padding: "clamp(20px,3vw,40px)", display: "grid", alignContent: "center", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span
+                  style={{
+                    fontSize: "9.5px",
+                    letterSpacing: ".16em",
+                    textTransform: "uppercase",
+                    background: "#0088b0",
+                    color: "#f3f2f2",
+                    padding: "4px 10px",
+                    borderRadius: 2,
+                  }}
+                >
+                  {sorted[0].category}
+                </span>
+                <span
+                  style={{
+                    fontSize: "10.5px",
+                    letterSpacing: ".1em",
+                    color: "#605d5d",
+                  }}
+                >
+                  {new Date(sorted[0].published_at).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
               </div>
-              <div className={`p-3 sm:p-6 flex-1 min-w-0 ${index === 0 ? "sm:w-1/2 sm:flex sm:flex-col sm:justify-center" : ""}`}>
-                <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-3">
-                  <span className="text-[9px] sm:text-xs font-medium text-emerald-700 bg-emerald-50 px-1.5 sm:px-2.5 py-0.5 rounded">
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(22px,2.6vw,32px)",
+                  fontWeight: 700,
+                  lineHeight: 1.18,
+                  letterSpacing: "-.02em",
+                }}
+              >
+                {sorted[0].title}
+              </h2>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 15,
+                  lineHeight: 1.55,
+                  color: "#605d5d",
+                }}
+              >
+                {sorted[0].excerpt}
+              </p>
+              <span
+                style={{
+                  fontSize: 11,
+                  letterSpacing: ".16em",
+                  textTransform: "uppercase",
+                  color: "#201e1d",
+                }}
+              >
+                Baca selengkapnya &rarr;
+              </span>
+            </div>
+          </Link>
+        )}
+
+        {/* Grid for remaining */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))",
+            gap: 24,
+          }}
+        >
+          {sorted.slice(1).map((article, i) => (
+            <Link
+              key={article.id}
+              href={`/berita/${article.slug}`}
+              className="beranda-product-card scroll-rise"
+              style={{
+                display: "block",
+                borderRadius: 2,
+                overflow: "hidden",
+                "--cover": `${32 + i * 3}%`,
+              } as React.CSSProperties}
+            >
+              <div
+                style={{
+                  aspectRatio: "16/10",
+                  background: "#e0dede",
+                  position: "relative",
+                  overflow: "hidden",
+                  borderBottom: "1px solid rgba(32,30,29,.16)",
+                }}
+              >
+                {article.image && article.image !== "/placeholder-news.png" ? (
+                  <img
+                    src={gdriveThumbnail(article.image)}
+                    alt={article.image_alt}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 36,
+                      color: "rgba(32,30,29,.16)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    TL
+                  </div>
+                )}
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    backgroundImage:
+                      "radial-gradient(circle,rgba(0,0,0,.18) 30%,transparent 32%)",
+                    backgroundSize: "3px 3px",
+                    mixBlendMode: "multiply",
+                  }}
+                />
+              </div>
+              <div style={{ padding: "20px 22px 24px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 10,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "9.5px",
+                      letterSpacing: ".14em",
+                      textTransform: "uppercase",
+                      border: "1px solid rgba(32,30,29,.35)",
+                      padding: "3px 8px",
+                      borderRadius: 2,
+                    }}
+                  >
                     {article.category}
                   </span>
-                  <span className="text-[9px] sm:text-xs text-gray-400">
+                  <span
+                    style={{
+                      fontSize: "10.5px",
+                      color: "#605d5d",
+                    }}
+                  >
                     {new Date(article.published_at).toLocaleDateString("id-ID", {
                       day: "numeric",
                       month: "short",
+                      year: "numeric",
                     })}
                   </span>
                 </div>
-                <h2
-                  className={`font-bold text-gray-900 group-hover:text-emerald-700 transition-colors line-clamp-2 ${
-                    index === 0 ? "text-sm sm:text-2xl" : "text-sm sm:text-lg"
-                  }`}
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 19,
+                    fontWeight: 600,
+                    lineHeight: 1.28,
+                  }}
                 >
                   {article.title}
-                </h2>
-                <p className="text-[11px] sm:text-sm text-gray-500 mt-1 line-clamp-2 hidden sm:block">{article.excerpt}</p>
+                </h3>
+                <p
+                  style={{
+                    margin: "10px 0 0",
+                    fontSize: 14,
+                    lineHeight: 1.55,
+                    color: "#605d5d",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  } as React.CSSProperties}
+                >
+                  {article.excerpt}
+                </p>
               </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
