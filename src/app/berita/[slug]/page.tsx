@@ -2,7 +2,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { articles, gdriveThumbnail } from "@/data/news";
+import { articles, articleSeo, gdriveThumbnail } from "@/data/news";
 
 export async function generateStaticParams() {
   return articles.map((a) => ({ slug: a.slug }));
@@ -16,18 +16,30 @@ export async function generateMetadata({
   const { slug } = await params;
   const article = articles.find((a) => a.slug === slug);
   if (!article) return {};
+
+  // Editable in /admin/seo; falls back to the article's own fields.
+  const seo = articleSeo(article);
+
   return {
-    title: article.title,
-    description: article.excerpt,
+    // The root layout appends the site name, so opt this page out of the
+    // template — the resolved title is already complete.
+    title: { absolute: seo.title },
+    description: seo.description,
+    alternates: { canonical: `/berita/${article.slug}` },
     openGraph: {
-      title: article.title,
-      description: article.excerpt,
+      title: seo.title,
+      description: seo.description,
       type: "article",
       publishedTime: article.published_at,
-      ...(article.image &&
-        article.image !== "/placeholder-news.png" && {
-          images: [{ url: gdriveThumbnail(article.image, 1200) }],
-        }),
+      ...(seo.ogImage && {
+        images: [{ url: gdriveThumbnail(seo.ogImage, 1200) }],
+      }),
+    },
+    twitter: {
+      card: seo.ogImage ? "summary_large_image" : "summary",
+      title: seo.title,
+      description: seo.description,
+      ...(seo.ogImage && { images: [gdriveThumbnail(seo.ogImage, 1200)] }),
     },
   };
 }
@@ -45,7 +57,7 @@ export default async function ArticleDetailPage({
     article.image && article.image !== "/placeholder-news.png";
 
   return (
-    <div style={{ background: "#f3f2f2", minHeight: "100vh" }}>
+    <div style={{ background: "#ffffff", minHeight: "100vh" }}>
       <article
         style={{
           maxWidth: 820,
@@ -87,8 +99,8 @@ export default async function ArticleDetailPage({
               fontSize: "9.5px",
               letterSpacing: ".16em",
               textTransform: "uppercase",
-              background: "#0088b0",
-              color: "#f3f2f2",
+              background: "#7a8450",
+              color: "#ffffff",
               padding: "4px 10px",
               borderRadius: 2,
             }}
@@ -147,7 +159,7 @@ export default async function ArticleDetailPage({
               aspectRatio: "16/9",
               overflow: "hidden",
               background: "#e0dede",
-              border: "1px solid rgba(32,30,29,.16)",
+              border: "1px solid rgba(32,30,29,.14)",
               borderRadius: 2,
             }}
           >
@@ -170,12 +182,12 @@ export default async function ArticleDetailPage({
                   bottom: 0,
                   right: 0,
                   padding: "8px 12px",
-                  background: "rgba(243,242,242,.92)",
+                  background: "rgba(255,255,255,.92)",
                   fontSize: 10,
                   letterSpacing: ".12em",
                   textTransform: "uppercase",
                   color: "#605d5d",
-                  borderTop: "1px solid rgba(32,30,29,.16)",
+                  borderTop: "1px solid rgba(32,30,29,.14)",
                 }}
               >
                 {article.image_alt}
@@ -189,7 +201,7 @@ export default async function ArticleDetailPage({
           style={{
             marginTop: hasImage ? 0 : 32,
             paddingTop: hasImage ? 0 : 32,
-            borderTop: hasImage ? undefined : "1px solid rgba(32,30,29,.16)",
+            borderTop: hasImage ? undefined : "1px solid rgba(32,30,29,.14)",
           }}
         >
           <div
@@ -208,7 +220,7 @@ export default async function ArticleDetailPage({
           style={{
             marginTop: 56,
             paddingTop: 32,
-            borderTop: "1px solid rgba(32,30,29,.16)",
+            borderTop: "1px solid rgba(32,30,29,.14)",
           }}
         >
           <h3
@@ -217,7 +229,7 @@ export default async function ArticleDetailPage({
               fontSize: 11,
               letterSpacing: ".22em",
               textTransform: "uppercase",
-              color: "#0088b0",
+              color: "#7a8450",
             }}
           >
             Berita lainnya

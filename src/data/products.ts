@@ -1,4 +1,5 @@
 import { CheckCircle2, Clock, XCircle, Ban, type LucideIcon } from "lucide-react";
+import { resolveSeo, type ResolvedSeo, type SeoOverride } from "./seo";
 
 export type StockType = "ready_stock" | "pre_order";
 
@@ -17,6 +18,8 @@ export interface Product {
   po_filled: number | null;
   po_reserved: number | null;
   po_deadline: string | null;
+  /** Search-result overrides, editable in /admin/seo. */
+  seo?: SeoOverride;
 }
 
 export const products: Product[] = [
@@ -128,6 +131,20 @@ export function getProductBadge(product: Product): {
     };
   }
   return { label: "Pre-Order Ditutup", color: "red", icon: XCircle };
+}
+
+/**
+ * Meta tags for a product detail page. Falls back to the product's own name
+ * and description, trimmed to a length search engines will actually show.
+ */
+export function productSeo(product: Product): ResolvedSeo {
+  return resolveSeo(product.seo, {
+    title: `${product.name} — Merchandise HIMA TL UNTAN`,
+    description: product.description.slice(0, 160),
+    ogImage:
+      product.images.find((i) => i.url && !i.url.startsWith("/placeholder"))
+        ?.url ?? "",
+  });
 }
 
 export function formatPrice(price: number): string {

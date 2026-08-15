@@ -72,7 +72,7 @@ export default function StatsCounter({ targets }: { targets: Target[] }) {
             padding: "0 26px",
             borderRight:
               i < targets.length - 1
-                ? "1px solid rgba(32,30,29,.16)"
+                ? "1px solid rgba(32,30,29,.14)"
                 : undefined,
             "--cover": `${26 + i * 4}%`,
           } as React.CSSProperties}
@@ -87,9 +87,7 @@ export default function StatsCounter({ targets }: { targets: Target[] }) {
               color: t.color,
             }}
           >
-            {t.key === "pohon"
-              ? (counts[t.key] ?? 0).toLocaleString("id-ID")
-              : (counts[t.key] ?? 0)}
+            {(counts[t.key] ?? 0).toLocaleString("id-ID")}
           </div>
           <div
             style={{

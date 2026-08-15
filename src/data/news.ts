@@ -1,3 +1,5 @@
+import { resolveSeo, type ResolvedSeo, type SeoOverride } from "./seo";
+
 export interface Article {
   id: string;
   title: string;
@@ -9,6 +11,8 @@ export interface Article {
   image: string;
   image_alt: string;
   published_at: string;
+  /** Search-result overrides, editable in /admin/seo. */
+  seo?: SeoOverride;
 }
 
 export function gdriveThumbnail(url: string, width = 800): string {
@@ -16,6 +20,20 @@ export function gdriveThumbnail(url: string, width = 800): string {
   if (match) return `https://lh3.googleusercontent.com/d/${match[1]}=w${width}`;
   if (url.includes("lh3.googleusercontent.com")) return url;
   return url;
+}
+
+/**
+ * Meta tags for an article detail page. Falls back to the article's own
+ * headline, excerpt, and cover image.
+ */
+export function articleSeo(article: Article): ResolvedSeo {
+  const hasCover =
+    article.image && article.image !== "/placeholder-news.png";
+  return resolveSeo(article.seo, {
+    title: `${article.title} — Berita HIMA TL UNTAN`,
+    description: article.excerpt.slice(0, 160),
+    ogImage: hasCover ? article.image : "",
+  });
 }
 
 export function slugify(text: string): string {

@@ -12,6 +12,8 @@ interface CarouselProps {
   showArrows?: boolean;
   className?: string;
   slideClassName?: string;
+  /** Advance every N ms. Omit or pass 0 to leave the carousel manual. */
+  autoplay?: number;
 }
 
 export default function Carousel({
@@ -21,12 +23,14 @@ export default function Carousel({
   showArrows = false,
   className = "",
   slideClassName = "",
+  autoplay = 0,
 }: CarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel(options);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
@@ -51,11 +55,32 @@ export default function Carousel({
     };
   }, [emblaApi, onSelect]);
 
+  // Self-advancing carousels: a plain timer rather than a plugin, so the
+  // dependency list stays as-is. Pauses on hover/touch and while the tab
+  // is hidden, and never runs for readers who ask for reduced motion.
+  useEffect(() => {
+    if (!emblaApi || !autoplay || paused) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      if (emblaApi.canScrollNext()) emblaApi.scrollNext();
+      else emblaApi.scrollTo(0);
+    }, autoplay);
+    return () => clearInterval(id);
+  }, [emblaApi, autoplay, paused]);
+
   const slides = React.Children.toArray(children);
 
   return (
-    <div className={`relative ${className}`}>
-      <div className="overflow-hidden" ref={emblaRef}>
+    <div
+      className={`relative ${className}`}
+      onMouseEnter={autoplay ? () => setPaused(true) : undefined}
+      onMouseLeave={autoplay ? () => setPaused(false) : undefined}
+      onPointerDown={autoplay ? () => setPaused(true) : undefined}
+      onPointerUp={autoplay ? () => setPaused(false) : undefined}
+    >
+      <div className="overflow-hidden carousel-viewport" ref={emblaRef}>
         <div className="flex touch-pan-y">
           {slides.map((child, i) => (
             <div

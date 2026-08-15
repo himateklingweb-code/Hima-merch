@@ -5,8 +5,229 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* ── Palette remap: one system for the whole site. Every Tailwind
+   `emerald`/`green` accent becomes olive, and the neutral `gray` scale
+   is a true neutral so pages built from utility classes sit on the same
+   white ground as the hand-styled ones. Featured accent: #7a8450. ── */
+@theme {
+  --color-emerald-50: #f1f2e9;
+  --color-emerald-100: #e3e6d2;
+  --color-emerald-200: #ccd2af;
+  --color-emerald-300: #b3bd8b;
+  --color-emerald-400: #97a468;
+  --color-emerald-500: #808e51;
+  --color-emerald-600: #7a8450;
+  --color-emerald-700: #626b3f;
+  --color-emerald-800: #4c5330;
+  --color-emerald-900: #3b4026;
+
+  --color-green-50: #f1f2e9;
+  --color-green-100: #e3e6d2;
+  --color-green-600: #7a8450;
+  --color-green-700: #626b3f;
+  --color-green-800: #4c5330;
+
+  --color-gray-50: #f7f7f7;
+  --color-gray-100: #ededed;
+  --color-gray-200: #e0dede;
+  --color-gray-300: #c9c5c5;
+  --color-gray-400: #97918f;
+  --color-gray-500: #7a7574;
+  --color-gray-600: #605d5d;
+  --color-gray-700: #4a4746;
+  --color-gray-800: #302d2c;
+  --color-gray-900: #201e1d;
+}
+
+/* Single source of truth for the site palette. `--paper` is the page
+   ground, `--surface` is what cards sit on so they read against it. */
 :root {
   --mo: 1;
+  --ink: #201e1d;
+  --paper: #ffffff;
+  --paper-2: #f4f4f4;
+  --surface: #ffffff;
+  --olive: #7a8450;
+  --olive-deep: #626b3f;
+  --gold: #ffd985;
+  --muted: #605d5d;
+  --sage: #c2c4ad;
+  --line: rgba(32, 30, 29, 0.14);
+  --line-strong: rgba(32, 30, 29, 0.3);
+}
+
+/* ── Route change: a slim olive rule that runs across the top instead of
+   the old black curtain wiping over the page. Non-blocking, so content
+   stays readable while the next segment streams in. ── */
+.route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  z-index: 300;
+  background: linear-gradient(90deg, var(--olive), var(--gold));
+  box-shadow: 0 0 12px rgba(122, 132, 80, 0.55);
+}
+.route-progress[data-state="loading"] {
+  animation: routeProgress 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.route-progress[data-state="done"] {
+  animation: routeProgressOut 0.45s ease forwards;
+}
+@keyframes routeProgress {
+  from { width: 0; }
+  to { width: 78%; }
+}
+@keyframes routeProgressOut {
+  from { width: 78%; opacity: 1; }
+  55% { width: 100%; opacity: 1; }
+  to { width: 100%; opacity: 0; }
+}
+
+/* ── Loading state: a beaker filling with water ──────────────────────
+   Used by every `loading.tsx` boundary, so a slow database read shows
+   the department's own subject matter instead of a bare spinner. ── */
+.hima-loader {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 26px;
+  min-height: 58vh;
+  padding: 72px 20px;
+  text-align: center;
+}
+.hima-loader-rig { position: relative; }
+
+.hima-loader-vessel {
+  position: relative;
+  width: 92px;
+  height: 116px;
+  border: 1.5px solid var(--ink);
+  border-top-width: 0;
+  border-radius: 2px 2px 12px 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+/* Lip of the beaker, drawn as two stubs so the mouth reads as open. */
+.hima-loader-vessel::before,
+.hima-loader-vessel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 16px;
+  height: 1.5px;
+  background: var(--ink);
+}
+.hima-loader-vessel::before { left: -1px; }
+.hima-loader-vessel::after { right: -1px; }
+
+.hima-loader-water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12%;
+  background: var(--olive);
+  animation: waterFill 2.6s ease-in-out infinite alternate;
+}
+.hima-loader-wave {
+  position: absolute;
+  top: -7px;
+  left: -50%;
+  width: 200%;
+  height: 14px;
+  background: radial-gradient(
+      circle at 50% 100%,
+      var(--olive) 47%,
+      transparent 49%
+    )
+    0 0 / 22px 14px repeat-x;
+  animation: waveSlide 1.15s linear infinite;
+}
+
+/* Graduation marks on the glass. */
+.hima-loader-ticks {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: space-evenly;
+  padding: 14px 0;
+  pointer-events: none;
+}
+.hima-loader-ticks span {
+  width: 13px;
+  height: 1px;
+  background: rgba(32, 30, 29, 0.28);
+}
+
+.hima-loader-drops {
+  position: absolute;
+  top: -30px;
+  left: 0;
+  right: 0;
+  height: 30px;
+  pointer-events: none;
+}
+.hima-loader-drops span {
+  position: absolute;
+  top: 0;
+  width: 5px;
+  height: 6px;
+  border-radius: 60% 60% 50% 50%;
+  background: var(--olive);
+  opacity: 0;
+  animation: dropFall 1.5s ease-in infinite;
+}
+.hima-loader-drops span:nth-child(1) { left: 38%; animation-delay: 0s; }
+.hima-loader-drops span:nth-child(2) { left: 50%; animation-delay: 0.5s; }
+.hima-loader-drops span:nth-child(3) { left: 60%; animation-delay: 1s; }
+
+.hima-loader-text { display: grid; gap: 8px; }
+.hima-loader-label {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.hima-loader-hint {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 34ch;
+}
+.hima-loader-dots span {
+  animation: dotBlink 1.4s steps(1, end) infinite;
+  opacity: 0;
+}
+.hima-loader-dots span:nth-child(2) { animation-delay: 0.2s; }
+.hima-loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes waterFill {
+  from { height: 12%; }
+  to { height: 88%; }
+}
+@keyframes waveSlide {
+  from { transform: translateX(0); }
+  to { transform: translateX(22px); }
+}
+@keyframes dropFall {
+  0% { transform: translateY(0) scaleY(0.7); opacity: 0; }
+  18% { opacity: 1; }
+  75% { transform: translateY(26px) scaleY(1.25); opacity: 1; }
+  100% { transform: translateY(30px) scaleY(0.5); opacity: 0; }
+}
+@keyframes dotBlink {
+  0%, 45% { opacity: 0; }
+  50%, 100% { opacity: 1; }
+}
+
+/* Reduced motion: hold the beaker part-full and drop the animation. */
+@media (prefers-reduced-motion: reduce) {
+  .hima-loader-water { height: 55%; }
+  .hima-loader-dots span { opacity: 1; }
 }
 
 @layer utilities {
@@ -20,31 +241,49 @@
 }
 
 html { scroll-behavior: smooth; }
-body { background: #f3f2f2; color: #201e1d; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-::selection { background: #edbb00; color: #201e1d; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+::selection { background: var(--gold); color: var(--ink); }
 
-[data-nav] a[aria-current="page"] { background: #201e1d; color: #f3f2f2; }
+[data-nav] a[aria-current="page"] { background: var(--nav-fg); color: var(--nav-solid); }
+
+/* ── Scroll progress: a slim olive→gold rule that fills as you read.
+   Pure CSS via a scroll-driven timeline; invisible where unsupported. ── */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  z-index: 200;
+  background: linear-gradient(90deg, var(--olive), var(--gold));
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  animation: scrollProgress linear both;
+  animation-timeline: scroll(root);
+}
 
 /* ── Keyframes ── */
 @keyframes reveal { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
 @keyframes revealX { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: none; } }
-@keyframes revealScale { from { opacity: 0; transform: scale(.94) translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes revealScale { from { opacity: 0; transform: scale(.96) translateY(18px); } to { opacity: 1; transform: none; } }
 @keyframes clipUp { from { opacity: 0; clip-path: inset(100% 0 0 0); transform: translateY(14px); } to { opacity: 1; clip-path: inset(0 0 0 0); transform: none; } }
-@keyframes parallaxUp { from { transform: translateY(60px); } to { transform: translateY(-90px); } }
-@keyframes parallaxDown { from { transform: translateY(-40px); } to { transform: translateY(70px); } }
-@keyframes riseIn { from { opacity: 0; transform: translateY(38px) rotate(-1.2deg); } to { opacity: 1; transform: none; } }
-@keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
-@keyframes drift { 0% { transform: translate3d(0,0,0) scale(1); } 33% { transform: translate3d(26px,-18px,0) scale(1.06); } 66% { transform: translate3d(-18px,14px,0) scale(.96); } 100% { transform: translate3d(0,0,0) scale(1); } }
-@keyframes misreg { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(5px,-4px); } 50% { transform: translate(-4px,3px); } 75% { transform: translate(3px,5px); } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+@keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+@keyframes drift { 0% { transform: translate3d(0,0,0) scale(1); } 33% { transform: translate3d(22px,-16px,0) scale(1.05); } 66% { transform: translate3d(-16px,12px,0) scale(.97); } 100% { transform: translate3d(0,0,0) scale(1); } }
 @keyframes spinSlow { to { transform: rotate(360deg); } }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@keyframes blink { 0%, 45% { opacity: 1; } 50%, 95% { opacity: .15; } 100% { opacity: 1; } }
+@keyframes blink { 0%, 45% { opacity: 1; } 50%, 95% { opacity: .2; } 100% { opacity: 1; } }
 @keyframes cue { 0% { transform: translateY(-6px); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(14px); opacity: 0; } }
-@keyframes curtainLift { from { transform: scaleY(1); } to { transform: scaleY(0); } }
-@keyframes curtainDrop { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-@keyframes popIn { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes popIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes scrollProgress { to { transform: scaleX(1); } }
+@keyframes sheen { from { transform: translateX(-130%) skewX(-12deg); } to { transform: translateX(130%) skewX(-12deg); } }
+@keyframes hairline { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
-/* ── Scroll-driven reveal ── */
+/* ── Scroll-driven reveals ── */
 .scroll-reveal {
   animation: reveal .8s ease-out both;
   animation-timeline: view();
@@ -60,75 +299,183 @@ body { background: #f3f2f2; color: #201e1d; -webkit-font-smoothing: antialiased;
   animation-timeline: view();
   animation-range: entry 0% cover var(--cover, 30%);
 }
-
-/* ── Hover patterns ── */
-.beranda-hero-cta {
-  background: #201e1d; color: #f3f2f2;
-  box-shadow: 0 3px 10px rgba(45,43,43,.16);
-  transition: transform .22s, background .22s;
+/* Hairline dividers that draw themselves in as they enter view. */
+.scroll-hairline {
+  transform-origin: 0 50%;
+  animation: hairline .9s cubic-bezier(.2,.8,.2,1) both;
+  animation-timeline: view();
+  animation-range: entry 0% cover 22%;
 }
-.beranda-hero-cta:hover { background: #0088b0; transform: translateY(-3px); }
+
+/* ── Animated underline for text links ── */
+.link-underline { position: relative; }
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -3px;
+  width: 100%; height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform .34s cubic-bezier(.2,.8,.2,1);
+}
+.link-underline:hover::after { transform: scaleX(1); }
+
+/* ── Light sheen sweep for filled buttons ── */
+.btn-sheen { position: relative; overflow: hidden; }
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 55%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.28), transparent);
+  transform: translateX(-130%) skewX(-12deg);
+  pointer-events: none;
+}
+.btn-sheen:hover::after { animation: sheen .8s ease; }
+
+/* ── Hover patterns (restrained lift for a formal feel) ── */
+.beranda-hero-cta {
+  background: var(--olive); color: var(--paper);
+  box-shadow: 0 2px 10px rgba(32,30,29,.12);
+  transition: transform .22s, background .22s, box-shadow .22s;
+}
+.beranda-hero-cta:hover { background: var(--olive-deep); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(32,30,29,.18); }
 
 .beranda-hero-outline {
-  border: 1.5px solid #201e1d; color: #201e1d;
+  border: 1.5px solid var(--ink); color: var(--ink);
   transition: background .22s, color .22s;
 }
-.beranda-hero-outline:hover { background: #edbb00; color: #201e1d; }
+.beranda-hero-outline:hover { background: var(--ink); color: var(--paper); }
 
 .beranda-quick-card {
-  background: #f3f2f2; color: #201e1d;
-  border: 1px solid rgba(32,30,29,.16);
-  transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s, background .28s;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line);
+  transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s, border-color .3s, background .3s;
 }
 .beranda-quick-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 32px rgba(45,43,43,.22);
-  background: #edbb00;
+  transform: translateY(-4px);
+  box-shadow: 0 10px 26px rgba(32,30,29,.12);
+  border-color: var(--olive);
+  background: #fbfbfb;
 }
 
 .beranda-product-card {
-  background: #f3f2f2; color: #201e1d;
-  border: 1px solid rgba(32,30,29,.16);
-  transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line);
+  transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s, border-color .3s;
 }
 .beranda-product-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 32px rgba(45,43,43,.22);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 26px rgba(32,30,29,.12);
+  border-color: var(--olive);
 }
 
 .beranda-news-row {
-  color: #201e1d; border-top: 1px solid rgba(32,30,29,.16);
+  color: var(--ink); border-top: 1px solid var(--line);
   transition: padding-left .3s, background .3s;
 }
-.beranda-news-row:hover { padding-left: 16px; background: #eae9e9; }
+.beranda-news-row:hover { padding-left: 16px; background: var(--paper-2); }
 
-.site-nav-link { color: #201e1d; transition: background .22s, color .22s; }
-.site-nav-link:hover { background: #201e1d; color: #f3f2f2; }
+/* ── Navbar: translucent paper at rest, darkening to the footer's ink
+   once the page scrolls. Every child reads its colour from the four
+   `--nav-*` tokens, so the whole bar inverts in one transition. ── */
+[data-nav] {
+  --nav-bg: rgba(255,255,255,.92);
+  --nav-solid: var(--paper);
+  --nav-fg: var(--ink);
+  --nav-fg-soft: var(--muted);
+  --nav-line: var(--line);
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-line);
+  color: var(--nav-fg);
+  transition: background .35s ease, border-color .35s ease,
+    color .35s ease, box-shadow .35s ease;
+}
+[data-nav][data-scrolled="true"] {
+  --nav-bg: rgba(32,30,29,.94);
+  --nav-solid: var(--ink);
+  --nav-fg: var(--paper);
+  --nav-fg-soft: rgba(255,255,255,.6);
+  --nav-line: rgba(255,255,255,.18);
+  box-shadow: 0 6px 24px rgba(32,30,29,.2);
+}
 
-.site-nav-cta { background: #201e1d; color: #f3f2f2; transition: transform .2s, background .2s; }
-.site-nav-cta:hover { background: #0088b0; transform: translateY(-2px); }
+.site-nav-title { color: var(--nav-fg); transition: color .35s ease; }
+.site-nav-sub { color: var(--nav-fg-soft); transition: color .35s ease; }
 
+/* The gold mark keeps its own colours — it is the one fixed point the
+   eye can track while the bar around it inverts. */
+.site-nav-mark {
+  background: var(--gold); color: #201e1d;
+  border: 1.5px solid var(--nav-fg);
+  transition: border-color .35s ease;
+}
+
+.site-nav-link { color: var(--nav-fg); transition: background .22s, color .22s; }
+.site-nav-link:hover { background: var(--nav-fg); color: var(--nav-solid); }
+
+.site-nav-toggle {
+  border: 1px solid var(--nav-fg);
+  background: transparent;
+  color: var(--nav-fg);
+  transition: background .22s, color .22s, border-color .35s ease;
+}
+.site-nav-toggle[data-open="true"] { background: var(--nav-fg); color: var(--nav-solid); }
+
+.site-nav-cta { background: var(--olive); color: #ffffff; transition: transform .2s, background .2s; }
+.site-nav-cta:hover { background: var(--olive-deep); transform: translateY(-2px); }
+
+.site-nav-panel {
+  background: var(--nav-solid);
+  border-top: 1px solid var(--nav-line);
+  transition: background .35s ease;
+}
 .site-nav-mobile-link {
-  color: #201e1d; border-bottom: 1px solid rgba(32,30,29,.16);
+  color: var(--nav-fg); border-bottom: 1px solid var(--nav-line);
   transition: background .2s, color .2s, padding-left .2s;
 }
-.site-nav-mobile-link:hover { background: #edbb00; padding-left: 20px; }
+.site-nav-mobile-link:hover { background: var(--gold); color: #201e1d; padding-left: 20px; }
+
+.site-nav-panel-cta {
+  background: var(--olive); color: #ffffff;
+  transition: background .2s;
+}
+.site-nav-panel-cta:hover { background: var(--olive-deep); }
 
 .site-footer-link {
-  color: #f3f2f2; border-bottom: 1px solid rgba(243,242,242,.2);
+  color: var(--paper); border-bottom: 1px solid rgba(255,255,255,.2);
   transition: padding-left .25s, color .25s;
 }
-.site-footer-link:hover { padding-left: 8px; color: #edbb00; }
+.site-footer-link:hover { padding-left: 8px; color: var(--gold); }
 
 .site-footer-cta-primary {
-  background: #edbb00; color: #201e1d; transition: transform .22s;
+  background: var(--gold); color: var(--ink); transition: transform .22s, box-shadow .22s;
 }
-.site-footer-cta-primary:hover { transform: translateY(-3px); }
+.site-footer-cta-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
 
 .site-footer-cta-outline {
-  border: 1px solid rgba(243,242,242,.35); color: #f3f2f2; transition: background .22s;
+  border: 1px solid rgba(255,255,255,.35); color: var(--paper); transition: background .22s;
 }
-.site-footer-cta-outline:hover { background: rgba(243,242,242,.14); }
+.site-footer-cta-outline:hover { background: rgba(255,255,255,.14); }
+
+/* Circular social buttons in the footer. */
+.site-footer-social {
+  display: grid; place-items: center;
+  width: 42px; height: 42px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 50%;
+  color: var(--paper);
+  transition: background .25s, color .25s, transform .25s, border-color .25s;
+}
+.site-footer-social:hover {
+  background: var(--gold); color: var(--ink);
+  border-color: var(--gold);
+  transform: translateY(-3px);
+}
+
+.site-watermark { color: rgba(255,255,255,.55); transition: color .25s; }
+.site-watermark:hover { color: var(--gold); }
 
 /* ── Responsive ── */
 @media (max-width: 1079px) {
@@ -158,6 +505,95 @@ body { background: #f3f2f2; color: #201e1d; -webkit-font-smoothing: antialiased;
   .home-mobile-carousel { display: none !important; }
 }
 
+/* ── Hero photo: a framed column on desktop, the section's own
+   background on mobile. The scrim keeps the headline legible over
+   whatever photo the dashboard supplies. ── */
+.hero-photo-bg { display: none; }
+@media (max-width: 767px) {
+  .hero-photo-bg {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .hero-photo-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(1) contrast(1.1);
+  }
+  .hero-photo-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(255,255,255,.9) 0%,
+      rgba(255,255,255,.82) 45%,
+      rgba(255,255,255,.94) 100%
+    );
+  }
+  .hero-figure { display: none !important; }
+  /* Lift the hero's own content above the photo layer. */
+  .hero-meta, .hero-grid, .hero-cue { position: relative; z-index: 1; }
+}
+
+/* Embla clips at its padding box, so a card that lifts on hover loses its
+   top border and its shadow to the viewport edge. Pad the viewport to give
+   the lift somewhere to go, then pull the same amount back with a negative
+   margin so surrounding layout is unchanged. Vertical only — horizontal
+   clipping is what makes the carousel a carousel. */
+.carousel-viewport {
+  padding-top: 8px;
+  padding-bottom: 22px;
+  margin-top: -8px;
+  margin-bottom: -22px;
+}
+
+/* ── Mitra ad cards + sponsor logo strip ── */
+.ad-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+  transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s, border-color .3s;
+}
+.ad-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 26px rgba(32,30,29,.12);
+  border-color: var(--olive);
+}
+.ad-card-logo {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  background: var(--paper-2);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+.ad-card-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 22px;
+}
+
+.sponsor-logo {
+  display: grid;
+  place-items: center;
+  height: 74px;
+  padding: 0 18px;
+  filter: grayscale(1);
+  opacity: .62;
+  transition: opacity .3s, filter .3s;
+}
+.sponsor-logo:hover { filter: none; opacity: 1; }
+.sponsor-logo img { max-height: 100%; max-width: 100%; object-fit: contain; }
+
 /* ── Article prose ── */
 .prose-article p { margin: 0 0 1.2em; }
 .prose-article p:last-child { margin-bottom: 0; }
@@ -166,8 +602,8 @@ body { background: #f3f2f2; color: #201e1d; -webkit-font-smoothing: antialiased;
 .prose-article ul, .prose-article ol { padding-left: 1.5em; margin: 0 0 1.2em; }
 .prose-article li { margin-bottom: .35em; }
 .prose-article blockquote {
-  border-left: 3px solid #0088b0; padding: .8em 1.2em; margin: 1.2em 0;
-  background: rgba(0,136,176,.06); font-style: italic;
+  border-left: 3px solid var(--olive); padding: .8em 1.2em; margin: 1.2em 0;
+  background: rgba(122,132,80,.08); font-style: italic;
 }
 
 @media (prefers-reduced-motion: reduce) {

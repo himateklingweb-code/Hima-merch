@@ -17,6 +17,7 @@ const navLinks = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
 
   const activeKey =
@@ -25,6 +26,15 @@ export default function Navbar() {
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  // Past the first slice of the page the bar goes dark, matching the
+  // footer, so it reads as a solid header rather than a tinted overlay.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -44,13 +54,12 @@ export default function Navbar() {
   return (
     <header
       data-nav=""
+      data-scrolled={scrolled || menuOpen ? "true" : "false"}
       style={{
         position: "sticky",
         top: 0,
         zIndex: 100,
-        background: "rgba(243,242,242,.92)",
         backdropFilter: "blur(10px) saturate(1.2)",
-        borderBottom: "1px solid rgba(32,30,29,.16)",
       }}
     >
       <div
@@ -76,17 +85,16 @@ export default function Navbar() {
           }}
         >
           <span
+            className="site-nav-mark"
             style={{
               width: 30,
               height: 30,
-              border: "1.5px solid #201e1d",
               borderRadius: 2,
               display: "grid",
               placeItems: "center",
               fontSize: 13,
               fontWeight: 700,
               letterSpacing: "-.02em",
-              background: "#edbb00",
               flexShrink: 0,
             }}
           >
@@ -94,6 +102,7 @@ export default function Navbar() {
           </span>
           <span style={{ display: "grid", lineHeight: 1.05, minWidth: 0 }}>
             <span
+              className="site-nav-title"
               style={{
                 fontSize: 15,
                 fontWeight: 700,
@@ -106,11 +115,11 @@ export default function Navbar() {
               HIMA Teknik Lingkungan
             </span>
             <span
+              className="site-nav-sub"
               style={{
                 fontSize: "9.5px",
                 letterSpacing: ".19em",
                 textTransform: "uppercase",
-                color: "#605d5d",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -165,20 +174,18 @@ export default function Navbar() {
             onClick={() => setMenuOpen(!menuOpen)}
             aria-expanded={menuOpen}
             aria-label="Menu navigasi"
+            className="site-nav-toggle"
+            data-open={menuOpen ? "true" : "false"}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 9,
-              border: "1px solid #201e1d",
-              background: menuOpen ? "#201e1d" : "transparent",
-              color: menuOpen ? "#f3f2f2" : "#201e1d",
               padding: "9px 15px",
               borderRadius: 2,
               fontSize: "11.5px",
               letterSpacing: ".12em",
               textTransform: "uppercase",
               cursor: "pointer",
-              transition: "background .2s, color .2s",
             }}
           >
             {menuOpen ? (
@@ -211,11 +218,8 @@ export default function Navbar() {
       {/* Mobile menu panel */}
       {menuOpen && (
         <div
-          style={{
-            borderTop: "1px solid rgba(32,30,29,.16)",
-            background: "#f3f2f2",
-            animation: "popIn .28s ease-out both",
-          }}
+          className="site-nav-panel"
+          style={{ animation: "popIn .28s ease-out both" }}
         >
           <nav
             style={{
@@ -244,11 +248,10 @@ export default function Navbar() {
             <Link
               href="/merchandise"
               onClick={() => setMenuOpen(false)}
+              className="site-nav-panel-cta"
               style={{
                 marginTop: 10,
                 textAlign: "center",
-                background: "#201e1d",
-                color: "#f3f2f2",
                 padding: "14px 16px",
                 borderRadius: 2,
                 fontSize: "12.5px",

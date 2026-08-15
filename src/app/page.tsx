@@ -1,17 +1,19 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { departments } from "@/data/departments";
 import { articles } from "@/data/news";
 import { products, formatPrice } from "@/data/products";
+import { getHomeStats } from "@/data/site";
 import StatsCounter from "@/components/StatsCounter";
 import HomeCarousels from "@/components/HomeCarousels";
+import AdsCarousel from "@/components/AdsCarousel";
+import SponsorStrip from "@/components/SponsorStrip";
 
 function badgeOf(p: (typeof products)[0], now: number) {
   if (p.stock_type === "ready_stock") {
     const left = p.stock - p.stock_reserved;
     return left > 0
-      ? { label: "Tersedia", bg: "#0088b0", fg: "#f3f2f2", state: "ready" }
-      : { label: "Stok habis", bg: "#7d7979", fg: "#f3f2f2", state: "habis" };
+      ? { label: "Tersedia", bg: "#7a8450", fg: "#ffffff", state: "ready" }
+      : { label: "Stok habis", bg: "#605d5d", fg: "#ffffff", state: "habis" };
   }
   const taken = (p.po_filled ?? 0) + (p.po_reserved ?? 0);
   const open =
@@ -19,28 +21,20 @@ function badgeOf(p: (typeof products)[0], now: number) {
     new Date(p.po_deadline).getTime() > now &&
     taken < (p.po_quota ?? 0);
   return open
-    ? { label: "Pre-order dibuka", bg: "#edbb00", fg: "#201e1d", state: "po" }
+    ? { label: "Pre-order dibuka", bg: "#ffd985", fg: "#201e1d", state: "po" }
     : {
         label: "Pre-order ditutup",
-        bg: "#aa0b56",
-        fg: "#f3f2f2",
+        bg: "#626b3f",
+        fg: "#ffffff",
         state: "po-tutup",
       };
 }
 
-const PLATES = ["#d7d3d3", "#444141", "#d7d3d3", "#cbeeff", "#ffdee6"];
+const PLATES = ["#c2c4ad", "#626b3f", "#dfe3d0", "#e0dede", "#eceaea"];
 
 export default function HomePage() {
   const now = Date.now();
-
-  const activeMemberCount = departments.reduce(
-    (n, d) =>
-      n +
-      d.periods
-        .filter((p) => p.is_active)
-        .reduce((k, p) => k + p.members.length, 0),
-    0
-  );
+  const stats = getHomeStats();
 
   const poOpen = products.filter((p) => {
     if (p.stock_type !== "pre_order" || !p.po_deadline) return false;
@@ -71,7 +65,7 @@ export default function HomePage() {
           : "Tenggat lewat";
     const metaColor =
       badge.state === "ready"
-        ? "#0088b0"
+        ? "#7a8450"
         : badge.state === "po"
           ? "#201e1d"
           : "#605d5d";
@@ -79,7 +73,7 @@ export default function HomePage() {
       slug: p.slug,
       no: String(i + 1).padStart(2, "0"),
       name: p.name,
-      plate: PLATES[i] || "#d7d3d3",
+      plate: PLATES[i] || "#c2c4ad",
       price: formatPrice(p.price),
       badge,
       meta,
@@ -124,29 +118,28 @@ export default function HomePage() {
   articles.slice(0, 3).forEach((a) => tickerItems.push(a.title));
 
   return (
-    <div style={{ position: "relative", background: "#f3f2f2", minHeight: "100vh" }}>
+    <div style={{ position: "relative", background: "#ffffff", minHeight: "100vh" }}>
       {/* ═══ HERO ═══ */}
       <section
         style={{
           position: "relative",
           overflow: "hidden",
-          borderBottom: "1px solid rgba(32,30,29,.16)",
+          borderBottom: "1px solid rgba(32,30,29,.14)",
         }}
       >
-        {/* Dot pattern */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            backgroundImage:
-              "radial-gradient(circle,rgba(32,30,29,.16) 30%,transparent 32%)",
-            backgroundSize: "4px 4px",
-            opacity: 0.5,
-            animation: "drift calc(38s * var(--mo,1)) ease-in-out infinite",
-          }}
-        />
-        {/* Blobs */}
+        {/* On mobile the hero photo becomes the section's background —
+            the framed column below is hidden at that width. */}
+        <div className="hero-photo-bg" aria-hidden="true">
+          <img src="/assets/plate.jpg" alt="" />
+        </div>
+
+        {/* No halftone texture over the hero: a dot screen across the whole
+            section muddies the white ground into khaki. The dot pattern is
+            kept only where it belongs — over photos and colour plates, as a
+            multiply overlay. */}
+
+        {/* Blobs — white highlights, not tints: they add depth by
+            lightening the ground rather than casting a colour over it. */}
         <div
           style={{
             position: "absolute",
@@ -155,8 +148,8 @@ export default function HomePage() {
             width: 520,
             height: 520,
             borderRadius: "50%",
-            background: "#0088b0",
-            opacity: 0.09,
+            background: "#ffffff",
+            opacity: 0.55,
             filter: "blur(10px)",
             animation: "drift calc(26s * var(--mo,1)) ease-in-out infinite",
           }}
@@ -169,8 +162,8 @@ export default function HomePage() {
             width: 460,
             height: 460,
             borderRadius: "50%",
-            background: "#d6006c",
-            opacity: 0.08,
+            background: "#ffffff",
+            opacity: 0.45,
             filter: "blur(10px)",
             animation:
               "drift calc(31s * var(--mo,1)) ease-in-out infinite reverse",
@@ -179,6 +172,7 @@ export default function HomePage() {
 
         {/* Meta bar */}
         <div
+          className="hero-meta"
           style={{
             position: "relative",
             maxWidth: 1280,
@@ -195,7 +189,7 @@ export default function HomePage() {
               letterSpacing: ".2em",
               textTransform: "uppercase" as const,
               color: "#605d5d",
-              borderBottom: "1px solid rgba(32,30,29,.16)",
+              borderBottom: "1px solid rgba(32,30,29,.14)",
               paddingBottom: 12,
               animation: "reveal .7s ease-out both",
               flexWrap: "wrap" as const,
@@ -214,7 +208,7 @@ export default function HomePage() {
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  background: "#d6006c",
+                  background: "#626b3f",
                   animation:
                     "blink calc(1.6s * var(--mo,1)) steps(1,end) infinite",
                 }}
@@ -222,18 +216,18 @@ export default function HomePage() {
               Pre-order dibuka
             </span>
             <span
-              className="hero-divider"
+              className="hero-divider scroll-hairline"
               style={{
                 flex: 1,
                 minWidth: 20,
                 height: 1,
-                background: "rgba(32,30,29,.16)",
+                background: "rgba(32,30,29,.14)",
               }}
             />
             <span>hima.tekniklingkungan.com</span>
-            <span style={{ color: "rgba(32,30,29,.35)" }}>/</span>
+            <span style={{ color: "rgba(32,30,29,.3)" }}>/</span>
             <span>Edisi 2025 / 2026</span>
-            <span style={{ color: "rgba(32,30,29,.35)" }}>/</span>
+            <span style={{ color: "rgba(32,30,29,.3)" }}>/</span>
             <span>Pontianak, Kalimantan Barat</span>
           </div>
         </div>
@@ -260,7 +254,7 @@ export default function HomePage() {
                 fontSize: 11,
                 letterSpacing: ".22em",
                 textTransform: "uppercase" as const,
-                color: "#0088b0",
+                color: "#7a8450",
                 animation: "reveal .8s ease-out both",
               }}
             >
@@ -305,7 +299,7 @@ export default function HomePage() {
                   animationDelay: "360ms",
                 }}
               >
-                UNTAN<span style={{ color: "#d6006c" }}>.</span>
+                UNTAN<span style={{ color: "#626b3f" }}>.</span>
               </span>
             </h1>
             <div
@@ -361,7 +355,7 @@ export default function HomePage() {
             >
               <Link
                 href="/merchandise"
-                className="beranda-hero-cta"
+                className="beranda-hero-cta btn-sheen"
                 style={{
                   padding: "15px 28px",
                   borderRadius: 2,
@@ -390,8 +384,8 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right — image */}
-          <div style={{ position: "relative" }}>
+          {/* Right — image (desktop only; mobile uses the section bg) */}
+          <div className="hero-figure" style={{ position: "relative" }}>
             <figure
               style={{
                 position: "relative",
@@ -399,7 +393,7 @@ export default function HomePage() {
                 aspectRatio: "4/5",
                 overflow: "hidden",
                 background: "#e0dede",
-                border: "1px solid rgba(32,30,29,.16)",
+                border: "1px solid rgba(32,30,29,.14)",
                 animation:
                   "revealScale 1.1s cubic-bezier(.2,.8,.2,1) both",
                 animationDelay: "300ms",
@@ -414,42 +408,17 @@ export default function HomePage() {
                   width: "100%",
                   height: "100%",
                   objectFit: "cover",
-                  filter: "grayscale(1) contrast(1.35) brightness(1.05)",
-                  mixBlendMode: "multiply",
+                  filter: "grayscale(1) contrast(1.12) brightness(1.04)",
                 }}
               />
-              <img
-                src="/assets/plate.jpg"
-                alt=""
+              {/* Soft olive duotone — calm and formal, no chromatic glitch */}
+              <div
                 style={{
                   position: "absolute",
                   inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  filter:
-                    "grayscale(1) brightness(1.5) sepia(1) hue-rotate(150deg) saturate(4.5)",
+                  background:
+                    "linear-gradient(150deg, rgba(122,132,80,.44), rgba(98,107,63,.34))",
                   mixBlendMode: "multiply",
-                  opacity: 0.72,
-                  animation:
-                    "misreg calc(9s * var(--mo,1)) ease-in-out infinite",
-                }}
-              />
-              <img
-                src="/assets/plate.jpg"
-                alt=""
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  filter:
-                    "grayscale(1) brightness(1.55) sepia(1) hue-rotate(275deg) saturate(6)",
-                  mixBlendMode: "multiply",
-                  opacity: 0.6,
-                  animation:
-                    "misreg calc(11s * var(--mo,1)) ease-in-out infinite reverse",
                 }}
               />
               <div
@@ -470,15 +439,15 @@ export default function HomePage() {
                   bottom: 0,
                   right: 0,
                   padding: "10px 12px",
-                  background: "rgba(243,242,242,.92)",
+                  background: "rgba(255,255,255,.92)",
                   fontSize: 10,
                   letterSpacing: ".14em",
                   textTransform: "uppercase" as const,
                   color: "#605d5d",
-                  borderTop: "1px solid rgba(32,30,29,.16)",
+                  borderTop: "1px solid rgba(32,30,29,.14)",
                 }}
               >
-                Plat proses C&middot;M&middot;K — dokumentasi kegiatan
+                Dokumentasi kegiatan lapangan
               </figcaption>
             </figure>
             {/* Floating PO badge */}
@@ -515,7 +484,7 @@ export default function HomePage() {
                   letterSpacing: ".14em",
                   textTransform: "uppercase" as const,
                   lineHeight: 1.5,
-                  background: "#edbb00",
+                  background: "#ffd985",
                   borderRadius: "50%",
                   width: 104,
                   height: 104,
@@ -546,6 +515,7 @@ export default function HomePage() {
 
         {/* Scroll cue */}
         <div
+          className="hero-cue"
           style={{
             position: "relative",
             maxWidth: 1280,
@@ -572,7 +542,7 @@ export default function HomePage() {
               style={{
                 width: 1,
                 height: 34,
-                background: "rgba(32,30,29,.35)",
+                background: "rgba(32,30,29,.3)",
                 position: "relative",
                 overflow: "hidden",
               }}
@@ -581,7 +551,7 @@ export default function HomePage() {
                 style={{
                   position: "absolute",
                   inset: 0,
-                  background: "#d6006c",
+                  background: "#626b3f",
                   animation:
                     "cue calc(1.9s * var(--mo,1)) ease-in-out infinite",
                 }}
@@ -595,7 +565,7 @@ export default function HomePage() {
           style={{
             position: "relative",
             background: "#201e1d",
-            color: "#f3f2f2",
+            color: "#ffffff",
             overflow: "hidden",
             padding: "13px 0",
           }}
@@ -619,7 +589,7 @@ export default function HomePage() {
               >
                 {tickerItems.flatMap((item, i) => [
                   <span key={`t${i}`}>{item}</span>,
-                  <span key={`d${i}`} style={{ color: "#edbb00" }}>
+                  <span key={`d${i}`} style={{ color: "#ffd985" }}>
                     &#9670;
                   </span>,
                 ])}
@@ -632,27 +602,142 @@ export default function HomePage() {
       {/* ═══ STATS ═══ */}
       <section
         style={{
-          borderBottom: "1px solid rgba(32,30,29,.16)",
-          background: "#eae9e9",
+          borderBottom: "1px solid rgba(32,30,29,.14)",
+          background: "#f4f4f4",
         }}
       >
-        <StatsCounter
-          targets={[
-            { key: "pengurus", value: activeMemberCount, label: "Pengurus aktif" },
-            { key: "dept", value: departments.length, label: "Departemen" },
-            { key: "produk", value: products.length, label: "Produk merchandise" },
-            {
-              key: "pohon",
-              value: 1000,
-              label: "Pohon mangrove ditanam",
-              color: "#0088b0",
-            },
-          ]}
-        />
+        <StatsCounter targets={stats} />
       </section>
 
-      {/* ═══ QUICK LINKS ═══ */}
-      <section style={{ borderBottom: "1px solid rgba(32,30,29,.16)" }}>
+      {/* ═══ NEWS ═══ */}
+      <section style={{ borderBottom: "1px solid rgba(32,30,29,.14)" }}>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            padding: "88px clamp(16px,3vw,40px)",
+          }}
+        >
+          <div
+            className="scroll-reveal-x"
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 20,
+              flexWrap: "wrap" as const,
+              marginBottom: 12,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                letterSpacing: ".22em",
+                textTransform: "uppercase" as const,
+                color: "#7a8450",
+                flex: "none",
+              }}
+            >
+              Berita terbaru
+            </span>
+            <span
+              style={{
+                flex: 1,
+                height: 1,
+                background: "rgba(32,30,29,.14)",
+              }}
+            />
+            <Link
+              href="/berita"
+              className="link-underline"
+              style={{
+                fontSize: 11,
+                letterSpacing: ".16em",
+                textTransform: "uppercase" as const,
+                flex: "none",
+                marginLeft: "auto",
+                color: "#201e1d",
+              }}
+            >
+              Semua berita &rarr;
+            </Link>
+          </div>
+          <div className="home-desktop-cards">
+          {latest.map((a) => (
+            <Link
+              key={a.slug}
+              href={`/berita/${a.slug}`}
+              className="beranda-news-row scroll-reveal-x"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "120px minmax(0,1fr) 150px",
+                gap: 28,
+                alignItems: "center",
+                padding: "26px 0",
+              }}
+            >
+              <span
+                className="news-row-grid"
+                style={{
+                  fontSize: "10.5px",
+                  letterSpacing: ".16em",
+                  textTransform: "uppercase" as const,
+                  color: "#605d5d",
+                }}
+              >
+                {a.date}
+              </span>
+              <span style={{ display: "grid", gap: 7 }}>
+                <span
+                  style={{
+                    fontSize: 23,
+                    fontWeight: 600,
+                    lineHeight: 1.24,
+                    letterSpacing: "-.015em",
+                  }}
+                >
+                  {a.title}
+                </span>
+                <span
+                  style={{
+                    fontSize: 14,
+                    lineHeight: 1.55,
+                    color: "#605d5d",
+                    maxWidth: "72ch",
+                  }}
+                >
+                  {a.excerpt}
+                </span>
+              </span>
+              <span
+                className="news-row-cat"
+                style={{
+                  fontSize: "10.5px",
+                  letterSpacing: ".14em",
+                  textTransform: "uppercase" as const,
+                  justifySelf: "end",
+                  border: "1px solid rgba(32,30,29,.3)",
+                  padding: "5px 11px",
+                  borderRadius: 2,
+                }}
+              >
+                {a.category}
+              </span>
+            </Link>
+          ))}
+          </div>
+          <div className="home-mobile-carousel">
+            <HomeCarousels type="news" />
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ MITRA ADS ═══ */}
+      <section
+        style={{
+          borderBottom: "1px solid rgba(32,30,29,.14)",
+          background: "#f4f4f4",
+        }}
+      >
         <div
           style={{
             maxWidth: 1280,
@@ -675,7 +760,63 @@ export default function HomePage() {
                 fontSize: 11,
                 letterSpacing: ".22em",
                 textTransform: "uppercase" as const,
-                color: "#0088b0",
+                color: "#7a8450",
+                flex: "none",
+              }}
+            >
+              Mitra &amp; kerja sama
+            </span>
+            <span
+              style={{
+                flex: 1,
+                height: 1,
+                background: "rgba(32,30,29,.14)",
+              }}
+            />
+            <Link
+              href="/kemitraan"
+              className="link-underline"
+              style={{
+                fontSize: 11,
+                letterSpacing: ".16em",
+                textTransform: "uppercase" as const,
+                flex: "none",
+                marginLeft: "auto",
+                color: "#201e1d",
+              }}
+            >
+              Jadi mitra &rarr;
+            </Link>
+          </div>
+          <AdsCarousel />
+        </div>
+      </section>
+
+      {/* ═══ QUICK LINKS ═══ */}
+      <section style={{ borderBottom: "1px solid rgba(32,30,29,.14)" }}>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            padding: "88px clamp(16px,3vw,40px)",
+          }}
+        >
+          <div
+            className="scroll-reveal-x"
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 20,
+              flexWrap: "wrap" as const,
+              marginBottom: 40,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                letterSpacing: ".22em",
+                textTransform: "uppercase" as const,
+                color: "#7a8450",
                 flex: "none",
               }}
             >
@@ -685,7 +826,7 @@ export default function HomePage() {
               style={{
                 flex: 1,
                 height: 1,
-                background: "rgba(32,30,29,.16)",
+                background: "rgba(32,30,29,.14)",
               }}
             />
           </div>
@@ -766,8 +907,8 @@ export default function HomePage() {
       {/* ═══ MERCHANDISE ═══ */}
       <section
         style={{
-          borderBottom: "1px solid rgba(32,30,29,.16)",
-          background: "#eae9e9",
+          borderBottom: "1px solid rgba(32,30,29,.14)",
+          background: "#f4f4f4",
         }}
       >
         <div
@@ -792,7 +933,7 @@ export default function HomePage() {
                 fontSize: 11,
                 letterSpacing: ".22em",
                 textTransform: "uppercase" as const,
-                color: "#0088b0",
+                color: "#7a8450",
                 flex: "none",
               }}
             >
@@ -802,11 +943,12 @@ export default function HomePage() {
               style={{
                 flex: 1,
                 height: 1,
-                background: "rgba(32,30,29,.16)",
+                background: "rgba(32,30,29,.14)",
               }}
             />
             <Link
               href="/merchandise"
+              className="link-underline"
               style={{
                 fontSize: 11,
                 letterSpacing: ".16em",
@@ -846,7 +988,7 @@ export default function HomePage() {
                     placeItems: "center",
                     aspectRatio: "4/3",
                     background: p.plate,
-                    borderBottom: "1px solid rgba(32,30,29,.16)",
+                    borderBottom: "1px solid rgba(32,30,29,.14)",
                     overflow: "hidden",
                   }}
                 >
@@ -854,7 +996,7 @@ export default function HomePage() {
                     style={{
                       fontSize: 72,
                       fontWeight: 700,
-                      color: "rgba(32,30,29,.16)",
+                      color: "rgba(32,30,29,.14)",
                       letterSpacing: "-.04em",
                     }}
                   >
@@ -904,7 +1046,7 @@ export default function HomePage() {
                       alignItems: "baseline",
                       justifyContent: "space-between",
                       marginTop: 16,
-                      borderTop: "1px solid rgba(32,30,29,.16)",
+                      borderTop: "1px solid rgba(32,30,29,.14)",
                       paddingTop: 14,
                     }}
                   >
@@ -939,23 +1081,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ NEWS ═══ */}
-      <section style={{ borderBottom: "1px solid rgba(32,30,29,.16)" }}>
+      {/* ═══ SPONSOR LOGOS ═══ */}
+      <section>
         <div
           style={{
             maxWidth: 1280,
             margin: "0 auto",
-            padding: "88px clamp(16px,3vw,40px)",
+            padding: "60px clamp(16px,3vw,40px) 72px",
           }}
         >
           <div
             className="scroll-reveal-x"
             style={{
               display: "flex",
-              alignItems: "baseline",
+              alignItems: "center",
               gap: 20,
               flexWrap: "wrap" as const,
-              marginBottom: 12,
+              marginBottom: 30,
             }}
           >
             <span
@@ -963,100 +1105,23 @@ export default function HomePage() {
                 fontSize: 11,
                 letterSpacing: ".22em",
                 textTransform: "uppercase" as const,
-                color: "#0088b0",
+                color: "#605d5d",
                 flex: "none",
               }}
             >
-              Berita terbaru
+              Didukung oleh
             </span>
             <span
+              className="scroll-hairline"
               style={{
                 flex: 1,
+                minWidth: 20,
                 height: 1,
-                background: "rgba(32,30,29,.16)",
+                background: "rgba(32,30,29,.14)",
               }}
             />
-            <Link
-              href="/berita"
-              style={{
-                fontSize: 11,
-                letterSpacing: ".16em",
-                textTransform: "uppercase" as const,
-                flex: "none",
-                marginLeft: "auto",
-                color: "#201e1d",
-              }}
-            >
-              Semua berita &rarr;
-            </Link>
           </div>
-          <div className="home-desktop-cards">
-          {latest.map((a) => (
-            <Link
-              key={a.slug}
-              href={`/berita/${a.slug}`}
-              className="beranda-news-row scroll-reveal-x"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "120px minmax(0,1fr) 150px",
-                gap: 28,
-                alignItems: "center",
-                padding: "26px 0",
-              }}
-            >
-              <span
-                className="news-row-grid"
-                style={{
-                  fontSize: "10.5px",
-                  letterSpacing: ".16em",
-                  textTransform: "uppercase" as const,
-                  color: "#605d5d",
-                }}
-              >
-                {a.date}
-              </span>
-              <span style={{ display: "grid", gap: 7 }}>
-                <span
-                  style={{
-                    fontSize: 23,
-                    fontWeight: 600,
-                    lineHeight: 1.24,
-                    letterSpacing: "-.015em",
-                  }}
-                >
-                  {a.title}
-                </span>
-                <span
-                  style={{
-                    fontSize: 14,
-                    lineHeight: 1.55,
-                    color: "#605d5d",
-                    maxWidth: "72ch",
-                  }}
-                >
-                  {a.excerpt}
-                </span>
-              </span>
-              <span
-                className="news-row-cat"
-                style={{
-                  fontSize: "10.5px",
-                  letterSpacing: ".14em",
-                  textTransform: "uppercase" as const,
-                  justifySelf: "end",
-                  border: "1px solid rgba(32,30,29,.35)",
-                  padding: "5px 11px",
-                  borderRadius: 2,
-                }}
-              >
-                {a.category}
-              </span>
-            </Link>
-          ))}
-          </div>
-          <div className="home-mobile-carousel">
-            <HomeCarousels type="news" />
-          </div>
+          <SponsorStrip />
         </div>
       </section>
     </div>

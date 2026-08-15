@@ -10,14 +10,14 @@ interface Props {
   type: "departments" | "products" | "news";
 }
 
-const LINE = "1px solid rgba(32,30,29,.16)";
-const PLATES = ["#d7d3d3", "#cbeeff", "#ffdee6", "#444141"];
+const LINE = "1px solid rgba(32,30,29,.14)";
+const PLATES = ["#c2c4ad", "#dfe3d0", "#e0dede", "#626b3f"];
 
 const BADGE_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
-  green: { bg: "#0088b0", fg: "#f3f2f2", short: "Tersedia" },
-  yellow: { bg: "#edbb00", fg: "#201e1d", short: "Pre-Order" },
-  red: { bg: "#aa0b56", fg: "#f3f2f2", short: "Ditutup" },
-  gray: { bg: "#7d7979", fg: "#f3f2f2", short: "Habis" },
+  green: { bg: "#7a8450", fg: "#ffffff", short: "Tersedia" },
+  yellow: { bg: "#ffd985", fg: "#201e1d", short: "Pre-Order" },
+  red: { bg: "#626b3f", fg: "#ffffff", short: "Ditutup" },
+  gray: { bg: "#605d5d", fg: "#ffffff", short: "Habis" },
 };
 
 export default function HomeCarousels({ type }: Props) {
@@ -40,7 +40,7 @@ export default function HomeCarousels({ type }: Props) {
                 height: "100%",
                 border: LINE,
                 borderRadius: 2,
-                background: "#f3f2f2",
+                background: "#ffffff",
                 padding: 18,
               }}
             >
@@ -53,7 +53,7 @@ export default function HomeCarousels({ type }: Props) {
                     border: LINE,
                     borderRadius: 2,
                     background: "#fff",
-                    color: "#0088b0",
+                    color: "#7a8450",
                     display: "grid",
                     placeItems: "center",
                   }}
@@ -84,7 +84,7 @@ export default function HomeCarousels({ type }: Props) {
                   fontSize: "10px",
                   letterSpacing: ".14em",
                   textTransform: "uppercase",
-                  color: "#0088b0",
+                  color: "#7a8450",
                 }}
               >
                 {activeCount} pengurus aktif
@@ -113,7 +113,7 @@ export default function HomeCarousels({ type }: Props) {
                 border: LINE,
                 borderRadius: 2,
                 overflow: "hidden",
-                background: "#f3f2f2",
+                background: "#ffffff",
               }}
             >
               <span
@@ -122,7 +122,7 @@ export default function HomeCarousels({ type }: Props) {
                   display: "grid",
                   placeItems: "center",
                   aspectRatio: "4/3",
-                  background: PLATES[i] ?? "#d7d3d3",
+                  background: PLATES[i] ?? "#c2c4ad",
                   borderBottom: LINE,
                   overflow: "hidden",
                 }}
@@ -131,7 +131,7 @@ export default function HomeCarousels({ type }: Props) {
                   style={{
                     fontSize: 60,
                     fontWeight: 700,
-                    color: "rgba(32,30,29,.16)",
+                    color: "rgba(32,30,29,.14)",
                     letterSpacing: "-.04em",
                   }}
                 >
@@ -216,7 +216,7 @@ export default function HomeCarousels({ type }: Props) {
               height: "100%",
               border: LINE,
               borderRadius: 2,
-              background: "#f3f2f2",
+              background: "#ffffff",
               padding: "18px 18px 20px",
             }}
           >
@@ -226,7 +226,7 @@ export default function HomeCarousels({ type }: Props) {
                   fontSize: "9.5px",
                   letterSpacing: ".14em",
                   textTransform: "uppercase",
-                  border: "1px solid rgba(32,30,29,.35)",
+                  border: "1px solid rgba(32,30,29,.3)",
                   padding: "4px 8px",
                   borderRadius: 2,
                   color: "#201e1d",

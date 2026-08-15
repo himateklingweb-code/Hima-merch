@@ -18,7 +18,7 @@ export default function BeritaPage() {
   return (
     <div
       style={{
-        background: "#f3f2f2",
+        background: "#ffffff",
         minHeight: "100vh",
       }}
     >
@@ -37,7 +37,7 @@ export default function BeritaPage() {
               fontSize: 11,
               letterSpacing: ".22em",
               textTransform: "uppercase",
-              color: "#0088b0",
+              color: "#7a8450",
             }}
           >
             Berita &amp; Kegiatan
@@ -109,7 +109,7 @@ export default function BeritaPage() {
                     display: "grid",
                     placeItems: "center",
                     fontSize: 48,
-                    color: "rgba(32,30,29,.16)",
+                    color: "rgba(32,30,29,.14)",
                     fontWeight: 700,
                   }}
                 >
@@ -134,8 +134,8 @@ export default function BeritaPage() {
                     fontSize: "9.5px",
                     letterSpacing: ".16em",
                     textTransform: "uppercase",
-                    background: "#0088b0",
-                    color: "#f3f2f2",
+                    background: "#7a8450",
+                    color: "#ffffff",
                     padding: "4px 10px",
                     borderRadius: 2,
                   }}
@@ -217,7 +217,7 @@ export default function BeritaPage() {
                   background: "#e0dede",
                   position: "relative",
                   overflow: "hidden",
-                  borderBottom: "1px solid rgba(32,30,29,.16)",
+                  borderBottom: "1px solid rgba(32,30,29,.14)",
                 }}
               >
                 {article.image && article.image !== "/placeholder-news.png" ? (
@@ -240,7 +240,7 @@ export default function BeritaPage() {
                       display: "grid",
                       placeItems: "center",
                       fontSize: 36,
-                      color: "rgba(32,30,29,.16)",
+                      color: "rgba(32,30,29,.14)",
                       fontWeight: 700,
                     }}
                   >
