@@ -171,68 +171,6 @@ export default function HomePage() {
           }}
         />
 
-        {/* Meta bar */}
-        <div
-          className="hero-meta"
-          style={{
-            position: "relative",
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "20px clamp(16px,3vw,40px) 0",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              fontSize: "10.5px",
-              letterSpacing: ".2em",
-              textTransform: "uppercase" as const,
-              color: "#605d5d",
-              borderBottom: "1px solid rgba(32,30,29,.14)",
-              paddingBottom: 12,
-              animation: "reveal .7s ease-out both",
-              flexWrap: "wrap" as const,
-            }}
-          >
-            <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                color: "#201e1d",
-              }}
-            >
-              <span
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: "#626b3f",
-                  animation:
-                    "blink calc(1.6s * var(--mo,1)) steps(1,end) infinite",
-                }}
-              />
-              Pre-order dibuka
-            </span>
-            <span
-              className="hero-divider scroll-hairline"
-              style={{
-                flex: 1,
-                minWidth: 20,
-                height: 1,
-                background: "rgba(32,30,29,.14)",
-              }}
-            />
-            <span>hima.tekniklingkungan.com</span>
-            <span style={{ color: "rgba(32,30,29,.3)" }}>/</span>
-            <span>Edisi 2025 / 2026</span>
-            <span style={{ color: "rgba(32,30,29,.3)" }}>/</span>
-            <span>Pontianak, Kalimantan Barat</span>
-          </div>
-        </div>
-
         {/* Hero grid */}
         <div
           className="hero-grid"

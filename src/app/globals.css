@@ -568,7 +568,7 @@ body::before {
   }
   .hero-figure { display: none !important; }
   /* Lift the hero's own content above the photo layer. */
-  .hero-meta, .hero-grid, .hero-cue { position: relative; z-index: 1; }
+  .hero-grid, .hero-cue { position: relative; z-index: 1; }
 }
 
 /* Embla clips at its padding box, so a card that lifts on hover loses its
