@@ -426,6 +426,38 @@ body::before {
 .site-nav-cta { background: var(--olive); color: #ffffff; transition: transform .2s, background .2s; }
 .site-nav-cta:hover { background: var(--olive-deep); transform: translateY(-2px); }
 
+/* Basket button. Stays visible at every width — unlike the nav links it
+   is not something you should have to open a menu to find. */
+.site-nav-cart {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--nav-line);
+  border-radius: 2px;
+  color: var(--nav-fg);
+  transition: background .22s, color .22s, border-color .35s ease;
+}
+.site-nav-cart:hover { background: var(--nav-fg); color: var(--nav-solid); }
+.site-nav-cart-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--olive);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-feature-settings: "tnum";
+}
+
 .site-nav-panel {
   background: var(--nav-solid);
   border-top: 1px solid var(--nav-line);
@@ -549,6 +581,17 @@ body::before {
   padding-bottom: 22px;
   margin-top: -8px;
   margin-bottom: -22px;
+}
+
+/* Profile block: statement beside the facts, stacking on narrow screens. */
+.profil-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .profil-grid { grid-template-columns: 1fr; }
 }
 
 /* ── Mitra ad cards + sponsor logo strip ── */

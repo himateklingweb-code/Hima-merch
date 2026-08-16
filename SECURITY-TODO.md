@@ -141,5 +141,31 @@ These require no backend and can be applied to the current demo:
 
 ---
 
+## Supabase orders — open read policy (added with checkout)
+
+`supabase/schema.sql` creates `orders` and `order_items` with RLS on.
+Inserts are open by design: students place orders without logging in.
+
+**Reads are currently open to the anon key too, and that must change
+before real orders flow through this.** Two callers need them today —
+`/pesanan/cek` (a buyer looking up their own code) and `/admin/pesanan`
+(staff listing everything) — and the dashboard still authenticates with
+the `sessionStorage` demo, so there is no Supabase identity to scope a
+policy to. As it stands, anyone holding the anon key (which ships to the
+browser) can read every order, including buyer names, phone numbers and
+addresses.
+
+- [ ] **P0** Move the admin login to Supabase Auth
+- [ ] **P0** Replace `"anyone can read orders"` with a policy limited to
+      authenticated staff
+- [ ] **P0** Expose buyer lookup through an RPC that takes the order code
+      and returns only that row, so `/pesanan/cek` never needs table-wide
+      select
+- [ ] **P1** Rate-limit order creation — insert is currently unbounded
+- [ ] **P1** Validate `unit_price`/`subtotal` server-side; they are sent
+      from the browser and could be tampered with
+
+---
+
 *Last audited: 2026-08-14*
 *Auditor: Automated security review*

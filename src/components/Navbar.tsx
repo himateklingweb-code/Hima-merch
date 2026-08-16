@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShoppingBag } from "lucide-react";
+import { useCart } from "./CartContext";
 
 const navLinks = [
   { href: "/", label: "Beranda", key: "beranda" },
@@ -19,6 +20,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+  const { itemCount } = useCart();
 
   const activeKey =
     navLinks.find((l) => l.href === pathname)?.key || "";
@@ -197,21 +199,21 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* CTA */}
+        {/* Basket — sits outside the hamburger so it stays reachable at
+            every width, and only draws attention once it has something. */}
         <Link
-          href="/merchandise"
-          className="site-nav-cta"
-          style={{
-            flexShrink: 0,
-            whiteSpace: "nowrap",
-            padding: "9px clamp(12px,1.4vw,18px)",
-            borderRadius: 2,
-            fontSize: "12.5px",
-            letterSpacing: ".06em",
-            textTransform: "uppercase",
-          }}
+          href="/keranjang"
+          className="site-nav-cart"
+          aria-label={
+            itemCount > 0
+              ? `Keranjang, ${itemCount} item`
+              : "Keranjang belanja"
+          }
         >
-          Pesan Merch
+          <ShoppingBag size={17} strokeWidth={1.9} />
+          {itemCount > 0 && (
+            <span className="site-nav-cart-count">{itemCount}</span>
+          )}
         </Link>
       </div>
 

@@ -2,24 +2,27 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getProductBadge, formatPrice, type Product } from "@/data/products";
-import { ArrowLeft, ShoppingBag, MessageCircle, Clock } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Check, Clock } from "lucide-react";
+import { useCart } from "@/components/CartContext";
 
 /**
  * Interactive half of the product page. The surrounding server component
  * resolves the product and its meta tags, so this only owns the bits that
- * need state: quantity, variant, and the WhatsApp order draft.
+ * need state: quantity, variant, and adding to the basket.
+ *
+ * Ordering goes through the cart now rather than straight to WhatsApp, so
+ * several products can be bought in one message.
  */
 export default function ProductDetail({ product }: { product: Product }) {
+  const { add } = useCart();
+  const router = useRouter();
   const [qty, setQty] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(
     product.variants?.options[0] ?? null
   );
-  // Fixed for the life of the page — deriving it during render would hand
-  // the reader a different order code on every re-render.
-  const [orderCode] = useState(
-    () => `ORD-DEMO-${Date.now().toString(36).toUpperCase()}`
-  );
+  const [added, setAdded] = useState(false);
 
   const badge = getProductBadge(product);
   const BadgeIcon = badge.icon;
@@ -29,15 +32,15 @@ export default function ProductDetail({ product }: { product: Product }) {
     : product.stock - product.stock_reserved;
   const canOrder = available > 0 && (!isPreOrder || (product.po_deadline && new Date(product.po_deadline) > new Date()));
 
-  const waMessage = encodeURIComponent(
-    `Halo, saya ingin ${isPreOrder ? "ikut Pre-Order" : "memesan"}:\n\n` +
-      `Produk: ${product.name}\n` +
-      (selectedVariant ? `Varian: ${selectedVariant}\n` : "") +
-      `Jumlah: ${qty}\n` +
-      `Tipe: ${isPreOrder ? "Pre-Order" : "Ready Stock"}\n` +
-      `Total: ${formatPrice(product.price * qty)}\n\n` +
-      `Kode Pesanan: ${orderCode}`
-  );
+  const handleAdd = (goToCart: boolean) => {
+    add(product, selectedVariant, qty);
+    if (goToCart) {
+      router.push("/keranjang");
+      return;
+    }
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1800);
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-12 lg:py-16">
@@ -185,16 +188,31 @@ export default function ProductDetail({ product }: { product: Product }) {
           </div>
 
           {canOrder ? (
-            <a
-              href={`https://wa.me/6281234567890?text=${waMessage}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold px-5 py-3 sm:py-3.5 rounded-xl text-sm sm:w-full active:bg-emerald-700 transition-colors"
-            >
-              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="sm:hidden">{isPreOrder ? "Ikut PO" : "Pesan"}</span>
-              <span className="hidden sm:inline">{isPreOrder ? "Ikut Pre-Order via WhatsApp" : "Pesan Langsung via WhatsApp"}</span>
-            </a>
+            <div className="flex flex-1 gap-2 sm:flex-col sm:gap-2.5">
+              <button
+                onClick={() => handleAdd(true)}
+                className="inline-flex flex-1 items-center justify-center gap-2 bg-emerald-600 text-white font-semibold px-5 py-3 sm:py-3.5 rounded-xl text-sm sm:w-full active:bg-emerald-700 transition-colors"
+              >
+                <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="sm:hidden">{isPreOrder ? "Ikut PO" : "Pesan"}</span>
+                <span className="hidden sm:inline">
+                  {isPreOrder ? "Ikut Pre-Order sekarang" : "Pesan sekarang"}
+                </span>
+              </button>
+              <button
+                onClick={() => handleAdd(false)}
+                className="inline-flex items-center justify-center gap-2 border border-emerald-600 text-emerald-700 font-semibold px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl text-sm sm:w-full hover:bg-emerald-50 transition-colors"
+              >
+                {added ? (
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                ) : (
+                  <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
+                )}
+                <span className="hidden sm:inline">
+                  {added ? "Masuk keranjang" : "Tambah ke keranjang"}
+                </span>
+              </button>
+            </div>
           ) : (
             <button
               disabled
@@ -205,7 +223,7 @@ export default function ProductDetail({ product }: { product: Product }) {
           )}
         </div>
         <p className="text-[10px] sm:text-xs text-gray-400 mt-1.5 text-center hidden sm:block">
-          Pesanan diproses via WhatsApp. Stok direservasi 60 menit setelah pesan.
+          Checkout lewat keranjang, lalu ringkasan pesanan dikirim ke WhatsApp kasir.
         </p>
       </div>
 

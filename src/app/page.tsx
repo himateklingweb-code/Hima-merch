@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { articles } from "@/data/news";
+import { departments } from "@/data/departments";
 import { products, formatPrice } from "@/data/products";
 import { getHomeStats } from "@/data/site";
 import StatsCounter from "@/components/StatsCounter";
@@ -731,6 +732,281 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ═══ PROFIL HIMA ═══ */}
+      <section
+        style={{
+          borderBottom: "1px solid rgba(32,30,29,.14)",
+          background: "#f4f4f4",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            padding: "88px clamp(16px,3vw,40px)",
+          }}
+        >
+          <div
+            className="scroll-reveal-x"
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 20,
+              flexWrap: "wrap" as const,
+              marginBottom: 40,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                letterSpacing: ".22em",
+                textTransform: "uppercase" as const,
+                color: "#7a8450",
+                flex: "none",
+              }}
+            >
+              Tentang kami
+            </span>
+            <span
+              style={{ flex: 1, height: 1, background: "rgba(32,30,29,.14)" }}
+            />
+            <Link
+              href="/tentang"
+              className="link-underline"
+              style={{
+                fontSize: 11,
+                letterSpacing: ".16em",
+                textTransform: "uppercase" as const,
+                flex: "none",
+                marginLeft: "auto",
+                color: "#201e1d",
+              }}
+            >
+              Profil lengkap &rarr;
+            </Link>
+          </div>
+
+          <div className="profil-grid">
+            <div>
+              <h2
+                className="scroll-reveal"
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(30px,4vw,52px)",
+                  lineHeight: 1.04,
+                  fontWeight: 700,
+                  letterSpacing: "-.03em",
+                }}
+              >
+                Wadah mahasiswa
+                <br />
+                <span
+                  style={{
+                    color: "transparent",
+                    WebkitTextStroke: "1.2px #201e1d",
+                  } as React.CSSProperties}
+                >
+                  Teknik Lingkungan
+                </span>
+              </h2>
+              <p
+                className="scroll-reveal"
+                style={{
+                  margin: "24px 0 0",
+                  fontSize: 17,
+                  lineHeight: 1.6,
+                  color: "#605d5d",
+                  maxWidth: "52ch",
+                }}
+              >
+                HIMA TL UNTAN menaungi aspirasi, pengembangan diri, dan
+                kontribusi nyata mahasiswa Teknik Lingkungan bagi masyarakat
+                Kalimantan Barat — lewat kajian, aksi lapangan, dan kolaborasi
+                lintas lembaga.
+              </p>
+            </div>
+
+            <div style={{ display: "grid", gap: 16 }}>
+              {[
+                {
+                  k: "Visi",
+                  v: "Organisasi progresif dan inovatif yang berdedikasi mengembangkan potensi mahasiswa serta berkontribusi nyata bagi lingkungan.",
+                },
+                {
+                  k: "Fokus kerja",
+                  v: "Kajian keilmuan, aksi lingkungan, kaderisasi, kewirausahaan, dan hubungan eksternal.",
+                },
+                {
+                  k: "Wilayah",
+                  v: "Fakultas Teknik, Universitas Tanjungpura — Pontianak, Kalimantan Barat.",
+                },
+              ].map((row, i) => (
+                <div
+                  key={row.k}
+                  className="scroll-rise"
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid rgba(32,30,29,.14)",
+                    borderRadius: 2,
+                    padding: "20px 22px",
+                    "--cover": `${30 + i * 3}%`,
+                  } as React.CSSProperties}
+                >
+                  <div
+                    style={{
+                      fontSize: "10.5px",
+                      letterSpacing: ".2em",
+                      textTransform: "uppercase" as const,
+                      color: "#7a8450",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {row.k}
+                  </div>
+                  <div
+                    style={{ fontSize: "14.5px", lineHeight: 1.6, color: "#201e1d" }}
+                  >
+                    {row.v}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ DEPARTEMEN ═══ */}
+      <section style={{ borderBottom: "1px solid rgba(32,30,29,.14)" }}>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto",
+            padding: "88px clamp(16px,3vw,40px)",
+          }}
+        >
+          <div
+            className="scroll-reveal-x"
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 20,
+              flexWrap: "wrap" as const,
+              marginBottom: 40,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                letterSpacing: ".22em",
+                textTransform: "uppercase" as const,
+                color: "#7a8450",
+                flex: "none",
+              }}
+            >
+              Struktur kepengurusan
+            </span>
+            <span
+              style={{ flex: 1, height: 1, background: "rgba(32,30,29,.14)" }}
+            />
+            <Link
+              href="/departemen"
+              className="link-underline"
+              style={{
+                fontSize: 11,
+                letterSpacing: ".16em",
+                textTransform: "uppercase" as const,
+                flex: "none",
+                marginLeft: "auto",
+                color: "#201e1d",
+              }}
+            >
+              Semua departemen &rarr;
+            </Link>
+          </div>
+
+          <div
+            className="home-desktop-cards"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))",
+              gap: 20,
+            }}
+          >
+            {departments.map((dept, i) => {
+              const Icon = dept.icon;
+              const activeCount =
+                dept.periods.find((p) => p.is_active)?.members.length ?? 0;
+              return (
+                <Link
+                  key={dept.id}
+                  href={`/departemen/${dept.slug}`}
+                  className="beranda-quick-card scroll-rise"
+                  style={{
+                    display: "grid",
+                    gap: 12,
+                    padding: "26px 24px",
+                    borderRadius: 2,
+                    alignContent: "start",
+                    "--cover": `${28 + i * 2}%`,
+                  } as React.CSSProperties}
+                >
+                  <span
+                    style={{
+                      width: 40,
+                      height: 40,
+                      border: "1px solid rgba(32,30,29,.14)",
+                      borderRadius: 2,
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#7a8450",
+                    }}
+                  >
+                    <Icon size={20} strokeWidth={1.75} />
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 700,
+                      letterSpacing: "-.02em",
+                      lineHeight: 1.15,
+                    }}
+                  >
+                    {dept.name}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "13.5px",
+                      lineHeight: 1.55,
+                      color: "#605d5d",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    } as React.CSSProperties}
+                  >
+                    {dept.description}
+                  </span>
+                  <span
+                    style={{
+                      marginTop: 4,
+                      fontSize: "10px",
+                      letterSpacing: ".14em",
+                      textTransform: "uppercase" as const,
+                      color: "#7a8450",
+                    }}
+                  >
+                    {activeCount} pengurus aktif
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+          <div className="home-mobile-carousel">
+            <HomeCarousels type="departments" />
+          </div>
+        </div>
+      </section>
+
       {/* ═══ MITRA ADS ═══ */}
       <section
         style={{
@@ -792,118 +1068,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══ QUICK LINKS ═══ */}
-      <section style={{ borderBottom: "1px solid rgba(32,30,29,.14)" }}>
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "88px clamp(16px,3vw,40px)",
-          }}
-        >
-          <div
-            className="scroll-reveal-x"
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 20,
-              flexWrap: "wrap" as const,
-              marginBottom: 40,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: ".22em",
-                textTransform: "uppercase" as const,
-                color: "#7a8450",
-                flex: "none",
-              }}
-            >
-              Mulai dari sini
-            </span>
-            <span
-              style={{
-                flex: 1,
-                height: 1,
-                background: "rgba(32,30,29,.14)",
-              }}
-            />
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
-              gap: 20,
-            }}
-          >
-            {[
-              {
-                href: "/merchandise",
-                no: "01",
-                title: "Pesan merchandise",
-                desc: "Etalase dengan filter ready stock dan pre-order, lengkap dengan kuota batch.",
-              },
-              {
-                href: "/pesanan/cek",
-                no: "02",
-                title: "Lacak pesanan",
-                desc: "Masukkan kode pesanan, lihat status pembayaran dan verifikasi kasir.",
-              },
-              {
-                href: "/departemen",
-                no: "03",
-                title: "Kenali pengurus",
-                desc: "Bagan enam departemen beserta arsip kepengurusan periode sebelumnya.",
-              },
-            ].map((card, i) => (
-              <Link
-                key={card.no}
-                href={card.href}
-                className="beranda-quick-card scroll-rise"
-                style={{
-                  display: "grid",
-                  gap: 12,
-                  padding: "30px 28px",
-                  borderRadius: 2,
-                  "--cover": `${30 + i * 3}%`,
-                } as React.CSSProperties}
-              >
-                <span
-                  style={{
-                    fontSize: "10.5px",
-                    letterSpacing: ".2em",
-                    textTransform: "uppercase" as const,
-                    color: "#605d5d",
-                  }}
-                >
-                  {card.no}
-                </span>
-                <span
-                  style={{
-                    fontSize: 26,
-                    fontWeight: 700,
-                    letterSpacing: "-.02em",
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {card.title}
-                </span>
-                <span
-                  style={{
-                    fontSize: "14.5px",
-                    lineHeight: 1.55,
-                    color: "#605d5d",
-                  }}
-                >
-                  {card.desc}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ═══ MERCHANDISE ═══ */}
       <section
         style={{
@@ -937,7 +1101,7 @@ export default function HomePage() {
                 flex: "none",
               }}
             >
-              Merchandise unggulan
+              Merchandise &middot; penunjang kegiatan
             </span>
             <span
               style={{
