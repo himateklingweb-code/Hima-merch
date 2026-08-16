@@ -58,7 +58,7 @@ export default function StatsCounter({ targets }: { targets: Target[] }) {
       style={{
         maxWidth: 1280,
         margin: "0 auto",
-        padding: "54px clamp(16px,3vw,40px)",
+        padding: "clamp(28px,6vw,54px) clamp(16px,3vw,40px)",
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
         gap: 2,
@@ -69,7 +69,7 @@ export default function StatsCounter({ targets }: { targets: Target[] }) {
           key={t.key}
           className="scroll-reveal"
           style={{
-            padding: "0 26px",
+            padding: "0 clamp(12px,3.5vw,26px)",
             borderRight:
               i < targets.length - 1
                 ? "1px solid rgba(32,30,29,.14)"
@@ -79,7 +79,7 @@ export default function StatsCounter({ targets }: { targets: Target[] }) {
         >
           <div
             style={{
-              fontSize: "clamp(40px,4.4vw,64px)",
+              fontSize: "clamp(26px,7vw,64px)",
               lineHeight: 1,
               fontWeight: 700,
               letterSpacing: "-.03em",

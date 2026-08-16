@@ -14,7 +14,8 @@ export default function MerchandisePage() {
       <div className="max-w-2xl mb-5 sm:mb-10">
         <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Merchandise</h1>
         <p className="text-gray-500 mt-1 sm:mt-3 text-sm sm:text-lg">
-          Koleksi merchandise resmi HIMA TL UNTAN. Pesan via WhatsApp.
+          Koleksi merchandise resmi HIMA TL UNTAN. Masukkan ke keranjang,
+          checkout dikonfirmasi lewat WhatsApp kasir.
         </p>
       </div>
 

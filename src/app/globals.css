@@ -519,6 +519,27 @@ body::before {
 @media (min-width: 1080px) {
   .nav-mobile-toggle { display: none !important; }
 }
+/* ── Navbar on small screens ─────────────────────────────────────────
+   At 375px the bar has to hold the mark, the name, a menu button and the
+   basket. Dropping the subtitle and the "Menu" word buys back the ~90px
+   that was pushing the organisation's name into an ellipsis. ── */
+@media (max-width: 520px) {
+  .site-nav-sub { display: none !important; }
+  .site-nav-title { font-size: 13.5px !important; }
+}
+@media (max-width: 420px) {
+  .site-nav-toggle-label { display: none; }
+  .site-nav-toggle { padding: 9px 11px !important; }
+}
+
+/* Four counters read as a 2×2 block on a phone rather than a long column. */
+@media (max-width: 767px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 20px 2px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .hero-grid { grid-template-columns: 1fr !important; }
   .hero-desc { grid-template-columns: 1fr !important; }
@@ -581,6 +602,25 @@ body::before {
   padding-bottom: 22px;
   margin-top: -8px;
   margin-bottom: -22px;
+}
+
+/* ── Section rhythm ──────────────────────────────────────────────────
+   One place to set the gutter every homepage section shares. The desktop
+   88px band is far too tall on a phone — it alone added roughly a screen
+   and a half of empty space — so it nearly halves below 768px. ── */
+.section-pad {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 88px clamp(16px, 3vw, 40px);
+}
+.section-pad-tight {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 60px clamp(16px, 3vw, 40px) 72px;
+}
+@media (max-width: 767px) {
+  .section-pad { padding: 40px 16px; }
+  .section-pad-tight { padding: 32px 16px 40px; }
 }
 
 /* Profile block: statement beside the facts, stacking on narrow screens. */

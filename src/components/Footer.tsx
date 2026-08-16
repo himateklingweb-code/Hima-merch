@@ -42,7 +42,7 @@ export default function Footer() {
         style={{
           maxWidth: 1280,
           margin: "0 auto",
-          padding: "80px clamp(16px,3vw,40px) 40px",
+          padding: "clamp(44px,8vw,80px) clamp(16px,3vw,40px) 36px",
         }}
       >
         <div
@@ -60,7 +60,7 @@ export default function Footer() {
               className="scroll-reveal"
               style={{
                 margin: 0,
-                fontSize: "clamp(34px,4.8vw,68px)",
+                fontSize: "clamp(26px,7vw,68px)",
                 lineHeight: 0.98,
                 fontWeight: 700,
                 letterSpacing: "-.035em",
@@ -80,7 +80,7 @@ export default function Footer() {
             <p
               style={{
                 margin: "24px 0 0",
-                fontSize: "16.5px",
+                fontSize: "clamp(14px,3.5vw,16.5px)",
                 lineHeight: 1.6,
                 color: "rgba(255,255,255,.72)",
                 maxWidth: "44ch",

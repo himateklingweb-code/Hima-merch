@@ -69,7 +69,7 @@ export default function CartPage() {
             {lines.map((line) => (
               <div
                 key={line.key}
-                className="flex flex-wrap items-start gap-4 border-b border-gray-100 p-4 last:border-b-0 sm:p-5"
+                className="flex flex-wrap items-start gap-x-4 gap-y-3 border-b border-gray-100 p-4 last:border-b-0 sm:p-5"
               >
                 <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-300">
                   <ShoppingBag className="h-6 w-6" />
@@ -105,7 +105,9 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                {/* Controls take their own row on a phone — inline they
+                    squeeze the product name down to one word per line. */}
+                <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
                   <div className="inline-flex items-center rounded-lg border border-gray-200">
                     <button
                       onClick={() => setQty(line.key, line.qty - 1)}
@@ -126,6 +128,11 @@ export default function CartPage() {
                       +
                     </button>
                   </div>
+
+                  <span className="font-semibold text-gray-900 sm:min-w-[110px] sm:text-right">
+                    {formatPrice(line.qty * line.unit_price)}
+                  </span>
+
                   <button
                     onClick={() => remove(line.key)}
                     className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-red-600"
@@ -133,10 +140,6 @@ export default function CartPage() {
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
-                </div>
-
-                <div className="w-full text-right font-semibold text-gray-900 sm:w-auto sm:min-w-[110px]">
-                  {formatPrice(line.qty * line.unit_price)}
                 </div>
               </div>
             ))}

@@ -195,7 +195,7 @@ export default function Navbar() {
             ) : (
               <Menu size={15} strokeWidth={2} />
             )}
-            Menu
+            <span className="site-nav-toggle-label">Menu</span>
           </button>
         </div>
 

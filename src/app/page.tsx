@@ -178,7 +178,7 @@ export default function HomePage() {
             position: "relative",
             maxWidth: 1280,
             margin: "0 auto",
-            padding: "48px clamp(16px,3vw,40px) 0",
+            padding: "clamp(22px,6vw,48px) clamp(16px,3vw,40px) 0",
             display: "grid",
             gridTemplateColumns: "minmax(0,1.32fr) minmax(0,.85fr)",
             gap: "clamp(28px,4vw,56px)",
@@ -202,7 +202,7 @@ export default function HomePage() {
             <h1
               style={{
                 margin: 0,
-                fontSize: "clamp(48px,8vw,124px)",
+                fontSize: "clamp(38px,9.5vw,124px)",
                 lineHeight: 0.86,
                 fontWeight: 700,
                 letterSpacing: "-.035em",
@@ -270,8 +270,8 @@ export default function HomePage() {
               <p
                 style={{
                   margin: 0,
-                  fontSize: 19,
-                  lineHeight: 1.52,
+                  fontSize: "clamp(15px,3.8vw,19px)",
+                  lineHeight: 1.55,
                   maxWidth: "52ch",
                 }}
               >
@@ -296,7 +296,7 @@ export default function HomePage() {
                 href="/merchandise"
                 className="beranda-hero-cta btn-sheen"
                 style={{
-                  padding: "15px 28px",
+                  padding: "clamp(12px,3.2vw,15px) clamp(20px,5.5vw,28px)",
                   borderRadius: 2,
                   fontSize: 13,
                   letterSpacing: ".09em",
@@ -310,7 +310,7 @@ export default function HomePage() {
                 href="/departemen"
                 className="beranda-hero-outline"
                 style={{
-                  padding: "14px 26px",
+                  padding: "clamp(11px,3vw,14px) clamp(18px,5vw,26px)",
                   borderRadius: 2,
                   fontSize: 13,
                   letterSpacing: ".09em",
@@ -459,7 +459,7 @@ export default function HomePage() {
             position: "relative",
             maxWidth: 1280,
             margin: "0 auto",
-            padding: "32px 40px 26px",
+            padding: "clamp(14px,4vw,32px) 40px clamp(12px,3vw,26px)",
             display: "flex",
             justifyContent: "center",
           }}
@@ -506,7 +506,7 @@ export default function HomePage() {
             background: "#201e1d",
             color: "#ffffff",
             overflow: "hidden",
-            padding: "13px 0",
+            padding: "clamp(9px,2.4vw,13px) 0",
           }}
         >
           <div
@@ -515,7 +515,7 @@ export default function HomePage() {
               width: "max-content",
               animation:
                 "marquee calc(34s * var(--mo,1)) linear infinite",
-              fontSize: "12.5px",
+              fontSize: "clamp(10.5px,2.6vw,12.5px)",
               letterSpacing: ".14em",
               textTransform: "uppercase" as const,
             }}
@@ -550,13 +550,7 @@ export default function HomePage() {
 
       {/* ═══ NEWS ═══ */}
       <section style={{ borderBottom: "1px solid rgba(32,30,29,.14)" }}>
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "88px clamp(16px,3vw,40px)",
-          }}
-        >
+        <div className="section-pad">
           <div
             className="scroll-reveal-x"
             style={{
@@ -628,9 +622,9 @@ export default function HomePage() {
               <span style={{ display: "grid", gap: 7 }}>
                 <span
                   style={{
-                    fontSize: 23,
+                    fontSize: "clamp(17px,4.4vw,23px)",
                     fontWeight: 600,
-                    lineHeight: 1.24,
+                    lineHeight: 1.28,
                     letterSpacing: "-.015em",
                   }}
                 >
@@ -677,13 +671,7 @@ export default function HomePage() {
           background: "#f4f4f4",
         }}
       >
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "88px clamp(16px,3vw,40px)",
-          }}
-        >
+        <div className="section-pad">
           <div
             className="scroll-reveal-x"
             style={{
@@ -691,7 +679,7 @@ export default function HomePage() {
               alignItems: "baseline",
               gap: 20,
               flexWrap: "wrap" as const,
-              marginBottom: 40,
+              marginBottom: "clamp(22px,5vw,40px)",
             }}
           >
             <span
@@ -730,7 +718,7 @@ export default function HomePage() {
                 className="scroll-reveal"
                 style={{
                   margin: 0,
-                  fontSize: "clamp(30px,4vw,52px)",
+                  fontSize: "clamp(23px,5.6vw,52px)",
                   lineHeight: 1.04,
                   fontWeight: 700,
                   letterSpacing: "-.03em",
@@ -751,7 +739,7 @@ export default function HomePage() {
                 className="scroll-reveal"
                 style={{
                   margin: "24px 0 0",
-                  fontSize: 17,
+                  fontSize: "clamp(14px,3.5vw,17px)",
                   lineHeight: 1.6,
                   color: "#605d5d",
                   maxWidth: "52ch",
@@ -786,7 +774,7 @@ export default function HomePage() {
                     background: "#ffffff",
                     border: "1px solid rgba(32,30,29,.14)",
                     borderRadius: 2,
-                    padding: "20px 22px",
+                    padding: "clamp(16px,4vw,20px) clamp(15px,4vw,22px)",
                     "--cover": `${30 + i * 3}%`,
                   } as React.CSSProperties}
                 >
@@ -815,13 +803,7 @@ export default function HomePage() {
 
       {/* ═══ DEPARTEMEN ═══ */}
       <section style={{ borderBottom: "1px solid rgba(32,30,29,.14)" }}>
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "88px clamp(16px,3vw,40px)",
-          }}
-        >
+        <div className="section-pad">
           <div
             className="scroll-reveal-x"
             style={{
@@ -829,7 +811,7 @@ export default function HomePage() {
               alignItems: "baseline",
               gap: 20,
               flexWrap: "wrap" as const,
-              marginBottom: 40,
+              marginBottom: "clamp(22px,5vw,40px)",
             }}
           >
             <span
@@ -882,7 +864,7 @@ export default function HomePage() {
                   style={{
                     display: "grid",
                     gap: 12,
-                    padding: "26px 24px",
+                    padding: "clamp(18px,4.5vw,26px) clamp(16px,4vw,24px)",
                     borderRadius: 2,
                     alignContent: "start",
                     "--cover": `${28 + i * 2}%`,
@@ -903,7 +885,7 @@ export default function HomePage() {
                   </span>
                   <span
                     style={{
-                      fontSize: 20,
+                      fontSize: "clamp(17px,4.4vw,20px)",
                       fontWeight: 700,
                       letterSpacing: "-.02em",
                       lineHeight: 1.15,
@@ -952,13 +934,7 @@ export default function HomePage() {
           background: "#f4f4f4",
         }}
       >
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "88px clamp(16px,3vw,40px)",
-          }}
-        >
+        <div className="section-pad">
           <div
             className="scroll-reveal-x"
             style={{
@@ -966,7 +942,7 @@ export default function HomePage() {
               alignItems: "baseline",
               gap: 20,
               flexWrap: "wrap" as const,
-              marginBottom: 40,
+              marginBottom: "clamp(22px,5vw,40px)",
             }}
           >
             <span
@@ -1013,13 +989,7 @@ export default function HomePage() {
           background: "#f4f4f4",
         }}
       >
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "88px clamp(16px,3vw,40px)",
-          }}
-        >
+        <div className="section-pad">
           <div
             className="scroll-reveal-x"
             style={{
@@ -1027,7 +997,7 @@ export default function HomePage() {
               alignItems: "baseline",
               gap: 20,
               flexWrap: "wrap" as const,
-              marginBottom: 40,
+              marginBottom: "clamp(22px,5vw,40px)",
             }}
           >
             <span
@@ -1131,11 +1101,11 @@ export default function HomePage() {
                     {p.badge.label}
                   </span>
                 </span>
-                <span style={{ display: "block", padding: "20px 22px 22px" }}>
+                <span style={{ display: "block", padding: "clamp(15px,4vw,20px) clamp(15px,4vw,22px) clamp(16px,4vw,22px)" }}>
                   <span
                     style={{
                       display: "block",
-                      fontSize: 19,
+                      fontSize: "clamp(16px,4vw,19px)",
                       fontWeight: 600,
                       lineHeight: 1.24,
                     }}
@@ -1154,7 +1124,7 @@ export default function HomePage() {
                   >
                     <span
                       style={{
-                        fontSize: 21,
+                        fontSize: "clamp(17px,4.2vw,21px)",
                         fontWeight: 700,
                         letterSpacing: "-.02em",
                         fontFeatureSettings: "'tnum'",
@@ -1185,13 +1155,7 @@ export default function HomePage() {
 
       {/* ═══ SPONSOR LOGOS ═══ */}
       <section>
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "60px clamp(16px,3vw,40px) 72px",
-          }}
-        >
+        <div className="section-pad-tight">
           <div
             className="scroll-reveal-x"
             style={{
