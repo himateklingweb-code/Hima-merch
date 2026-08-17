@@ -128,7 +128,17 @@ Auth **dan (b)** punya baris di tabel `staff`. Dua-duanya wajib.
 
 ### 4b. Daftarkan sebagai pengurus
 
-**SQL Editor** → jalankan (ganti emailnya):
+Langkah ini **tidak ada passwordnya** — dan itu memang disengaja. Password
+sudah dibuat di langkah 4a lewat form Supabase. Perintah di bawah hanya
+menghubungkan akun yang sudah ada itu ke tabel `staff`, yaitu yang dicek
+oleh semua aturan keamanan.
+
+Supabase menyimpan password sebagai hash bcrypt di kolom
+`auth.users.encrypted_password`. Password asli tidak pernah disimpan dan
+tidak bisa dimasukkan lewat SQL biasa — kalau ada panduan yang menyuruh
+menulis password di dalam `insert`, itu keliru dan tidak aman.
+
+**SQL Editor** → jalankan (ganti emailnya agar cocok dengan 4a):
 
 ```sql
 insert into public.staff (id, email, full_name, role)
@@ -138,7 +148,16 @@ where email = 'kasir@himatl.com'
 on conflict (id) do nothing;
 ```
 
+Perintah itu mencari user berdasarkan email, mengambil `id`-nya, lalu
+menyalinnya ke `staff`. Kalau hasilnya `0 rows`, berarti emailnya tidak
+cocok dengan yang dibuat di 4a.
+
 `role` boleh `admin` atau `kasir`.
+
+### Lupa atau ganti password
+
+**Authentication** → **Users** → klik user → **Reset password**. Tidak perlu
+menyentuh tabel `staff`.
 
 Coba masuk lewat `/admin/login`.
 
@@ -339,7 +358,7 @@ Semua yang dulu tercatat di sini sudah selesai:
 
 | Hal | Keterangan |
 |---|---|
-| **Leaked password protection** | Belum aktif. Nyalakan di Supabase → **Authentication** → **Policies** supaya kata sandi pengurus dicek terhadap basis data kebocoran. Satu klik, sangat disarankan |
+| **Leaked password protection** | Belum aktif, dan **butuh paket Pro** — project ini masih Free, jadi belum bisa dinyalakan. Kalau nanti naik paket: **Authentication** → **Sign In / Providers** → **Email**. Sementara itu, atur panjang minimum & syarat karakter di halaman yang sama (gratis), dan pakai password manager saat membuat akun pengurus |
 | **Keywords global di `/admin/seo`** | Masih per sesi — belum dipakai di metadata mana pun |
 | **Tombol "Generate sitemap"** | Kosmetik. Sitemap sudah otomatis di `/sitemap.xml`, dibangun ulang tiap deploy |
 

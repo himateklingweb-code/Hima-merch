@@ -241,9 +241,15 @@ screenshot. Verified the key is absent from the response.
 
 ### Still open
 
-- [ ] **P1** Leaked-password protection is off in Supabase Auth. One toggle
-      under Authentication → Policies; checks staff passwords against
-      HaveIBeenPwned. Flagged by `get_advisors`.
+- [ ] **P1** Leaked-password protection is off in Supabase Auth (flagged by
+      `get_advisors`). It checks passwords against HaveIBeenPwned, and lives
+      at Authentication → Sign In / Providers → Email — *not* under
+      Database → Policies.
+      **Blocked: it requires the Pro plan and this project is on Free.**
+      Until then, the free mitigations on that same page are worth setting:
+      raise the minimum password length past 8 and require mixed character
+      classes. Staff accounts are few and created by hand, so a password
+      manager covers most of the risk.
 - [ ] **P3** The global-keywords field and the "Generate sitemap" button in
       /admin/seo are still cosmetic. The sitemap itself is real and
       automatic at `/sitemap.xml`.
