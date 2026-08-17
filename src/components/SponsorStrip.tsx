@@ -2,16 +2,16 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Carousel from "./Carousel";
-import { partners } from "@/data/partners";
 import { gdriveThumbnail } from "@/data/news";
+import type { Partner } from "@/data/partners";
 
 /**
- * The logo wall that closes the homepage — a slow, self-advancing strip
- * of every mitra and sponsor. Partners without artwork fall back to a
- * wordmark so they can be listed before a logo file exists.
+ * The logo wall that closes the homepage — a slow, self-advancing strip of
+ * every mitra and sponsor. Partners without artwork fall back to a wordmark
+ * so they can be listed before a logo file exists.
  */
-export default function SponsorStrip() {
-  if (partners.length === 0) return null;
+export default function SponsorStrip({ items }: { items: Partner[] }) {
+  if (items.length === 0) return null;
 
   return (
     <Carousel
@@ -20,7 +20,7 @@ export default function SponsorStrip() {
       autoplay={2800}
       showDots={false}
     >
-      {partners.map((partner) => {
+      {items.map((partner) => {
         const inner = partner.logo ? (
           <img src={gdriveThumbnail(partner.logo, 320)} alt={partner.name} />
         ) : (

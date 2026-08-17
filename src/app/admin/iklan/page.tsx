@@ -2,7 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
-import { ads as initialAds, Ad } from "@/data/ads";
+import { ads as seedAds, Ad } from "@/data/ads";
+import { useCollection } from "@/lib/use-collection";
+import DbStatus from "@/components/admin/DbStatus";
 import { gdriveThumbnail } from "@/data/news";
 import {
   Plus,
@@ -13,31 +15,70 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+/** Database shape. The column is `order_index`; the app type calls it `order`. */
+interface AdRow {
+  id: string;
+  name: string;
+  blurb: string;
+  logo: string | null;
+  website: string;
+  active: boolean;
+  order_index: number;
+}
+
+const toRow = (a: Ad): AdRow => ({
+  id: a.id,
+  name: a.name,
+  blurb: a.blurb,
+  logo: a.logo || null,
+  website: a.website,
+  active: a.active,
+  order_index: a.order,
+});
+
+const fromRow = (r: AdRow): Ad => ({
+  id: r.id,
+  name: r.name,
+  blurb: r.blurb ?? "",
+  logo: r.logo ?? "",
+  website: r.website,
+  active: r.active,
+  order: r.order_index,
+});
+
 export default function AdminIklanPage() {
-  const [items, setItems] = useState<Ad[]>(initialAds);
+  const {
+    items: rows,
+    loading,
+    live,
+    error,
+    saving,
+    save,
+    remove,
+  } = useCollection<AdRow>("ads", seedAds.map(toRow), {
+    orderBy: "order_index",
+    ascending: true,
+  });
+  const items: Ad[] = rows.map(fromRow);
   const [editing, setEditing] = useState<Ad | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const handleSave = (ad: Ad) => {
-    if (isNew) {
-      setItems((prev) => [...prev, ad]);
-    } else {
-      setItems((prev) => prev.map((a) => (a.id === ad.id ? ad : a)));
-    }
+  const handleSave = async (ad: Ad) => {
+    const ok = await save(toRow(ad));
+    if (!ok) return;
     setEditing(null);
     setIsNew(false);
   };
 
-  const handleDelete = (id: string) => {
-    setItems((prev) => prev.filter((a) => a.id !== id));
-    setDeleteId(null);
+  const handleDelete = async (id: string) => {
+    if (await remove(id)) setDeleteId(null);
   };
 
-  const toggleActive = (id: string) =>
-    setItems((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, active: !a.active } : a))
-    );
+  const toggleActive = async (id: string) => {
+    const ad = items.find((a) => a.id === id);
+    if (ad) await save(toRow({ ...ad, active: !ad.active }));
+  };
 
   const openNew = () => {
     setIsNew(true);
@@ -63,13 +104,16 @@ export default function AdminIklanPage() {
             Kartu iklan yang tampil di carousel beranda
           </p>
         </div>
-        <button
-          onClick={openNew}
-          className="inline-flex items-center gap-2 bg-emerald-600 text-white font-medium px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Tambah Iklan
-        </button>
+        <div className="flex items-center gap-3">
+          <DbStatus live={live} loading={loading} error={error} saving={saving} />
+          <button
+            onClick={openNew}
+            className="inline-flex items-center gap-2 bg-emerald-600 text-white font-medium px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah Iklan
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -234,7 +278,7 @@ function AdModal({
 }: {
   ad: Ad;
   isNew: boolean;
-  onSave: (a: Ad) => void;
+  onSave: (a: Ad) => void | Promise<void>;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ ...ad });

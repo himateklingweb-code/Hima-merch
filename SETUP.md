@@ -84,12 +84,17 @@ Buka <http://localhost:3000>.
 
 ### 3b. Jalankan skema database
 
-1. Buka menu **SQL Editor** → **New query**
-2. Salin **seluruh isi** file [`supabase/migrations/00000000000000_init.sql`](supabase/migrations/00000000000000_init.sql)
-3. Tempel, lalu **Run**
+Buka menu **SQL Editor** → **New query**, lalu jalankan **tiga file ini
+secara berurutan** (isi seluruhnya, satu per satu):
 
-Ini membuat tabel `products`, `orders`, `order_items`, `staff`, semua aturan
-keamanan (RLS), dan dua fungsi pemesanan. Aman dijalankan ulang.
+| Urutan | File | Isi |
+|---|---|---|
+| 1 | [`00000000000000_init.sql`](supabase/migrations/00000000000000_init.sql) | `staff`, `products`, `orders`, `order_items`, RLS, fungsi pemesanan |
+| 2 | [`00000000000001_content_tables.sql`](supabase/migrations/00000000000001_content_tables.sql) | `articles`, `departments`, `department_periods`, `department_members`, `partners`, `ads` + RLS |
+| 3 | [`00000000000002_seed_content.sql`](supabase/migrations/00000000000002_seed_content.sql) | Isi awal berita, departemen, mitra, iklan |
+
+Semuanya aman dijalankan ulang — memakai `if not exists` dan
+`on conflict do nothing`.
 
 ### 3c. Ambil kunci API
 
@@ -237,6 +242,22 @@ dikosongkan** — jadi tidak ada pesanan hantu yang terlanjur dikirim ke kasir.
 
 ## 9. Tugas rutin pengurus
 
+Semua konten di bawah ini diubah lewat dashboard `/admin` dan langsung
+tersimpan ke database. Website menyegarkan diri paling lama **1 menit**
+setelah perubahan — tidak perlu deploy ulang.
+
+| Yang diubah | Di mana |
+|---|---|
+| Berita / artikel | `/admin/berita` |
+| Pengurus departemen | `/admin/departemen` |
+| Iklan mitra di beranda | `/admin/iklan` |
+| Meta SEO produk & berita | `/admin/seo` |
+| Stok & harga produk | Supabase **Table Editor** → `products` |
+
+Setiap layar menampilkan lencana **Data live** kalau tersambung ke database.
+Kalau tertulis **Data contoh**, perubahan tidak akan tersimpan — periksa
+konfigurasi env.
+
 ### Mengubah stok / harga produk
 
 **Table Editor** → tabel `products` → edit langsung.
@@ -250,9 +271,9 @@ dikosongkan** — jadi tidak ada pesanan hantu yang terlanjur dikirim ke kasir.
 | `po_deadline` | Tanggal tutup PO — lewat tanggal ini, PO otomatis ditolak |
 | `is_active` | `false` menyembunyikan produk dari pemesanan |
 
-> Yang tampil di etalase saat ini masih dari
-> [`src/data/products.ts`](src/data/products.ts). Lihat
-> [bagian 11](#11-yang-belum-selesai).
+> Etalase membaca tabel ini langsung, jadi stok yang dilihat pengunjung
+> selalu sesuai kenyataan — termasuk stok yang sedang ditahan pesanan
+> yang belum diverifikasi.
 
 ### Memverifikasi pesanan
 
@@ -294,11 +315,15 @@ Jujur soal batasan saat ini, supaya tidak ada kejutan:
 
 | Hal | Kondisi | Dampak |
 |---|---|---|
-| **Etalase membaca file, bukan database** | Halaman merchandise masih memakai `src/data/products.ts` | Stok yang tampil bisa berbeda dari stok asli. Pemesanan tetap aman karena divalidasi database |
-| **Ubah status pesanan** | Tombol "Verifikasi" belum berfungsi | Lakukan lewat Supabase Table Editor |
-| **Konten CMS lain** | Berita, departemen, iklan mitra masih di file `src/data/*.ts` | Perubahan lewat dashboard hanya bertahan selama sesi browser |
+| **Ubah status pesanan** | Tombol "Verifikasi" belum berfungsi | Lakukan lewat Supabase Table Editor. Aturan RLS-nya sudah ada, tinggal dipasang tombolnya |
+| **Meta halaman statis** | Beranda, Tentang, Kontak dll di `/admin/seo` belum punya tabel | Override produk & berita **tersimpan**; halaman statis masih per sesi |
+| **Pesanan kedaluwarsa** | Belum otomatis | Stok tertahan sampai dibersihkan manual — lihat [bagian 9](#pesanan-kedaluwarsa) |
 | **Pembatasan pesanan** | 5 pesanan per nomor per jam | Berbasis nomor WhatsApp, bukan IP |
 | **Bukti pembayaran** | Kolom sudah ada, upload belum | Bukti transfer masih lewat WhatsApp |
+
+Yang **sudah** berjalan penuh di database: produk, pesanan, berita,
+departemen, pengurus, mitra, dan iklan. Semuanya bisa diubah lewat dashboard
+dan langsung tampil di website.
 
 Prioritas berikutnya ada di [`SECURITY-TODO.md`](SECURITY-TODO.md).
 

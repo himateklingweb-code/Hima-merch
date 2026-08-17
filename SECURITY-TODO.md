@@ -194,6 +194,24 @@ policy still called it, which made the whole catalogue unreadable to the
 public with "permission denied for function is_staff". The products read
 policy is now split by role so the `anon` predicate never touches it.
 
+### Content tables — added 2026-08-17
+
+Berita, departemen, mitra and iklan moved into Postgres, so the dashboard
+screens for them write real rows instead of session state. Same RLS shape as
+products: public reads published rows, staff writes.
+
+Verified as `anon` and as a signed-in non-staff user — insert is refused
+outright, and update/delete match **zero rows**. Worth noting because RLS
+does not raise on UPDATE/DELETE, it silently filters: a test that only
+checks for an exception will report a false pass. Row counts and the actual
+stored values were both checked.
+
+**Not yet verified: the staff *write* path.** Creating an account is outside
+what the assistant can do, so no `staff` row exists to test against. The
+policy predicate is the same `is_staff()` used elsewhere, but confirm it
+yourself after creating your account (SETUP.md §4) by editing an article in
+`/admin/berita` and reloading.
+
 ### Still open
 
 - [ ] **P1** The "Verifikasi" button in `/admin/pesanan` is not wired.
@@ -204,9 +222,11 @@ policy is now split by role so the `anon` predicate never touches it.
       the manual SQL documented in SETUP.md.
 - [ ] **P2** Rate limiting is per WhatsApp number, not per IP. Someone
       cycling numbers can still create orders.
-- [ ] **P2** Storefront reads `src/data/products.ts` rather than the
-      `products` table, so displayed stock can drift from real stock.
-      Ordering is unaffected — the database is authoritative there.
+- [x] **P2** ~~Storefront reads `src/data/products.ts` rather than the
+      `products` table~~ — resolved 2026-08-17. Every public page now reads
+      Postgres through `src/lib/content-repo.ts` with 60s revalidation, so
+      displayed stock matches reality. The TypeScript collections remain
+      only as a fallback for an unconfigured environment.
 - [ ] **P2** Payment proof upload (`payment_proof_url` exists, no upload
       path). Would need a Storage bucket with its own access rules.
 

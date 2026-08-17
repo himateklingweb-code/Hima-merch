@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { partners } from "@/data/partners";
+import { getPartners } from "@/lib/content-repo";
 import { Building2, Mail } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -7,7 +7,13 @@ export const metadata: Metadata = {
   description: "Daftar mitra dan sponsor HIMA Teknik Lingkungan UNTAN serta informasi pengajuan kerja sama.",
 };
 
-export default function KemitraanPage() {
+
+// Read fresh at most once a minute so stock and new content appear
+// without a redeploy.
+export const revalidate = 60;
+
+export default async function KemitraanPage() {
+  const partners = await getPartners();
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
       <div className="max-w-2xl mb-5 sm:mb-10">

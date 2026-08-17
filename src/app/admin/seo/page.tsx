@@ -10,11 +10,17 @@ import {
   FileText,
   Package,
 } from "lucide-react";
-import { products, productSeo } from "@/data/products";
-import { articles, articleSeo } from "@/data/news";
+import { productSeo } from "@/data/products";
+import { articleSeo } from "@/data/news";
+import { getSupabase } from "@/lib/supabase";
+import { products as seedProducts } from "@/data/products";
+import { articles as seedArticles } from "@/data/news";
 import { seoIssues, seoScore, TITLE_MAX, DESC_MAX } from "@/data/seo";
 
 interface PageSeo {
+  /** Row id + table, present only for rows backed by a database table. */
+  id?: string;
+  table?: "products" | "articles";
   path: string;
   label: string;
   title: string;
@@ -74,13 +80,17 @@ const staticPages: PageSeo[] = [
 
 // Detail pages seed from their resolved meta — what is live right now,
 // whether that came from an override or from the content itself.
-const productPages: PageSeo[] = products.map((p) => ({
+const productPages: PageSeo[] = seedProducts.map((p) => ({
+  id: p.id,
+  table: "products" as const,
   path: `/merchandise/${p.slug}`,
   label: p.name,
   ...productSeo(p),
 }));
 
-const articlePages: PageSeo[] = articles.map((a) => ({
+const articlePages: PageSeo[] = seedArticles.map((a) => ({
+  id: a.id,
+  table: "articles" as const,
   path: `/berita/${a.slug}`,
   label: a.title,
   ...articleSeo(a),
@@ -195,10 +205,10 @@ export default function AdminSeoPage() {
       />
 
       <p className="text-xs text-gray-400 mt-4">
-        Demo — perubahan hanya berlaku di sesi ini. Pada produksi, nilai ini
-        disimpan di kolom <code className="font-mono">seo</code> milik tiap
-        produk/artikel dan dibaca server-side oleh{" "}
-        <code className="font-mono">generateMetadata</code>.
+        Override produk &amp; berita tersimpan ke kolom{" "}
+        <code className="font-mono">seo</code> dan langsung dipakai{" "}
+        <code className="font-mono">generateMetadata</code>. Meta halaman statis
+        belum punya tabel, jadi masih berlaku per sesi.
       </p>
     </div>
   );
@@ -221,8 +231,47 @@ function SeoSection({
   editKey: string | null;
   setEditKey: (k: string | null) => void;
 }) {
+  const [savingPath, setSavingPath] = useState<string | null>(null);
+  const [savedPath, setSavedPath] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const update = (idx: number, field: keyof PageSeo, val: string) =>
     onChange(pages.map((p, i) => (i === idx ? { ...p, [field]: val } : p)));
+
+  /**
+   * Writes the override to the row's own `seo` column. Only rows that came
+   * from a table can be saved; the static-page entries have nowhere to go
+   * until there is a site_settings table.
+   */
+  const persist = async (page: PageSeo) => {
+    if (!page.id || !page.table) return;
+    const supabase = getSupabase();
+    if (!supabase) {
+      setSaveError("Supabase belum dikonfigurasi.");
+      return;
+    }
+
+    setSavingPath(page.path);
+    setSaveError(null);
+    const { error } = await supabase
+      .from(page.table)
+      .update({
+        seo: {
+          title: page.title,
+          description: page.description,
+          ogImage: page.ogImage,
+        },
+      })
+      .eq("id", page.id);
+    setSavingPath(null);
+
+    if (error) {
+      setSaveError(error.message);
+      return;
+    }
+    setSavedPath(page.path);
+    window.setTimeout(() => setSavedPath(null), 2000);
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-6">
@@ -262,6 +311,19 @@ function SeoSection({
                   >
                     {score}%
                   </span>
+                  {page.table && (
+                    <button
+                      onClick={() => persist(page)}
+                      disabled={savingPath === page.path}
+                      className="text-xs font-medium px-2.5 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                    >
+                      {savingPath === page.path
+                        ? "Menyimpan…"
+                        : savedPath === page.path
+                          ? "Tersimpan ✓"
+                          : "Simpan"}
+                    </button>
+                  )}
                   <button
                     onClick={() => setEditKey(open ? null : page.path)}
                     className="text-xs text-emerald-600 hover:underline"
@@ -270,6 +332,10 @@ function SeoSection({
                   </button>
                 </div>
               </div>
+
+              {saveError && savingPath === null && (
+                <p className="text-xs text-red-600 mb-2">{saveError}</p>
+              )}
 
               {issues.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">

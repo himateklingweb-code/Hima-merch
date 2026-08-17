@@ -1,8 +1,12 @@
-import { products, getProductBadge, formatPrice } from "@/data/products";
+import { getProductBadge, formatPrice } from "@/data/products";
+import { getProducts } from "@/lib/content-repo";
 import { Plus, Pencil, Eye } from "lucide-react";
 import Link from "next/link";
 
-export default function AdminProdukPage() {
+export const revalidate = 30;
+
+export default async function AdminProdukPage() {
+  const products = await getProducts();
   return (
     <div>
       <div className="flex items-center justify-between mb-6">

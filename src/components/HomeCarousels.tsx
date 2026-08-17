@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { iconFromName } from "@/lib/icons";
 import Carousel from "./Carousel";
-import { products, getProductBadge, formatPrice } from "@/data/products";
-import { departments } from "@/data/departments";
-import { articles } from "@/data/news";
+import { getProductBadge, formatPrice, type Product } from "@/data/products";
+import type { Department } from "@/data/departments";
+import type { Article } from "@/data/news";
 
 interface Props {
   type: "departments" | "products" | "news";
+  /** Fetched on the server and passed down — this stays presentational. */
+  products?: Product[];
+  departments?: Department[];
+  articles?: Article[];
 }
 
 const LINE = "1px solid rgba(32,30,29,.14)";
@@ -20,7 +25,12 @@ const BADGE_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
   gray: { bg: "#605d5d", fg: "#ffffff", short: "Habis" },
 };
 
-export default function HomeCarousels({ type }: Props) {
+export default function HomeCarousels({
+  type,
+  products = [],
+  departments = [],
+  articles = [],
+}: Props) {
   if (type === "departments") {
     return (
       <Carousel
@@ -29,7 +39,7 @@ export default function HomeCarousels({ type }: Props) {
         showDots={false}
       >
         {departments.map((dept) => {
-          const Icon = dept.icon;
+          const Icon = iconFromName(dept.icon);
           const activeCount = dept.periods.find((p) => p.is_active)?.members.length ?? 0;
           return (
             <Link

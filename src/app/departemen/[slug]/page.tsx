@@ -1,10 +1,12 @@
 import { Metadata } from "next";
+import DeptIcon from "@/components/DeptIcon";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { departments } from "@/data/departments";
+import { getDepartments, getDepartmentBySlug } from "@/lib/content-repo";
 import { ArrowLeft, User } from "lucide-react";
 
 export async function generateStaticParams() {
+  const departments = await getDepartments();
   return departments.map((d) => ({ slug: d.slug }));
 }
 
@@ -14,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const dept = departments.find((d) => d.slug === slug);
+  const dept = await getDepartmentBySlug(slug);
   if (!dept) return {};
   return {
     title: `Departemen ${dept.name}`,
@@ -28,12 +30,11 @@ export default async function DepartemenDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const dept = departments.find((d) => d.slug === slug);
+  const dept = await getDepartmentBySlug(slug);
   if (!dept) notFound();
 
   const activePeriod = dept.periods.find((p) => p.is_active);
   const pastPeriods = dept.periods.filter((p) => !p.is_active);
-  const Icon = dept.icon;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-12 lg:py-16">
@@ -47,7 +48,7 @@ export default async function DepartemenDetailPage({
 
       <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-          <Icon className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.75} />
+          <DeptIcon name={dept.icon} className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.75} />
         </div>
         <div>
           <h1 className="text-xl sm:text-4xl font-bold text-gray-900">Dept. {dept.name}</h1>

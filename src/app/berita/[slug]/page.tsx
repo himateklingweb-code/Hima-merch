@@ -2,9 +2,11 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { articles, articleSeo, gdriveThumbnail } from "@/data/news";
+import { articleSeo, gdriveThumbnail } from "@/data/news";
+import { getArticles, getArticleBySlug } from "@/lib/content-repo";
 
 export async function generateStaticParams() {
+  const articles = await getArticles();
   return articles.map((a) => ({ slug: a.slug }));
 }
 
@@ -14,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = articles.find((a) => a.slug === slug);
+  const article = await getArticleBySlug(slug);
   if (!article) return {};
 
   // Editable in /admin/seo; falls back to the article's own fields.
@@ -50,7 +52,10 @@ export default async function ArticleDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = articles.find((a) => a.slug === slug);
+  const [article, articles] = await Promise.all([
+    getArticleBySlug(slug),
+    getArticles(),
+  ]);
   if (!article) notFound();
 
   const hasImage =

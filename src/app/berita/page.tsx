@@ -1,7 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { Metadata } from "next";
-import { articles, gdriveThumbnail } from "@/data/news";
+import { gdriveThumbnail } from "@/data/news";
+import { getArticles } from "@/lib/content-repo";
 
 export const metadata: Metadata = {
   title: "Berita",
@@ -9,7 +10,13 @@ export const metadata: Metadata = {
     "Berita dan kabar terbaru dari HIMA Teknik Lingkungan Universitas Tanjungpura.",
 };
 
-export default function BeritaPage() {
+
+// Read fresh at most once a minute so stock and new content appear
+// without a redeploy.
+export const revalidate = 60;
+
+export default async function BeritaPage() {
+  const articles = await getArticles();
   const sorted = [...articles].sort(
     (a, b) =>
       new Date(b.published_at).getTime() - new Date(a.published_at).getTime()

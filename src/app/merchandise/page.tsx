@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
-import { products, getProductBadge, formatPrice } from "@/data/products";
+import { getProductBadge, formatPrice } from "@/data/products";
+import { getProducts } from "@/lib/content-repo";
 import { ShoppingBag } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -8,7 +9,13 @@ export const metadata: Metadata = {
   description: "Produk merchandise resmi HIMA Teknik Lingkungan UNTAN — kaos, jaket, tote bag, dan lainnya.",
 };
 
-export default function MerchandisePage() {
+
+// Read fresh at most once a minute so stock and new content appear
+// without a redeploy.
+export const revalidate = 60;
+
+export default async function MerchandisePage() {
+  const products = await getProducts();
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
       <div className="max-w-2xl mb-5 sm:mb-10">

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { products, productSeo } from "@/data/products";
+import { productSeo } from "@/data/products";
+import { getProducts, getProductBySlug } from "@/lib/content-repo";
 import { gdriveThumbnail } from "@/data/news";
 import ProductDetail from "./ProductDetail";
 
 export async function generateStaticParams() {
+  const products = await getProducts();
   return products.map((p) => ({ slug: p.slug }));
 }
 
@@ -14,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = products.find((p) => p.slug === slug);
+  const product = await getProductBySlug(slug);
   if (!product) return {};
 
   // Editable in /admin/seo; falls back to the product's own fields.
@@ -49,7 +51,7 @@ export default async function ProductDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = products.find((p) => p.slug === slug);
+  const product = await getProductBySlug(slug);
   if (!product) notFound();
 
   return <ProductDetail product={product} />;

@@ -1,15 +1,21 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { articles } from "@/data/news";
-import { departments } from "@/data/departments";
-import { products, formatPrice } from "@/data/products";
-import { getHomeStats } from "@/data/site";
+import { iconFromName } from "@/lib/icons";
+import type { Product } from "@/data/products";
+import { formatPrice } from "@/data/products";
+import {
+  getProducts,
+  getArticles,
+  getDepartments,
+  getPartners,
+  getActiveAds,
+} from "@/lib/content-repo";
 import StatsCounter from "@/components/StatsCounter";
 import HomeCarousels from "@/components/HomeCarousels";
 import AdsCarousel from "@/components/AdsCarousel";
 import SponsorStrip from "@/components/SponsorStrip";
 
-function badgeOf(p: (typeof products)[0], now: number) {
+function badgeOf(p: Product, now: number) {
   if (p.stock_type === "ready_stock") {
     const left = p.stock - p.stock_reserved;
     return left > 0
@@ -33,9 +39,39 @@ function badgeOf(p: (typeof products)[0], now: number) {
 
 const PLATES = ["#c2c4ad", "#626b3f", "#dfe3d0", "#e0dede", "#eceaea"];
 
-export default function HomePage() {
+// Content is read fresh at most once a minute; stock moves as orders come
+// in, so a stale storefront would advertise things that are gone.
+export const revalidate = 60;
+
+export default async function HomePage() {
+  const [products, articles, departments, partners, ads] = await Promise.all([
+    getProducts(),
+    getArticles(),
+    getDepartments(),
+    getPartners(),
+    getActiveAds(),
+  ]);
+
   const now = Date.now();
-  const stats = getHomeStats();
+  const activeMembers = departments.reduce(
+    (n, d) =>
+      n +
+      d.periods
+        .filter((p) => p.is_active)
+        .reduce((k, p) => k + p.members.length, 0),
+    0
+  );
+  const stats = [
+    { key: "pengurus", value: activeMembers, label: "Pengurus aktif" },
+    { key: "dept", value: departments.length, label: "Departemen" },
+    { key: "produk", value: products.length, label: "Produk merchandise" },
+    {
+      key: "mitra",
+      value: partners.length,
+      label: "Mitra & sponsor",
+      color: "#7a8450",
+    },
+  ];
 
   const poOpen = products.filter((p) => {
     if (p.stock_type !== "pre_order" || !p.po_deadline) return false;
@@ -659,7 +695,7 @@ export default function HomePage() {
           ))}
           </div>
           <div className="home-mobile-carousel">
-            <HomeCarousels type="news" />
+            <HomeCarousels type="news" articles={articles} />
           </div>
         </div>
       </section>
@@ -853,7 +889,7 @@ export default function HomePage() {
             }}
           >
             {departments.map((dept, i) => {
-              const Icon = dept.icon;
+              const Icon = iconFromName(dept.icon);
               const activeCount =
                 dept.periods.find((p) => p.is_active)?.members.length ?? 0;
               return (
@@ -922,7 +958,7 @@ export default function HomePage() {
             })}
           </div>
           <div className="home-mobile-carousel">
-            <HomeCarousels type="departments" />
+            <HomeCarousels type="departments" departments={departments} />
           </div>
         </div>
       </section>
@@ -978,7 +1014,7 @@ export default function HomePage() {
               Jadi mitra &rarr;
             </Link>
           </div>
-          <AdsCarousel />
+          <AdsCarousel items={ads} />
         </div>
       </section>
 
@@ -1148,7 +1184,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="home-mobile-carousel">
-            <HomeCarousels type="products" />
+            <HomeCarousels type="products" products={products} />
           </div>
         </div>
       </section>
@@ -1187,7 +1223,7 @@ export default function HomePage() {
               }}
             />
           </div>
-          <SponsorStrip />
+          <SponsorStrip items={partners} />
         </div>
       </section>
     </div>

@@ -23,6 +23,11 @@ merchandise dengan pemesanan lewat WhatsApp.
 ## Struktur
 
 ```
+All content — products, orders, berita, departemen, mitra and iklan — lives
+in Postgres. The `src/data/*.ts` collections remain only as a fallback so a
+fresh clone runs without any configuration.
+
+```
 src/
 ├─ app/
 │  ├─ page.tsx              Beranda

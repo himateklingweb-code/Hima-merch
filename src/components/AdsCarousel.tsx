@@ -2,16 +2,14 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Carousel from "./Carousel";
-import { getActiveAds } from "@/data/ads";
 import { gdriveThumbnail } from "@/data/news";
+import type { Ad } from "@/data/ads";
 
 /**
- * Self-advancing carousel of mitra ad cards. Content comes from
- * /admin/iklan — each card carries the sponsor's logo and links out to
- * the website they nominated.
+ * Self-advancing carousel of mitra ad cards. The list is fetched on the
+ * server and passed in, so this component stays presentational.
  */
-export default function AdsCarousel() {
-  const items = getActiveAds();
+export default function AdsCarousel({ items }: { items: Ad[] }) {
   if (items.length === 0) return null;
 
   return (

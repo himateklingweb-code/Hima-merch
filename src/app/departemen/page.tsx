@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { iconFromName } from "@/lib/icons";
 import { Metadata } from "next";
-import { departments } from "@/data/departments";
+import { getDepartments } from "@/lib/content-repo";
 import { ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -8,7 +9,13 @@ export const metadata: Metadata = {
   description: "6 departemen HIMA Teknik Lingkungan UNTAN yang menjalankan program kerja organisasi.",
 };
 
-export default function DepartemenPage() {
+
+// Read fresh at most once a minute so stock and new content appear
+// without a redeploy.
+export const revalidate = 60;
+
+export default async function DepartemenPage() {
+  const departments = await getDepartments();
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
       <div className="max-w-2xl mb-5 sm:mb-10">
@@ -21,7 +28,7 @@ export default function DepartemenPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
         {departments.map((dept) => {
           const activePeriod = dept.periods.find((p) => p.is_active);
-          const Icon = dept.icon;
+          const Icon = iconFromName(dept.icon);
           return (
             <Link
               key={dept.id}

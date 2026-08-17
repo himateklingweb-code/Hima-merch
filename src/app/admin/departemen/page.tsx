@@ -1,66 +1,168 @@
 "use client";
 
-import { useState } from "react";
-import { departments as initialDepts, Department, DepartmentMember } from "@/data/departments";
+import { useCallback, useEffect, useState } from "react";
+import { iconFromName } from "@/lib/icons";
+import {
+  departments as seedDepts,
+  Department,
+  DepartmentMember,
+} from "@/data/departments";
+import { getSupabase } from "@/lib/supabase";
+import DbStatus from "@/components/admin/DbStatus";
 import { Pencil, Users, Plus, Trash2, Star, X } from "lucide-react";
 
+/**
+ * Members are edited against the department's *active* period. The nested
+ * shape (department → periods → members) is why this screen loads its own
+ * data instead of using the flat useCollection hook.
+ */
 export default function AdminDepartemenPage() {
-  const [depts, setDepts] = useState<Department[]>(initialDepts);
+  const [depts, setDepts] = useState<Department[]>(seedDepts);
+  const [loading, setLoading] = useState(true);
+  const [live, setLive] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<{
     deptId: string;
     member: DepartmentMember | null;
   } | null>(null);
 
+  const reload = useCallback(async () => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      setLive(false);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error: readError } = await supabase
+      .from("departments")
+      .select("*, periods:department_periods(*, members:department_members(*))")
+      .order("order_index", { ascending: true });
+
+    if (readError || !data) {
+      setLive(false);
+      setLoading(false);
+      return;
+    }
+
+    setDepts(
+      data.map((d) => ({
+        id: d.id as string,
+        name: d.name as string,
+        slug: d.slug as string,
+        description: d.description as string,
+        icon: d.icon as string,
+        periods: ((d.periods ?? []) as Record<string, unknown>[])
+          .map((p) => ({
+            id: p.id as string,
+            department_id: p.department_id as string,
+            period_label: p.period_label as string,
+            is_active: p.is_active as boolean,
+            start_date: (p.start_date as string) ?? "",
+            end_date: (p.end_date as string) ?? "",
+            members: ((p.members ?? []) as Record<string, unknown>[])
+              .map((m) => ({
+                id: m.id as string,
+                name: m.name as string,
+                position: m.position as string,
+                photo: (m.photo as string) ?? "",
+                contact: (m.contact as string) ?? undefined,
+                order_index: m.order_index as number,
+              }))
+              .sort((a, b) => a.order_index - b.order_index),
+          }))
+          .sort((a, b) => Number(b.is_active) - Number(a.is_active)),
+      }))
+    );
+    setLive(true);
+    setLoading(false);
+  }, []);
+
+  // Fetching after mount is the point: the row set lives in Postgres, not
+  // in React, and reading it during render is impossible. The loading
+  // flag is what keeps this from flickering, not a second render pass.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const bph = depts.find((d) => d.slug === "bph");
   const regularDepts = depts.filter((d) => d.slug !== "bph");
 
-  const handleSaveMember = (deptId: string, member: DepartmentMember) => {
-    setDepts((prev) =>
-      prev.map((d) => {
-        if (d.id !== deptId) return d;
-        const activePeriod = d.periods.find((p) => p.is_active);
-        if (!activePeriod) return d;
-        const exists = activePeriod.members.find((m) => m.id === member.id);
-        return {
-          ...d,
-          periods: d.periods.map((p) =>
-            p.id === activePeriod.id
-              ? {
-                  ...p,
-                  members: exists
-                    ? p.members.map((m) => (m.id === member.id ? member : m))
-                    : [...p.members, member],
-                }
-              : p
-          ),
-        };
-      })
-    );
+  const handleSaveMember = async (
+    deptId: string,
+    member: DepartmentMember
+  ) => {
+    const supabase = getSupabase();
+    const dept = depts.find((d) => d.id === deptId);
+    const activePeriod = dept?.periods.find((p) => p.is_active);
+
+    if (!activePeriod) {
+      setError("Departemen ini belum punya periode aktif.");
+      return;
+    }
+    if (!supabase) {
+      setError("Supabase belum dikonfigurasi — perubahan tidak tersimpan.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    const { error: writeError } = await supabase
+      .from("department_members")
+      .upsert({
+        id: member.id,
+        period_id: activePeriod.id,
+        name: member.name,
+        position: member.position,
+        photo: member.photo || null,
+        contact: member.contact || null,
+        order_index: member.order_index,
+      });
+    setSaving(false);
+
+    if (writeError) {
+      setError(writeError.message);
+      return;
+    }
+    await reload();
     setEditingMember(null);
   };
 
-  const handleDeleteMember = (deptId: string, memberId: string) => {
-    setDepts((prev) =>
-      prev.map((d) => {
-        if (d.id !== deptId) return d;
-        return {
-          ...d,
-          periods: d.periods.map((p) => ({
-            ...p,
-            members: p.members.filter((m) => m.id !== memberId),
-          })),
-        };
-      })
-    );
+  const handleDeleteMember = async (deptId: string, memberId: string) => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      setError("Supabase belum dikonfigurasi — perubahan tidak tersimpan.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    const { error: delError } = await supabase
+      .from("department_members")
+      .delete()
+      .eq("id", memberId);
+    setSaving(false);
+
+    if (delError) {
+      setError(delError.message);
+      return;
+    }
+    await reload();
   };
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Departemen</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Kelola pengurus inti &amp; departemen
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Departemen</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Kelola pengurus inti &amp; departemen
+          </p>
+        </div>
+        <DbStatus live={live} loading={loading} error={error} saving={saving} />
       </div>
 
       {/* ── BPH Section ── */}
@@ -143,7 +245,7 @@ export default function AdminDepartemenPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {regularDepts.map((dept) => {
           const activePeriod = dept.periods.find((p) => p.is_active);
-          const Icon = dept.icon;
+          const Icon = iconFromName(dept.icon);
           return (
             <div
               key={dept.id}
@@ -256,7 +358,7 @@ function MemberModal({
 }: {
   deptId: string;
   member: DepartmentMember | null;
-  onSave: (deptId: string, m: DepartmentMember) => void;
+  onSave: (deptId: string, m: DepartmentMember) => void | Promise<void>;
   onClose: () => void;
 }) {
   const [name, setName] = useState(member?.name ?? "");

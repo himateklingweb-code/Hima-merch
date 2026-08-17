@@ -2,29 +2,37 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
-import { articles as initialArticles, Article, gdriveThumbnail, slugify } from "@/data/news";
+import { articles as seedArticles, Article, gdriveThumbnail, slugify } from "@/data/news";
+import { useCollection } from "@/lib/use-collection";
+import DbStatus from "@/components/admin/DbStatus";
 import { Plus, Pencil, Eye, Trash2, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminBeritaPage() {
-  const [items, setItems] = useState<Article[]>(initialArticles);
+  const {
+    items,
+    loading,
+    live,
+    error,
+    saving,
+    save,
+    remove,
+  } = useCollection<Article>("articles", seedArticles, {
+    orderBy: "published_at",
+    ascending: false,
+  });
   const [editing, setEditing] = useState<Article | null>(null);
-  const [isNew, setIsNew] = useState(false);
+  const [, setIsNew] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const handleSave = (article: Article) => {
-    if (isNew) {
-      setItems((prev) => [article, ...prev]);
-    } else {
-      setItems((prev) => prev.map((a) => (a.id === article.id ? article : a)));
-    }
+  const handleSave = async (article: Article) => {
+    if (!(await save(article))) return;
     setEditing(null);
     setIsNew(false);
   };
 
-  const handleDelete = (id: string) => {
-    setItems((prev) => prev.filter((a) => a.id !== id));
-    setDeleteId(null);
+  const handleDelete = async (id: string) => {
+    if (await remove(id)) setDeleteId(null);
   };
 
   const openNew = () => {
@@ -52,13 +60,16 @@ export default function AdminBeritaPage() {
             Kelola artikel &amp; foto kegiatan
           </p>
         </div>
-        <button
-          onClick={openNew}
-          className="inline-flex items-center gap-2 bg-emerald-600 text-white font-medium px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Tulis Artikel
-        </button>
+        <div className="flex items-center gap-3">
+          <DbStatus live={live} loading={loading} error={error} saving={saving} />
+          <button
+            onClick={openNew}
+            className="inline-flex items-center gap-2 bg-emerald-600 text-white font-medium px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Tulis Artikel
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -208,7 +219,7 @@ function ArticleModal({
   onClose,
 }: {
   article: Article;
-  onSave: (a: Article) => void;
+  onSave: (a: Article) => void | Promise<void>;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ ...article });

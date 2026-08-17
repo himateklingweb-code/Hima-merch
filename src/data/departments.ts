@@ -1,14 +1,3 @@
-import {
-  Star,
-  Home,
-  Globe,
-  Briefcase,
-  GraduationCap,
-  Wrench,
-  Megaphone,
-  type LucideIcon,
-} from "lucide-react";
-
 export interface DepartmentMember {
   id: string;
   name: string;
@@ -33,7 +22,8 @@ export interface Department {
   name: string;
   slug: string;
   description: string;
-  icon: LucideIcon;
+  /** Lucide component name; resolve with iconFromName(). */
+  icon: string;
   periods: DepartmentPeriod[];
 }
 
@@ -44,7 +34,7 @@ export const departments: Department[] = [
     slug: "bph",
     description:
       "Badan Pengurus Harian (BPH) merupakan pengurus inti HIMA TL UNTAN yang terdiri dari Ketua, Sekretaris, dan Bendahara. BPH bertanggung jawab atas koordinasi seluruh kegiatan organisasi dan pengambilan keputusan strategis.",
-    icon: Star,
+    icon: "Star",
     periods: [
       {
         id: "period-bph-1",
@@ -67,7 +57,7 @@ export const departments: Department[] = [
     slug: "dagri",
     description:
       "Departemen Dalam Negeri bertanggung jawab dalam mengelola hubungan internal organisasi, membangun solidaritas antar anggota, serta menyelenggarakan kegiatan yang mempererat kebersamaan mahasiswa Teknik Lingkungan UNTAN.",
-    icon: Home,
+    icon: "Home",
     periods: [
       {
         id: "period-1",
@@ -103,7 +93,7 @@ export const departments: Department[] = [
     slug: "lugri",
     description:
       "Departemen Luar Negeri bertugas menjalin dan memperkuat hubungan eksternal HIMA TL UNTAN dengan organisasi mahasiswa lain, instansi pemerintah, serta pihak-pihak terkait di luar kampus.",
-    icon: Globe,
+    icon: "Globe",
     periods: [
       {
         id: "period-3",
@@ -126,7 +116,7 @@ export const departments: Department[] = [
     slug: "kwu",
     description:
       "Departemen Kewirausahaan mengelola kegiatan wirausaha HIMA TL UNTAN, termasuk merchandise resmi, bazar, dan program pengembangan jiwa kewirausahaan mahasiswa.",
-    icon: Briefcase,
+    icon: "Briefcase",
     periods: [
       {
         id: "period-4",
@@ -150,7 +140,7 @@ export const departments: Department[] = [
     slug: "depdik",
     description:
       "Departemen Pendidikan fokus pada peningkatan kualitas akademik mahasiswa melalui tutorial, seminar, workshop, dan kegiatan ilmiah lainnya.",
-    icon: GraduationCap,
+    icon: "GraduationCap",
     periods: [
       {
         id: "period-5",
@@ -172,7 +162,7 @@ export const departments: Department[] = [
     slug: "rumah-tangga",
     description:
       "Departemen Rumah Tangga bertanggung jawab atas logistik, inventaris, dan kebutuhan operasional organisasi sehari-hari.",
-    icon: Wrench,
+    icon: "Wrench",
     periods: [
       {
         id: "period-6",
@@ -194,7 +184,7 @@ export const departments: Department[] = [
     slug: "kominfo",
     description:
       "Departemen Komunikasi dan Informasi mengelola media sosial, website, dokumentasi kegiatan, dan seluruh publikasi informasi HIMA TL UNTAN kepada publik.",
-    icon: Megaphone,
+    icon: "Megaphone",
     periods: [
       {
         id: "period-7",

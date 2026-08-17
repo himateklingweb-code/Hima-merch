@@ -1,6 +1,6 @@
 import { orders } from "@/data/orders";
-import { products, formatPrice } from "@/data/products";
-import { articles } from "@/data/news";
+import { formatPrice } from "@/data/products";
+import { getProducts, getArticles } from "@/lib/content-repo";
 import {
   ShoppingCart,
   Package,
@@ -11,7 +11,10 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-export default function AdminDashboard() {
+export const revalidate = 30;
+
+export default async function AdminDashboard() {
+  const [products, articles] = await Promise.all([getProducts(), getArticles()]);
   const pendingOrders = orders.filter((o) => o.order_status === "pending_verifikasi");
   const verifiedOrders = orders.filter((o) => o.order_status === "terjual");
   const expiredOrders = orders.filter((o) => o.order_status === "kadaluarsa");

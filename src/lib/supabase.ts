@@ -20,6 +20,25 @@ export const isSupabaseConfigured = Boolean(url && anonKey);
 
 let cached: SupabaseClient | null = null;
 
+/**
+ * Client for server components.
+ *
+ * Deliberately separate from the browser one: no session storage, no token
+ * refresh. Server rendering only ever reads public content, which RLS
+ * exposes to the anon role anyway, and a shared mutable session on the
+ * server would leak between requests.
+ */
+export function getServerSupabase(): SupabaseClient | null {
+  if (!url || !anonKey) return null;
+  return createClient(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
+
 export function getSupabase(): SupabaseClient | null {
   if (!url || !anonKey) return null;
   if (!cached) {
