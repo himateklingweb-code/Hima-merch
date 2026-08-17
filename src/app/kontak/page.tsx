@@ -1,10 +1,21 @@
 import { Metadata } from "next";
+import { getSiteMeta } from "@/lib/content-repo";
 import { MapPin, Mail, Phone, Globe, MessageCircle } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Kontak",
-  description: "Hubungi HIMA Teknik Lingkungan Universitas Tanjungpura.",
-};
+// Editable in /admin/seo — falls back to the previous hardcoded values.
+export async function generateMetadata(): Promise<Metadata> {
+  const meta = await getSiteMeta("/kontak");
+  return {
+    title: { absolute: meta.title },
+    description: meta.description,
+    alternates: { canonical: "/kontak" },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      ...(meta.ogImage && { images: [{ url: meta.ogImage }] }),
+    },
+  };
+}
 
 export default function KontakPage() {
   return (

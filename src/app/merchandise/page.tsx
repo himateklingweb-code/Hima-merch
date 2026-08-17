@@ -1,13 +1,23 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import { getProductBadge, formatPrice } from "@/data/products";
-import { getProducts } from "@/lib/content-repo";
+import { getProducts, getSiteMeta } from "@/lib/content-repo";
 import { ShoppingBag } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Merchandise",
-  description: "Produk merchandise resmi HIMA Teknik Lingkungan UNTAN — kaos, jaket, tote bag, dan lainnya.",
-};
+// Editable in /admin/seo — falls back to the previous hardcoded values.
+export async function generateMetadata(): Promise<Metadata> {
+  const meta = await getSiteMeta("/merchandise");
+  return {
+    title: { absolute: meta.title },
+    description: meta.description,
+    alternates: { canonical: "/merchandise" },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      ...(meta.ogImage && { images: [{ url: meta.ogImage }] }),
+    },
+  };
+}
 
 
 // Read fresh at most once a minute so stock and new content appear

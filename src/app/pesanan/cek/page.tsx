@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/data/products";
 import { fetchOrderByCode, type PublicOrderReceipt } from "@/lib/orders-repo";
+import PaymentProofUpload from "./PaymentProofUpload";
 
 const statusConfig = {
   pending_verifikasi: {
@@ -221,13 +222,19 @@ export default function CekPesananPage() {
             )}
 
             {result.order_status === "pending_verifikasi" && (
-              <div className="bg-yellow-50 rounded-lg p-3 text-xs text-yellow-800">
-                <p className="font-medium">Menunggu verifikasi kasir.</p>
-                <p className="mt-0.5 text-yellow-600">
-                  Kasir akan menghubungi lewat WhatsApp untuk konfirmasi
-                  pembayaran.
-                </p>
-              </div>
+              <>
+                <div className="bg-yellow-50 rounded-lg p-3 text-xs text-yellow-800">
+                  <p className="font-medium">Menunggu verifikasi kasir.</p>
+                  <p className="mt-0.5 text-yellow-600">
+                    Sudah transfer? Unggah buktinya di bawah supaya kasir bisa
+                    memverifikasi lebih cepat.
+                  </p>
+                </div>
+                <PaymentProofUpload
+                  orderCode={result.order_code}
+                  alreadyUploaded={Boolean(result.has_payment_proof)}
+                />
+              </>
             )}
 
             {result.order_status === "kadaluarsa" && (

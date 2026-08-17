@@ -212,23 +212,47 @@ policy predicate is the same `is_staff()` used elsewhere, but confirm it
 yourself after creating your account (SETUP.md §4) by editing an article in
 `/admin/berita` and reloading.
 
+### Order lifecycle & extras — added 2026-08-17
+
+- [x] **P1** ~~Verifikasi button not wired~~ — `set_order_status()` is staff
+      only and moves stock as the status changes: confirming a sale
+      decrements it, cancelling returns it, un-confirming re-holds it.
+      Verified all three transitions against real rows (120→117→120).
+- [x] **P1** ~~Expired orders keep holding stock~~ — `expire_stale_orders()`
+      releases stock for unpaid orders past 24h, scheduled hourly via
+      pg_cron. Verified: a backdated order flipped to `kadaluarsa` and its
+      reservation was returned.
+- [x] **P2** ~~Rate limiting is per WhatsApp number only~~ — a second limit
+      of 15/hour keys on a salted SHA-256 of the client address. The raw IP
+      is never stored; the pepper lives inside a SECURITY DEFINER function
+      so `anon` cannot brute-force the (small) IPv4 space against it.
+- [x] **P2** ~~Payment proof upload missing~~ — private Storage bucket,
+      5 MB cap, image/PDF only. Buyers may insert but never list, read or
+      delete, so one buyer cannot fetch another's receipt. Staff read
+      through a 5-minute signed URL. `attach_payment_proof()` rejects any
+      path outside the bucket — verified an external URL is refused, as is
+      an unknown order code.
+- [x] **P2** Static-page meta now lives in `site_meta` and is read by
+      `generateMetadata`, so editing it in /admin/seo actually takes effect.
+
+The public receipt exposes `has_payment_proof` as a boolean and never the
+storage path — that path is the handle staff use to fetch someone's banking
+screenshot. Verified the key is absent from the response.
+
 ### Still open
 
-- [ ] **P1** The "Verifikasi" button in `/admin/pesanan` is not wired.
-      Status changes happen in the Supabase Table Editor. The RLS update
-      policy for staff already exists.
-- [ ] **P1** Expired orders keep holding `stock_reserved`. Needs a
-      scheduled job (pg_cron) to release stock after N hours rather than
-      the manual SQL documented in SETUP.md.
-- [ ] **P2** Rate limiting is per WhatsApp number, not per IP. Someone
-      cycling numbers can still create orders.
+- [ ] **P1** Leaked-password protection is off in Supabase Auth. One toggle
+      under Authentication → Policies; checks staff passwords against
+      HaveIBeenPwned. Flagged by `get_advisors`.
+- [ ] **P3** The global-keywords field and the "Generate sitemap" button in
+      /admin/seo are still cosmetic. The sitemap itself is real and
+      automatic at `/sitemap.xml`.
+
 - [x] **P2** ~~Storefront reads `src/data/products.ts` rather than the
       `products` table~~ — resolved 2026-08-17. Every public page now reads
       Postgres through `src/lib/content-repo.ts` with 60s revalidation, so
       displayed stock matches reality. The TypeScript collections remain
       only as a fallback for an unconfigured environment.
-- [ ] **P2** Payment proof upload (`payment_proof_url` exists, no upload
-      path). Would need a Storage bucket with its own access rules.
 
 ---
 

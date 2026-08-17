@@ -1,9 +1,20 @@
 import { Metadata } from "next";
+import { getSiteMeta } from "@/lib/content-repo";
 
-export const metadata: Metadata = {
-  title: "Tentang Kami",
-  description: "Mengenal HIMA Teknik Lingkungan Universitas Tanjungpura — visi, misi, sejarah, dan atribut organisasi.",
-};
+// Editable in /admin/seo — falls back to the previous hardcoded values.
+export async function generateMetadata(): Promise<Metadata> {
+  const meta = await getSiteMeta("/tentang");
+  return {
+    title: { absolute: meta.title },
+    description: meta.description,
+    alternates: { canonical: "/tentang" },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      ...(meta.ogImage && { images: [{ url: meta.ogImage }] }),
+    },
+  };
+}
 
 export default function TentangPage() {
   return (

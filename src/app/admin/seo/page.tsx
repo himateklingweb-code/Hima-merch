@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Search,
   Globe,
@@ -20,7 +20,7 @@ import { seoIssues, seoScore, TITLE_MAX, DESC_MAX } from "@/data/seo";
 interface PageSeo {
   /** Row id + table, present only for rows backed by a database table. */
   id?: string;
-  table?: "products" | "articles";
+  table?: "products" | "articles" | "site_meta";
   path: string;
   label: string;
   title: string;
@@ -28,55 +28,9 @@ interface PageSeo {
   ogImage: string;
 }
 
-const staticPages: PageSeo[] = [
-  {
-    path: "/",
-    label: "Beranda",
-    title: "HIMA Teknik Lingkungan UNTAN",
-    description:
-      "Website resmi Himpunan Mahasiswa Teknik Lingkungan, Universitas Tanjungpura, Pontianak.",
-    ogImage: "",
-  },
-  {
-    path: "/tentang",
-    label: "Tentang",
-    title: "Tentang — HIMA Teknik Lingkungan UNTAN",
-    description:
-      "Profil dan sejarah Himpunan Mahasiswa Teknik Lingkungan Universitas Tanjungpura.",
-    ogImage: "",
-  },
-  {
-    path: "/departemen",
-    label: "Departemen",
-    title: "Departemen — HIMA Teknik Lingkungan UNTAN",
-    description:
-      "Struktur organisasi dan departemen HIMA Teknik Lingkungan UNTAN.",
-    ogImage: "",
-  },
-  {
-    path: "/merchandise",
-    label: "Merchandise",
-    title: "Merchandise — HIMA Teknik Lingkungan UNTAN",
-    description:
-      "Etalase merchandise resmi HIMA TL UNTAN — kaos, jaket, hoodie, dan lainnya.",
-    ogImage: "",
-  },
-  {
-    path: "/berita",
-    label: "Berita",
-    title: "Berita — HIMA Teknik Lingkungan UNTAN",
-    description:
-      "Berita dan kabar terbaru dari HIMA Teknik Lingkungan Universitas Tanjungpura.",
-    ogImage: "",
-  },
-  {
-    path: "/kontak",
-    label: "Kontak",
-    title: "Kontak — HIMA Teknik Lingkungan UNTAN",
-    description: "Hubungi HIMA Teknik Lingkungan UNTAN via WhatsApp atau Instagram.",
-    ogImage: "",
-  },
-];
+// Loaded from the site_meta table at mount; the array below is only the
+// shape, not the source of truth.
+const staticPages: PageSeo[] = [];
 
 // Detail pages seed from their resolved meta — what is live right now,
 // whether that came from an override or from the content itself.
@@ -106,10 +60,83 @@ export default function AdminSeoPage() {
   );
   const [sitemapGen, setSitemapGen] = useState(false);
 
+  // All three groups come from the database. Products and articles are
+  // listed from their own tables rather than the bundled seed, so a product
+  // added after launch still shows up here.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    let cancelled = false;
+
+    void (async () => {
+      const [meta, prods, arts] = await Promise.all([
+        supabase.from("site_meta").select("*").order("path"),
+        supabase.from("products").select("id, name, slug, description, seo").order("id"),
+        supabase.from("articles").select("id, title, slug, excerpt, image, seo").order("published_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+
+      if (meta.data) {
+        setPages(
+          meta.data.map((r) => ({
+            id: r.path as string,
+            table: "site_meta" as const,
+            path: r.path as string,
+            label: r.label as string,
+            title: (r.title as string) ?? "",
+            description: (r.description as string) ?? "",
+            ogImage: (r.og_image as string) ?? "",
+          }))
+        );
+      }
+
+      if (prods.data) {
+        setProdPages(
+          prods.data.map((p) => {
+            const o = (p.seo ?? {}) as Record<string, string>;
+            return {
+              id: p.id as string,
+              table: "products" as const,
+              path: `/merchandise/${p.slug}`,
+              label: p.name as string,
+              title: o.title || `${p.name} — Merchandise HIMA TL UNTAN`,
+              description: o.description || String(p.description ?? "").slice(0, 160),
+              ogImage: o.ogImage ?? "",
+            };
+          })
+        );
+      }
+
+      if (arts.data) {
+        setArtPages(
+          arts.data.map((a) => {
+            const o = (a.seo ?? {}) as Record<string, string>;
+            return {
+              id: a.id as string,
+              table: "articles" as const,
+              path: `/berita/${a.slug}`,
+              label: a.title as string,
+              title: o.title || `${a.title} — Berita HIMA TL UNTAN`,
+              description: o.description || String(a.excerpt ?? "").slice(0, 160),
+              ogImage: o.ogImage ?? (a.image as string) ?? "",
+            };
+          })
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const all = [...pages, ...prodPages, ...artPages];
-  const avgScore = Math.round(
-    all.reduce((s, p) => s + seoScore(p), 0) / all.length
-  );
+  // Guard the divide: the static list starts empty until the fetch lands.
+  const avgScore = all.length
+    ? Math.round(all.reduce((s, p) => s + seoScore(p), 0) / all.length)
+    : 0;
 
   return (
     <div>
@@ -205,10 +232,11 @@ export default function AdminSeoPage() {
       />
 
       <p className="text-xs text-gray-400 mt-4">
-        Override produk &amp; berita tersimpan ke kolom{" "}
-        <code className="font-mono">seo</code> dan langsung dipakai{" "}
-        <code className="font-mono">generateMetadata</code>. Meta halaman statis
-        belum punya tabel, jadi masih berlaku per sesi.
+        Semua perubahan di halaman ini tersimpan ke database dan langsung
+        dipakai oleh{" "}
+        <code className="font-mono">generateMetadata</code> — halaman statis di
+        tabel <code className="font-mono">site_meta</code>, produk &amp; berita di
+        kolom <code className="font-mono">seo</code> masing-masing.
       </p>
     </div>
   );
@@ -239,9 +267,8 @@ function SeoSection({
     onChange(pages.map((p, i) => (i === idx ? { ...p, [field]: val } : p)));
 
   /**
-   * Writes the override to the row's own `seo` column. Only rows that came
-   * from a table can be saved; the static-page entries have nowhere to go
-   * until there is a site_settings table.
+   * Saves the override. Static pages write flat columns in site_meta;
+   * products and articles write their own jsonb  column.
    */
   const persist = async (page: PageSeo) => {
     if (!page.id || !page.table) return;
@@ -253,16 +280,27 @@ function SeoSection({
 
     setSavingPath(page.path);
     setSaveError(null);
-    const { error } = await supabase
-      .from(page.table)
-      .update({
-        seo: {
-          title: page.title,
-          description: page.description,
-          ogImage: page.ogImage,
-        },
-      })
-      .eq("id", page.id);
+    const { error } =
+      page.table === "site_meta"
+        ? await supabase
+            .from("site_meta")
+            .update({
+              title: page.title,
+              description: page.description,
+              og_image: page.ogImage,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("path", page.id)
+        : await supabase
+            .from(page.table)
+            .update({
+              seo: {
+                title: page.title,
+                description: page.description,
+                ogImage: page.ogImage,
+              },
+            })
+            .eq("id", page.id);
     setSavingPath(null);
 
     if (error) {

@@ -1,13 +1,23 @@
 import Link from "next/link";
 import { iconFromName } from "@/lib/icons";
 import { Metadata } from "next";
-import { getDepartments } from "@/lib/content-repo";
+import { getDepartments, getSiteMeta } from "@/lib/content-repo";
 import { ArrowRight } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Departemen",
-  description: "6 departemen HIMA Teknik Lingkungan UNTAN yang menjalankan program kerja organisasi.",
-};
+// Editable in /admin/seo — falls back to the previous hardcoded values.
+export async function generateMetadata(): Promise<Metadata> {
+  const meta = await getSiteMeta("/departemen");
+  return {
+    title: { absolute: meta.title },
+    description: meta.description,
+    alternates: { canonical: "/departemen" },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      ...(meta.ogImage && { images: [{ url: meta.ogImage }] }),
+    },
+  };
+}
 
 
 // Read fresh at most once a minute so stock and new content appear

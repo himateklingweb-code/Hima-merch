@@ -293,3 +293,110 @@ export async function getActiveAds(): Promise<Ad[]> {
     order: r.order_index as number,
   }));
 }
+
+// --------------------------------------------------------------- site meta
+
+export interface SiteMeta {
+  path: string;
+  label: string;
+  title: string;
+  description: string;
+  ogImage: string;
+}
+
+/** Fallbacks used when Supabase is unconfigured or a path has no row yet. */
+const SITE_META_FALLBACK: Record<string, { title: string; description: string }> = {
+  "/": {
+    title: "HIMA Teknik Lingkungan UNTAN",
+    description:
+      "Website resmi Himpunan Mahasiswa Teknik Lingkungan, Universitas Tanjungpura, Pontianak.",
+  },
+  "/tentang": {
+    title: "Tentang — HIMA Teknik Lingkungan UNTAN",
+    description:
+      "Profil dan sejarah Himpunan Mahasiswa Teknik Lingkungan Universitas Tanjungpura.",
+  },
+  "/departemen": {
+    title: "Departemen — HIMA Teknik Lingkungan UNTAN",
+    description: "Struktur organisasi dan departemen HIMA Teknik Lingkungan UNTAN.",
+  },
+  "/merchandise": {
+    title: "Merchandise — HIMA Teknik Lingkungan UNTAN",
+    description:
+      "Etalase merchandise resmi HIMA TL UNTAN — kaos, jaket, hoodie, dan lainnya.",
+  },
+  "/berita": {
+    title: "Berita — HIMA Teknik Lingkungan UNTAN",
+    description:
+      "Berita dan kabar terbaru dari HIMA Teknik Lingkungan Universitas Tanjungpura.",
+  },
+  "/kemitraan": {
+    title: "Kemitraan — HIMA Teknik Lingkungan UNTAN",
+    description:
+      "Daftar mitra dan sponsor HIMA Teknik Lingkungan UNTAN serta pengajuan kerja sama.",
+  },
+  "/kontak": {
+    title: "Kontak — HIMA Teknik Lingkungan UNTAN",
+    description: "Hubungi HIMA Teknik Lingkungan UNTAN via WhatsApp atau Instagram.",
+  },
+};
+
+/**
+ * Metadata for a page that is not a product or an article.
+ *
+ * These used to be hardcoded `export const metadata`, so editing them in
+ * /admin/seo changed nothing. They come from `site_meta` now, with the
+ * previous hardcoded values kept as the fallback.
+ */
+export async function getSiteMeta(path: string): Promise<SiteMeta> {
+  const fallback = SITE_META_FALLBACK[path] ?? { title: "", description: "" };
+  const base: SiteMeta = {
+    path,
+    label: path,
+    title: fallback.title,
+    description: fallback.description,
+    ogImage: "",
+  };
+
+  const supabase = getServerSupabase();
+  if (!supabase) return base;
+
+  const { data, error } = await supabase
+    .from("site_meta")
+    .select("*")
+    .eq("path", path)
+    .maybeSingle();
+
+  if (error || !data) return base;
+  return {
+    path,
+    label: (data.label as string) ?? path,
+    title: (data.title as string) || base.title,
+    description: (data.description as string) || base.description,
+    ogImage: (data.og_image as string) ?? "",
+  };
+}
+
+/** Every static-page meta row — used by the dashboard's SEO screen. */
+export async function getAllSiteMeta(): Promise<SiteMeta[]> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return Object.entries(SITE_META_FALLBACK).map(([path, v]) => ({
+      path,
+      label: path,
+      title: v.title,
+      description: v.description,
+      ogImage: "",
+    }));
+  }
+
+  const { data, error } = await supabase.from("site_meta").select("*").order("path");
+  if (error || !data) return [];
+  return data.map((r) => ({
+    path: r.path as string,
+    label: r.label as string,
+    title: (r.title as string) ?? "",
+    description: (r.description as string) ?? "",
+    ogImage: (r.og_image as string) ?? "",
+  }));
+}

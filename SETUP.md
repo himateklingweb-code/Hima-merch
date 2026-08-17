@@ -18,7 +18,7 @@ Perkiraan waktu: **30–45 menit**, sebagian besar menunggu deploy.
 8. [Cara kerja pemesanan](#8-cara-kerja-pemesanan)
 9. [Tugas rutin pengurus](#9-tugas-rutin-pengurus)
 10. [Kalau ada masalah](#10-kalau-ada-masalah)
-11. [Yang belum selesai](#11-yang-belum-selesai)
+11. [Status & catatan](#11-yang-belum-selesai)
 
 ---
 
@@ -84,7 +84,7 @@ Buka <http://localhost:3000>.
 
 ### 3b. Jalankan skema database
 
-Buka menu **SQL Editor** → **New query**, lalu jalankan **tiga file ini
+Buka menu **SQL Editor** → **New query**, lalu jalankan **empat file ini
 secara berurutan** (isi seluruhnya, satu per satu):
 
 | Urutan | File | Isi |
@@ -92,6 +92,7 @@ secara berurutan** (isi seluruhnya, satu per satu):
 | 1 | [`00000000000000_init.sql`](supabase/migrations/00000000000000_init.sql) | `staff`, `products`, `orders`, `order_items`, RLS, fungsi pemesanan |
 | 2 | [`00000000000001_content_tables.sql`](supabase/migrations/00000000000001_content_tables.sql) | `articles`, `departments`, `department_periods`, `department_members`, `partners`, `ads` + RLS |
 | 3 | [`00000000000002_seed_content.sql`](supabase/migrations/00000000000002_seed_content.sql) | Isi awal berita, departemen, mitra, iklan |
+| 4 | [`00000000000003_lifecycle_and_extras.sql`](supabase/migrations/00000000000003_lifecycle_and_extras.sql) | Verifikasi pesanan, kedaluwarsa otomatis, batas per-IP, `site_meta`, bukti pembayaran |
 
 Semuanya aman dijalankan ulang — memakai `if not exists` dan
 `on conflict do nothing`.
@@ -207,6 +208,9 @@ Cek satu per satu:
 - [ ] Pesanan muncul di `/admin/pesanan` dengan label **Data live**
 - [ ] `/admin` menolak akses tanpa login
 - [ ] Buka di HP — tata letak rapi
+- [ ] Klik **Verifikasi** di sebuah pesanan → stok produk berkurang
+- [ ] Unggah bukti transfer dari halaman lacak pesanan → ikon 🧾 muncul di dashboard
+- [ ] Ubah judul di `/admin/seo` → **Simpan** → muat ulang halamannya, judul tab ikut berubah
 
 ---
 
@@ -277,22 +281,30 @@ konfigurasi env.
 
 ### Memverifikasi pesanan
 
-`/admin/pesanan` → cocokkan bukti transfer → ubah `payment_status` dan
-`order_status`. Untuk sekarang perubahan status masih dilakukan lewat
-Supabase **Table Editor**.
+Buka `/admin/pesanan`. Tiap pesanan yang menunggu punya tombol:
+
+| Tombol | Yang terjadi |
+|---|---|
+| **Verifikasi** | Pesanan jadi *terjual* & *lunas*. Stok benar-benar berkurang |
+| **✕ (Batalkan)** | Pesanan dibatalkan, stok yang ditahan dikembalikan |
+| **Urungkan** | Membatalkan verifikasi, stok kembali ditahan |
+
+Ikon 🧾 muncul kalau pembeli sudah mengunggah bukti transfer — klik untuk
+membukanya. Tautannya hanya berlaku 5 menit dan hanya bisa dibuka pengurus.
+
+> Stok bergerak sendiri mengikuti status. Jangan menguranginya manual di
+> Table Editor, nanti terhitung dua kali.
 
 ### Pesanan kedaluwarsa
 
-Pesanan yang tidak dibayar menahan stok. Bersihkan berkala:
+Berjalan otomatis: tiap jam, pesanan yang belum dibayar lebih dari 24 jam
+ditandai *kadaluarsa* dan stoknya dilepas kembali.
+
+Untuk menjalankan lebih awal, atau memakai batas waktu lain:
 
 ```sql
-update public.orders
-set order_status = 'kadaluarsa'
-where order_status = 'pending_verifikasi'
-  and created_at < now() - interval '24 hours';
+select public.expire_stale_orders(24);
 ```
-
-Lalu kembalikan stoknya secara manual di tabel `products`.
 
 ---
 
@@ -313,17 +325,27 @@ Lalu kembalikan stoknya secara manual di tabel `products`.
 
 Jujur soal batasan saat ini, supaya tidak ada kejutan:
 
-| Hal | Kondisi | Dampak |
-|---|---|---|
-| **Ubah status pesanan** | Tombol "Verifikasi" belum berfungsi | Lakukan lewat Supabase Table Editor. Aturan RLS-nya sudah ada, tinggal dipasang tombolnya |
-| **Meta halaman statis** | Beranda, Tentang, Kontak dll di `/admin/seo` belum punya tabel | Override produk & berita **tersimpan**; halaman statis masih per sesi |
-| **Pesanan kedaluwarsa** | Belum otomatis | Stok tertahan sampai dibersihkan manual — lihat [bagian 9](#pesanan-kedaluwarsa) |
-| **Pembatasan pesanan** | 5 pesanan per nomor per jam | Berbasis nomor WhatsApp, bukan IP |
-| **Bukti pembayaran** | Kolom sudah ada, upload belum | Bukti transfer masih lewat WhatsApp |
+Semua yang dulu tercatat di sini sudah selesai:
 
-Yang **sudah** berjalan penuh di database: produk, pesanan, berita,
-departemen, pengurus, mitra, dan iklan. Semuanya bisa diubah lewat dashboard
-dan langsung tampil di website.
+| Hal | Status |
+|---|---|
+| Ubah status pesanan | ✅ Tombol **Verifikasi**, **Batalkan**, dan **Urungkan** berfungsi. Stok ikut bergerak otomatis |
+| Meta halaman statis | ✅ Tersimpan di tabel `site_meta`, diedit lewat `/admin/seo` |
+| Pesanan kedaluwarsa | ✅ Otomatis tiap jam — pesanan belum bayar lewat 24 jam jadi kadaluarsa dan stoknya dilepas |
+| Pembatasan pesanan | ✅ 5 per nomor **dan** 15 per jaringan, per jam |
+| Bukti pembayaran | ✅ Pembeli mengunggah dari halaman lacak pesanan; hanya kasir yang bisa membukanya |
+
+### Yang masih perlu perhatian
+
+| Hal | Keterangan |
+|---|---|
+| **Leaked password protection** | Belum aktif. Nyalakan di Supabase → **Authentication** → **Policies** supaya kata sandi pengurus dicek terhadap basis data kebocoran. Satu klik, sangat disarankan |
+| **Keywords global di `/admin/seo`** | Masih per sesi — belum dipakai di metadata mana pun |
+| **Tombol "Generate sitemap"** | Kosmetik. Sitemap sudah otomatis di `/sitemap.xml`, dibangun ulang tiap deploy |
+
+Semua konten — produk, pesanan, berita, departemen, pengurus, mitra, iklan,
+dan meta halaman — berjalan penuh di database dan bisa diubah lewat
+dashboard.
 
 Prioritas berikutnya ada di [`SECURITY-TODO.md`](SECURITY-TODO.md).
 

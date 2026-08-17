@@ -1,11 +1,21 @@
 import { Metadata } from "next";
-import { getPartners } from "@/lib/content-repo";
+import { getPartners, getSiteMeta } from "@/lib/content-repo";
 import { Building2, Mail } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Kemitraan",
-  description: "Daftar mitra dan sponsor HIMA Teknik Lingkungan UNTAN serta informasi pengajuan kerja sama.",
-};
+// Editable in /admin/seo — falls back to the previous hardcoded values.
+export async function generateMetadata(): Promise<Metadata> {
+  const meta = await getSiteMeta("/kemitraan");
+  return {
+    title: { absolute: meta.title },
+    description: meta.description,
+    alternates: { canonical: "/kemitraan" },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      ...(meta.ogImage && { images: [{ url: meta.ogImage }] }),
+    },
+  };
+}
 
 
 // Read fresh at most once a minute so stock and new content appear

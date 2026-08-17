@@ -2,13 +2,22 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import { gdriveThumbnail } from "@/data/news";
-import { getArticles } from "@/lib/content-repo";
+import { getArticles, getSiteMeta } from "@/lib/content-repo";
 
-export const metadata: Metadata = {
-  title: "Berita",
-  description:
-    "Berita dan kabar terbaru dari HIMA Teknik Lingkungan Universitas Tanjungpura.",
-};
+// Editable in /admin/seo — falls back to the previous hardcoded values.
+export async function generateMetadata(): Promise<Metadata> {
+  const meta = await getSiteMeta("/berita");
+  return {
+    title: { absolute: meta.title },
+    description: meta.description,
+    alternates: { canonical: "/berita" },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      ...(meta.ogImage && { images: [{ url: meta.ogImage }] }),
+    },
+  };
+}
 
 
 // Read fresh at most once a minute so stock and new content appear

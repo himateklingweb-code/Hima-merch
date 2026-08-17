@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OrderStatus } from "@/data/orders";
+import { OrderStatus, PaymentStatus } from "@/data/orders";
 import { formatPrice } from "@/data/products";
 import {
   CheckCircle,
@@ -12,8 +12,14 @@ import {
   Filter,
   Database,
   Loader2,
+  Receipt,
 } from "lucide-react";
-import { fetchOrders, type OrderRecord } from "@/lib/orders-repo";
+import {
+  fetchOrders,
+  setOrderStatus,
+  signedProofUrl,
+  type OrderRecord,
+} from "@/lib/orders-repo";
 
 const statusConfig: Record<
   OrderStatus,
@@ -34,6 +40,37 @@ export default function AdminPesananPage() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [live, setLive] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [busyCode, setBusyCode] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    const res = await fetchOrders();
+    setOrders(res.orders);
+    setLive(res.live);
+  };
+
+  /**
+   * Status changes go through the database, which also moves the stock —
+   * confirming a sale decrements it, cancelling puts it back.
+   */
+  const updateStatus = async (
+    code: string,
+    next: { orderStatus?: OrderStatus; paymentStatus?: PaymentStatus }
+  ) => {
+    setBusyCode(code);
+    setActionError(null);
+    const res = await setOrderStatus(code, next);
+    if (!res.ok) setActionError(res.error ?? "Gagal mengubah status.");
+    else await refresh();
+    setBusyCode(null);
+  };
+
+  /** Receipts live in a private bucket; open one through a short-lived link. */
+  const viewProof = async (path: string) => {
+    const url = await signedProofUrl(path);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    else setActionError("Bukti pembayaran tidak dapat dibuka.");
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +115,13 @@ export default function AdminPesananPage() {
           {live ? "Data live" : "Data contoh"}
         </span>
       </div>
+
+      {actionError && (
+        <div className="mb-4 flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{actionError}</span>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -220,15 +264,66 @@ export default function AdminPesananPage() {
                       </td>
                       <td className="px-5 py-3 align-top">
                         <div className="flex items-center justify-end gap-1">
-                          {order.order_status === "pending_verifikasi" && (
+                          {order.payment_proof_url && (
                             <button
-                              className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors"
-                              title="Verifikasi memerlukan login staf Supabase (lihat SECURITY-TODO.md)"
+                              onClick={() => viewProof(order.payment_proof_url!)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-emerald-700 transition-colors"
+                              title="Lihat bukti pembayaran"
                             >
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              Verifikasi
+                              <Receipt className="w-4 h-4" />
                             </button>
                           )}
+
+                          {order.order_status === "pending_verifikasi" && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  updateStatus(order.order_code, {
+                                    orderStatus: "terjual",
+                                    paymentStatus: "lunas",
+                                  })
+                                }
+                                disabled={busyCode === order.order_code}
+                                className="inline-flex items-center gap-1 text-xs font-medium bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                                title="Tandai lunas & terjual — stok akan dikurangi"
+                              >
+                                {busyCode === order.order_code ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                )}
+                                Verifikasi
+                              </button>
+                              <button
+                                onClick={() =>
+                                  updateStatus(order.order_code, {
+                                    orderStatus: "dibatalkan",
+                                  })
+                                }
+                                disabled={busyCode === order.order_code}
+                                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-red-600 disabled:opacity-60 transition-colors"
+                                title="Batalkan — stok dikembalikan"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+
+                          {order.order_status === "terjual" && (
+                            <button
+                              onClick={() =>
+                                updateStatus(order.order_code, {
+                                  orderStatus: "pending_verifikasi",
+                                })
+                              }
+                              disabled={busyCode === order.order_code}
+                              className="text-xs text-gray-400 hover:text-gray-600 hover:underline disabled:opacity-60"
+                              title="Batalkan verifikasi — stok dikembalikan ke tertahan"
+                            >
+                              Urungkan
+                            </button>
+                          )}
+
                           <a
                             href={`https://wa.me/${order.buyer_wa}`}
                             target="_blank"

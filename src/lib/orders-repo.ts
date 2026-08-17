@@ -50,6 +50,8 @@ export interface PublicOrderReceipt {
   item_count: number;
   payment_status: PaymentStatus;
   order_status: OrderStatus;
+  /** Boolean only — the tracker never receives the storage path. */
+  has_payment_proof?: boolean;
   verified_at?: string | null;
   created_at: string;
   items: OrderItemRecord[];
@@ -229,6 +231,75 @@ export async function fetchOrders(): Promise<{
 
   if (error) return { orders: demoRecords(), live: false };
   return { orders: (data ?? []) as unknown as OrderRecord[], live: true };
+}
+
+/**
+ * Change an order's status — what the Verifikasi button calls.
+ *
+ * The database does the stock movement: confirming a sale takes the
+ * quantity out of stock, cancelling puts it back. Staff-only, enforced
+ * inside the RPC rather than trusted from here.
+ */
+export async function setOrderStatus(
+  orderCode: string,
+  next: { orderStatus?: OrderStatus; paymentStatus?: PaymentStatus }
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
+
+  const { error } = await supabase.rpc("set_order_status", {
+    p_order_code: orderCode,
+    p_order_status: next.orderStatus ?? null,
+    p_payment_status: next.paymentStatus ?? null,
+  });
+
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+/**
+ * Attach a transfer receipt to an order.
+ *
+ * Uploads to a private bucket, then records the path through an RPC keyed
+ * on the order code. The buyer is not signed in, so the code — which
+ * carries a random suffix — is what authorises the write.
+ */
+export async function uploadPaymentProof(
+  orderCode: string,
+  file: File
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const path = `${orderCode}/${Date.now()}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from("payment-proofs")
+    .upload(path, file, { upsert: false, contentType: file.type });
+
+  if (upErr) return { ok: false, error: upErr.message };
+
+  const { error: rpcErr } = await supabase.rpc("attach_payment_proof", {
+    p_code: orderCode,
+    p_url: `payment-proofs/${path}`,
+  });
+
+  return rpcErr ? { ok: false, error: rpcErr.message } : { ok: true };
+}
+
+/** Short-lived link so staff can view a receipt from the private bucket. */
+export async function signedProofUrl(
+  storedPath: string
+): Promise<string | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+
+  const path = storedPath.replace(/^payment-proofs\//, "");
+  const { data, error } = await supabase.storage
+    .from("payment-proofs")
+    .createSignedUrl(path, 300);
+
+  return error ? null : (data?.signedUrl ?? null);
 }
 
 /** Look up one order by the code on the buyer's receipt. */
