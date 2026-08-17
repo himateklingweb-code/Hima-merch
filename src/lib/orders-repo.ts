@@ -4,7 +4,7 @@ import type { PaymentStatus, OrderStatus } from "@/data/orders";
 
 /** A line in a basket — one product/variant combination. */
 export interface OrderItemRecord {
-  product_id: string;
+  product_id?: string;
   product_name: string;
   product_slug?: string | null;
   variant: string | null;
@@ -14,6 +14,7 @@ export interface OrderItemRecord {
   subtotal: number;
 }
 
+/** Full order, as staff see it in the dashboard. */
 export interface OrderRecord {
   id: string;
   order_code: string;
@@ -34,6 +35,33 @@ export interface OrderRecord {
   items: OrderItemRecord[];
 }
 
+/**
+ * The trimmed receipt a buyer gets from a code lookup.
+ *
+ * Deliberately not an OrderRecord: `get_order_by_code` masks the name and
+ * phone and omits the address entirely, so a leaked code cannot be turned
+ * into someone's contact details.
+ */
+export interface PublicOrderReceipt {
+  order_code: string;
+  buyer_name: string;
+  buyer_wa_masked: string;
+  total_amount: number;
+  item_count: number;
+  payment_status: PaymentStatus;
+  order_status: OrderStatus;
+  verified_at?: string | null;
+  created_at: string;
+  items: OrderItemRecord[];
+}
+
+/** What checkout sends. Note there is no price — the server sets that. */
+export interface NewOrderLine {
+  product_id: string;
+  variant: string | null;
+  qty: number;
+}
+
 export interface NewOrderInput {
   buyer_name: string;
   buyer_wa: string;
@@ -41,13 +69,26 @@ export interface NewOrderInput {
   buyer_prodi?: string;
   buyer_address: string;
   notes?: string;
-  items: OrderItemRecord[];
+  items: NewOrderLine[];
 }
 
-/**
- * The seeded orders reshaped as baskets, so the dashboard and the order
- * tracker render identically whether or not Supabase is configured.
- */
+export interface CreateOrderResult {
+  orderCode: string;
+  /** False when the order only exists in this browser, not the database. */
+  persisted: boolean;
+  /**
+   * True when the database actively refused the order — sold out, closed
+   * pre-order, bad input. The basket must be kept and nothing sent to the
+   * cashier. Distinct from `persisted: false`, which also covers "no
+   * database configured", where carrying on is the right call.
+   */
+  rejected: boolean;
+  totalAmount?: number;
+  itemCount?: number;
+  error?: string;
+}
+
+/** Seeded orders reshaped as baskets, for when Supabase is unconfigured. */
 function demoRecords(): OrderRecord[] {
   return demoOrders.map((o) => ({
     id: o.id,
@@ -83,106 +124,97 @@ function demoRecords(): OrderRecord[] {
 /** Fallback code for when the database is unreachable or unconfigured. */
 function localOrderCode(): string {
   const year = new Date().getFullYear();
-  const rand = Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0");
-  return `ORD-${year}-${rand}`;
-}
-
-export interface CreateOrderResult {
-  orderCode: string;
-  /** False when the order only exists in this browser, not the database. */
-  persisted: boolean;
-  error?: string;
+  const rand = Math.random().toString(16).slice(2, 8).toUpperCase();
+  return `ORD-${year}-LOCAL-${rand}`;
 }
 
 /**
- * Write a basket to the database.
+ * Place an order.
  *
- * A failure here must never cost the student their order: the checkout
- * still hands off to WhatsApp with a locally generated code, and the
- * result says the order was not persisted so the UI can say so plainly.
+ * Everything goes through the `create_order` RPC: the browser sends product
+ * ids, variants and quantities, and the database looks up the real price,
+ * checks stock and the pre-order window, holds the stock, and allocates the
+ * code. A tampered payload cannot set its own price or oversell.
+ *
+ * A failure here must never cost the student their order — checkout still
+ * hands off to WhatsApp with a locally generated code, and `persisted`
+ * tells the UI to say so plainly.
  */
 export async function createOrder(
   input: NewOrderInput
 ): Promise<CreateOrderResult> {
   const supabase = getSupabase();
-  const totalAmount = input.items.reduce((s, i) => s + i.subtotal, 0);
-  const itemCount = input.items.reduce((s, i) => s + i.qty, 0);
 
   if (!supabase) {
+    // No database wired up: let the order through on a local code rather
+    // than blocking a student who did nothing wrong.
     return {
       orderCode: localOrderCode(),
       persisted: false,
+      rejected: false,
       error: "Supabase belum dikonfigurasi.",
     };
   }
 
   try {
-    // Sequential code from the database; fall back if the RPC is missing.
-    const { data: codeData, error: codeError } = await supabase.rpc(
-      "next_order_code"
-    );
-    const orderCode =
-      !codeError && codeData ? String(codeData) : localOrderCode();
-
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        order_code: orderCode,
-        buyer_name: input.buyer_name,
-        buyer_wa: input.buyer_wa,
-        buyer_nim: input.buyer_nim || null,
-        buyer_prodi: input.buyer_prodi || null,
-        buyer_address: input.buyer_address,
-        notes: input.notes || null,
-        total_amount: totalAmount,
-        item_count: itemCount,
-      })
-      .select("id, order_code")
-      .single();
-
-    if (orderError || !order) {
-      return {
-        orderCode,
-        persisted: false,
-        error: orderError?.message ?? "Gagal menyimpan pesanan.",
-      };
-    }
-
-    const { error: itemsError } = await supabase.from("order_items").insert(
-      input.items.map((i) => ({
-        order_id: order.id,
+    const { data, error } = await supabase.rpc("create_order", {
+      p_buyer_name: input.buyer_name,
+      p_buyer_wa: input.buyer_wa,
+      p_buyer_address: input.buyer_address,
+      p_items: input.items.map((i) => ({
         product_id: i.product_id,
-        product_name: i.product_name,
-        product_slug: i.product_slug ?? null,
         variant: i.variant,
-        stock_type_snapshot: i.stock_type_snapshot,
         qty: i.qty,
-        unit_price: i.unit_price,
-        subtotal: i.subtotal,
-      }))
-    );
+      })),
+      p_buyer_nim: input.buyer_nim ?? null,
+      p_buyer_prodi: input.buyer_prodi ?? null,
+      p_notes: input.notes ?? null,
+    });
 
-    if (itemsError) {
+    if (error) {
+      // The database said no — sold out, closed pre-order, bad input. It
+      // raises these with readable Indonesian messages, so they are safe
+      // and useful to show the buyer directly.
       return {
-        orderCode: order.order_code,
+        orderCode: "",
         persisted: false,
-        error: itemsError.message,
+        rejected: true,
+        error: error.message,
       };
     }
 
-    return { orderCode: order.order_code, persisted: true };
+    const result = data as {
+      order_code: string;
+      total_amount: number;
+      item_count: number;
+    };
+
+    return {
+      orderCode: result.order_code,
+      persisted: true,
+      rejected: false,
+      totalAmount: result.total_amount,
+      itemCount: result.item_count,
+    };
   } catch (err) {
+    // Network or transport failure rather than a refusal — treat it like a
+    // missing database and let the WhatsApp handoff still happen.
     return {
       orderCode: localOrderCode(),
       persisted: false,
+      rejected: false,
       error: err instanceof Error ? err.message : "Kesalahan tak terduga.",
     };
   }
 }
 
-/** Every order, newest first. Falls back to the seeded demo rows. */
+/**
+ * Every order, newest first — staff only.
+ *
+ * RLS returns nothing unless the caller is signed in and has a `staff` row,
+ * so an unauthenticated visitor simply gets an empty list rather than an
+ * error. Falls back to demo rows when Supabase is unconfigured.
+ */
 export async function fetchOrders(): Promise<{
   orders: OrderRecord[];
   live: boolean;
@@ -195,31 +227,41 @@ export async function fetchOrders(): Promise<{
     .select("*, items:order_items(*)")
     .order("created_at", { ascending: false });
 
-  if (error || !data) return { orders: demoRecords(), live: false };
-  return { orders: data as unknown as OrderRecord[], live: true };
+  if (error) return { orders: demoRecords(), live: false };
+  return { orders: (data ?? []) as unknown as OrderRecord[], live: true };
 }
 
-/** Look up one order by the code printed on the buyer's receipt. */
+/** Look up one order by the code on the buyer's receipt. */
 export async function fetchOrderByCode(
   code: string
-): Promise<OrderRecord | null> {
+): Promise<PublicOrderReceipt | null> {
   const trimmed = code.trim().toUpperCase();
   const supabase = getSupabase();
 
   if (!supabase) {
-    return demoRecords().find((o) => o.order_code.toUpperCase() === trimmed) ?? null;
+    const demo = demoRecords().find((o) => o.order_code === trimmed);
+    return demo
+      ? {
+          order_code: demo.order_code,
+          buyer_name: demo.buyer_name,
+          buyer_wa_masked: `•••• ${demo.buyer_wa.slice(-4)}`,
+          total_amount: demo.total_amount,
+          item_count: demo.item_count,
+          payment_status: demo.payment_status,
+          order_status: demo.order_status,
+          verified_at: demo.verified_at,
+          created_at: demo.created_at,
+          items: demo.items,
+        }
+      : null;
   }
 
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*, items:order_items(*)")
-    .eq("order_code", trimmed)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_order_by_code", {
+    p_code: trimmed,
+  });
 
-  if (error || !data) {
-    return demoRecords().find((o) => o.order_code.toUpperCase() === trimmed) ?? null;
-  }
-  return data as unknown as OrderRecord;
+  if (error || !data) return null;
+  return data as unknown as PublicOrderReceipt;
 }
 
 export { isSupabaseConfigured };

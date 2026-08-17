@@ -24,7 +24,13 @@ export function getSupabase(): SupabaseClient | null {
   if (!url || !anonKey) return null;
   if (!cached) {
     cached = createClient(url, anonKey, {
-      auth: { persistSession: false },
+      auth: {
+        // The dashboard signs staff in with Supabase Auth, so the session
+        // has to survive a reload and refresh itself.
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
     });
   }
   return cached;

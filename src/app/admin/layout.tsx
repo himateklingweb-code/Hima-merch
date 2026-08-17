@@ -17,6 +17,7 @@ import {
   Shield,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getSupabase } from "@/lib/supabase";
 
 const sidebarLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -39,16 +40,59 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
+  const [staffName, setStaffName] = useState<string>("");
+  const [staffEmail, setStaffEmail] = useState<string>("");
+
+  // The real gate is row level security on the database — this check only
+  // decides what to paint. An account without a `staff` row can hold a
+  // valid session and still read nothing.
   useEffect(() => {
     if (pathname === "/admin/login") {
       setAuthenticated(true);
       return;
     }
-    const isAuth = sessionStorage.getItem("hima_admin_auth") === "1";
-    setAuthenticated(isAuth);
-    if (!isAuth) {
-      router.replace("/admin/login");
-    }
+
+    let cancelled = false;
+
+    (async () => {
+      const supabase = getSupabase();
+      if (!supabase) {
+        if (!cancelled) setAuthenticated(false);
+        router.replace("/admin/login");
+        return;
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
+      if (!user) {
+        if (!cancelled) setAuthenticated(false);
+        router.replace("/admin/login");
+        return;
+      }
+
+      const { data: staff } = await supabase
+        .from("staff")
+        .select("full_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (!staff) {
+        await supabase.auth.signOut();
+        setAuthenticated(false);
+        router.replace("/admin/login");
+        return;
+      }
+
+      setStaffName(staff.full_name || staff.email || "Pengurus");
+      setStaffEmail(staff.email ?? user.email ?? "");
+      setAuthenticated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [pathname, router]);
 
   if (pathname === "/admin/login") {
@@ -66,8 +110,8 @@ export default function AdminLayout({
     );
   }
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("hima_admin_auth");
+  const handleLogout = async () => {
+    await getSupabase()?.auth.signOut();
     router.replace("/admin/login");
   };
 
@@ -133,8 +177,10 @@ export default function AdminLayout({
                 A
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">Admin Demo</div>
-                <div className="text-xs text-gray-400">admin@himatl.com</div>
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {staffName || "Pengurus"}
+                </div>
+                <div className="text-xs text-gray-400 truncate">{staffEmail}</div>
               </div>
             </div>
             <button

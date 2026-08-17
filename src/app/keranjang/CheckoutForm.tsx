@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, MessageCircle } from "lucide-react";
+import { Loader2, MessageCircle, AlertTriangle } from "lucide-react";
 import { useCart } from "@/components/CartContext";
 import { formatPrice } from "@/data/products";
 import { createOrder } from "@/lib/orders-repo";
@@ -48,6 +48,8 @@ export default function CheckoutForm({
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [submitting, setSubmitting] = useState(false);
+  /** Server-side refusal, e.g. the last one sold while they were typing. */
+  const [rejection, setRejection] = useState<string | null>(null);
 
   const set = (key: keyof FormState, val: string) => {
     setForm((p) => ({ ...p, [key]: val }));
@@ -100,6 +102,7 @@ export default function CheckoutForm({
     e.preventDefault();
     if (!validate() || lines.length === 0) return;
 
+    setRejection(null);
     setSubmitting(true);
     const wa = normaliseWa(form.wa)!;
 
@@ -110,23 +113,28 @@ export default function CheckoutForm({
       buyer_prodi: form.prodi.trim() || undefined,
       buyer_address: form.address.trim(),
       notes: form.notes.trim() || undefined,
+      // Ids and quantities only. The database looks up the real price and
+      // checks stock, so nothing here is worth tampering with.
       items: lines.map((l) => ({
         product_id: l.product_id,
-        product_name: l.product_name,
-        product_slug: l.product_slug,
         variant: l.variant,
-        stock_type_snapshot: l.stock_type,
         qty: l.qty,
-        unit_price: l.unit_price,
-        subtotal: l.qty * l.unit_price,
       })),
     });
+
+    setSubmitting(false);
+
+    // The database refused it — sold out, pre-order closed, bad input.
+    // Keep the basket, show why, and send nothing to the cashier.
+    if (res.rejected) {
+      setRejection(res.error ?? "Pesanan tidak dapat diproses.");
+      return;
+    }
 
     const waUrl = `https://wa.me/${WA_NUMBER}?text=${buildWaMessage(
       res.orderCode
     )}`;
 
-    setSubmitting(false);
     onPlaced({ ...res, waUrl });
 
     // Hand off to WhatsApp. Popup blockers can stop this, so the receipt
@@ -237,6 +245,19 @@ export default function CheckoutForm({
           />
         </div>
       </div>
+
+      {rejection && (
+        <div className="mt-5 flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            {rejection}
+            <br />
+            <span className="text-red-600">
+              Keranjangmu masih tersimpan — sesuaikan jumlah lalu coba lagi.
+            </span>
+          </span>
+        </div>
+      )}
 
       <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
         <span className="text-sm text-gray-500">Total</span>

@@ -11,7 +11,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatPrice } from "@/data/products";
-import { fetchOrderByCode, type OrderRecord } from "@/lib/orders-repo";
+import { fetchOrderByCode, type PublicOrderReceipt } from "@/lib/orders-repo";
 
 const statusConfig = {
   pending_verifikasi: {
@@ -44,7 +44,7 @@ const paymentConfig = {
 
 export default function CekPesananPage() {
   const [code, setCode] = useState("");
-  const [result, setResult] = useState<OrderRecord | null | "not_found">(null);
+  const [result, setResult] = useState<PublicOrderReceipt | null | "not_found">(null);
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -75,7 +75,7 @@ export default function CekPesananPage() {
             type="text"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="ORD-2026-XXXX"
+            placeholder="ORD-2026-0001-A1B2C3"
             className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all text-sm font-mono"
           />
         </div>
@@ -88,18 +88,9 @@ export default function CekPesananPage() {
         </button>
       </form>
 
-      <div className="text-center text-[10px] sm:text-xs text-gray-400 mb-4 sm:mb-6 flex flex-wrap justify-center gap-1">
-        <span>Contoh:</span>
-        {["ORD-2026-0001", "ORD-2026-0003", "ORD-2026-0004"].map((c) => (
-          <button
-            key={c}
-            onClick={() => setCode(c)}
-            className="text-emerald-600 underline"
-          >
-            {c}
-          </button>
-        ))}
-      </div>
+      <p className="text-center text-[10px] sm:text-xs text-gray-400 mb-4 sm:mb-6">
+        Kode pesanan dikirim setelah checkout dan ada di pesan WhatsApp kamu.
+      </p>
 
       {result === "not_found" && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 sm:p-6 text-center">
@@ -195,8 +186,13 @@ export default function CekPesananPage() {
                 <div className="text-[10px] sm:text-xs text-gray-400">
                   Pemesan
                 </div>
+                {/* Name and number come back partly masked — a leaked code
+                    should not hand over someone's contact details. */}
                 <div className="font-medium text-gray-900 text-xs sm:text-sm mt-0.5">
                   {result.buyer_name}
+                </div>
+                <div className="text-[10px] text-gray-400 mt-0.5">
+                  {result.buyer_wa_masked}
                 </div>
               </div>
               <div>
@@ -215,7 +211,7 @@ export default function CekPesananPage() {
 
             {result.verified_at && (
               <div className="pt-3 border-t border-gray-100 text-xs text-gray-500">
-                Diverifikasi oleh {result.verified_by} pada{" "}
+                Diverifikasi kasir pada{" "}
                 {new Date(result.verified_at).toLocaleDateString("id-ID", {
                   day: "numeric",
                   month: "short",

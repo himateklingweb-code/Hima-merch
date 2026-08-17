@@ -141,29 +141,74 @@ These require no backend and can be applied to the current demo:
 
 ---
 
-## Supabase orders — open read policy (added with checkout)
+## Supabase orders — RESOLVED 2026-08-17
 
-`supabase/schema.sql` creates `orders` and `order_items` with RLS on.
-Inserts are open by design: students place orders without logging in.
+The order pipeline was rebuilt on `supabase/migrations/00000000000000_init.sql`.
+All five P0/P1 items below are now closed and verified against the live
+database:
 
-**Reads are currently open to the anon key too, and that must change
-before real orders flow through this.** Two callers need them today —
-`/pesanan/cek` (a buyer looking up their own code) and `/admin/pesanan`
-(staff listing everything) — and the dashboard still authenticates with
-the `sessionStorage` demo, so there is no Supabase identity to scope a
-policy to. As it stands, anyone holding the anon key (which ships to the
-browser) can read every order, including buyer names, phone numbers and
-addresses.
+- [x] **P0** Admin login moved to Supabase Auth. The demo credentials and
+      the `sessionStorage` gate are gone; the login page also refuses an
+      authenticated user who has no `staff` row.
+- [x] **P0** `orders` and `order_items` have no public select policy at
+      all. Verified: as the `anon` role, both tables return 0 rows while
+      1 order and 2 items exist in the table.
+- [x] **P0** Buyer lookup goes through `get_order_by_code()`, which
+      returns a single row. It masks the buyer's name and phone and omits
+      the address entirely, so a leaked code cannot be turned into
+      contact details.
+- [x] **P1** Order creation is rate limited to 5 per WhatsApp number per
+      hour, inside the RPC.
+- [x] **P1** Prices are never accepted from the browser. `create_order()`
+      takes only product ids, variants and quantities, then prices the
+      basket from the `products` table. Verified: a payload claiming a
+      250k jacket costs 1 rupiah was recorded at the real Rp 420.000.
 
-- [ ] **P0** Move the admin login to Supabase Auth
-- [ ] **P0** Replace `"anyone can read orders"` with a policy limited to
-      authenticated staff
-- [ ] **P0** Expose buyer lookup through an RPC that takes the order code
-      and returns only that row, so `/pesanan/cek` never needs table-wide
-      select
-- [ ] **P1** Rate-limit order creation — insert is currently unbounded
-- [ ] **P1** Validate `unit_price`/`subtotal` server-side; they are sent
-      from the browser and could be tampered with
+Also hardened while in there:
+
+- `is_staff()` and `next_order_code()` revoked from the public API — they
+  are internal helpers, not endpoints.
+- Order codes gained a random suffix (`ORD-2026-0001-A3F9C1`). Sequential
+  codes plus a public lookup meant anyone could have walked the range.
+- Server-side validation of stock, pre-order deadlines, variant validity,
+  phone format, quantity bounds, and basket size. Seven tampering
+  scenarios tested; all rejected.
+- CSP restricts `connect-src` to the Supabase project, so injected script
+  cannot exfiltrate order data elsewhere.
+- `X-Robots-Tag: noindex` on `/admin/*`.
+
+### Accepted advisor warnings
+
+`get_advisors(type: security)` reports five WARNs. All are understood and
+deliberate — recorded here so a future reader does not "fix" them and break
+the site:
+
+| Function | Roles | Why it stays |
+|---|---|---|
+| `create_order` | anon, authenticated | Checkout is open to students without login. Every input is validated inside the function; prices come from the catalogue, not the caller. |
+| `get_order_by_code` | anon, authenticated | Buyers look up their own receipt. Returns one row, masked, no address. Codes carry a random suffix so the range cannot be walked. |
+| `is_staff` | authenticated only | Required: RLS policies are evaluated as the querying role, so `authenticated` must be able to execute it or every staff-only policy fails. Revoked from `anon`. It only reports whether *you* are staff. |
+
+Note the trap: `is_staff()` was briefly revoked from `anon` while a products
+policy still called it, which made the whole catalogue unreadable to the
+public with "permission denied for function is_staff". The products read
+policy is now split by role so the `anon` predicate never touches it.
+
+### Still open
+
+- [ ] **P1** The "Verifikasi" button in `/admin/pesanan` is not wired.
+      Status changes happen in the Supabase Table Editor. The RLS update
+      policy for staff already exists.
+- [ ] **P1** Expired orders keep holding `stock_reserved`. Needs a
+      scheduled job (pg_cron) to release stock after N hours rather than
+      the manual SQL documented in SETUP.md.
+- [ ] **P2** Rate limiting is per WhatsApp number, not per IP. Someone
+      cycling numbers can still create orders.
+- [ ] **P2** Storefront reads `src/data/products.ts` rather than the
+      `products` table, so displayed stock can drift from real stock.
+      Ordering is unaffected — the database is authoritative there.
+- [ ] **P2** Payment proof upload (`payment_proof_url` exists, no upload
+      path). Would need a Storage bucket with its own access rules.
 
 ---
 

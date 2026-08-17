@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Website HIMA Teknik Lingkungan UNTAN
 
-## Getting Started
+Situs resmi Himpunan Mahasiswa Teknik Lingkungan, Universitas Tanjungpura —
+profil organisasi, berita kegiatan, struktur kepengurusan, dan etalase
+merchandise dengan pemesanan lewat WhatsApp.
 
-First, run the development server:
+**Mau memasang atau men-deploy? → [SETUP.md](SETUP.md)**
+
+---
+
+## Teknologi
+
+| | |
+|---|---|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Bahasa | TypeScript |
+| Styling | Tailwind CSS v4 + CSS variables |
+| Database | Supabase (PostgreSQL 17 + Auth + RLS) |
+| Deploy | Vercel |
+
+---
+
+## Struktur
+
+```
+src/
+├─ app/
+│  ├─ page.tsx              Beranda
+│  ├─ tentang/              Profil, visi & misi
+│  ├─ departemen/           Struktur kepengurusan
+│  ├─ berita/               Artikel kegiatan
+│  ├─ merchandise/          Etalase produk
+│  ├─ keranjang/            Keranjang + checkout
+│  ├─ pesanan/cek/          Lacak pesanan
+│  ├─ kemitraan/, kontak/
+│  └─ admin/                Dashboard pengurus
+├─ components/              Navbar, Footer, Carousel, Cart, Loader
+├─ data/                    Konten statis (berita, departemen, mitra)
+└─ lib/                     Klien Supabase & akses data pesanan
+
+supabase/migrations/        Skema database
+```
+
+---
+
+## Cara kerja pemesanan
+
+Keranjang disimpan di browser. Saat checkout, browser hanya mengirim
+**produk apa dan berapa banyak** — harga, stok, dan kuota pre-order dibaca
+langsung dari katalog oleh database lewat fungsi `create_order()`. Artinya
+data yang dimanipulasi di browser tidak bisa mengubah harga atau memesan
+melebihi stok.
+
+Kode pesanan dikembalikan ke pembeli, ringkasan dikirim ke WhatsApp kasir,
+dan pesanan muncul di dashboard.
+
+Pembeli bisa melacak pesanan di `/pesanan/cek`. Halaman itu memanggil
+`get_order_by_code()`, yang menyamarkan nama dan nomor serta tidak
+mengembalikan alamat — supaya kode yang bocor tidak berubah jadi data
+kontak orang.
+
+---
+
+## Keamanan
+
+- **Row Level Security** aktif di semua tabel. Tabel `orders` tidak bisa
+  dibaca publik sama sekali; hanya pengurus yang sudah login (punya baris di
+  tabel `staff`) yang bisa melihatnya.
+- **Harga divalidasi di server.** Browser tidak pernah menentukan harga.
+- **Kode pesanan tidak bisa ditebak** — ada akhiran acak, jadi tidak bisa
+  ditelusuri berurutan.
+- **Dashboard pakai Supabase Auth.** Tidak ada kredensial demo.
+- **Content Security Policy** membatasi koneksi keluar hanya ke Supabase.
+
+Catatan lengkap dan sisa pekerjaan: [SECURITY-TODO.md](SECURITY-TODO.md).
+
+---
+
+## Pengembangan
+
+```bash
+npm install
+```
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+```bash
+npm run build
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Website tetap berjalan tanpa `.env.local` — pesanan tidak tersimpan dan
+dashboard memakai data contoh. Ini disengaja agar konfigurasi yang belum
+lengkap tidak membuat situs mati.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Lisensi & kredit
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Dikembangkan untuk HIMA Teknik Lingkungan UNTAN.
+Dirancang oleh [sayba.arc](https://sayba.id).
