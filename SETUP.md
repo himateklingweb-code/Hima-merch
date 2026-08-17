@@ -84,7 +84,7 @@ Buka <http://localhost:3000>.
 
 ### 3b. Jalankan skema database
 
-Buka menu **SQL Editor** → **New query**, lalu jalankan **empat file ini
+Buka menu **SQL Editor** → **New query**, lalu jalankan **lima file ini
 secara berurutan** (isi seluruhnya, satu per satu):
 
 | Urutan | File | Isi |
@@ -93,6 +93,7 @@ secara berurutan** (isi seluruhnya, satu per satu):
 | 2 | [`00000000000001_content_tables.sql`](supabase/migrations/00000000000001_content_tables.sql) | `articles`, `departments`, `department_periods`, `department_members`, `partners`, `ads` + RLS |
 | 3 | [`00000000000002_seed_content.sql`](supabase/migrations/00000000000002_seed_content.sql) | Isi awal berita, departemen, mitra, iklan |
 | 4 | [`00000000000003_lifecycle_and_extras.sql`](supabase/migrations/00000000000003_lifecycle_and_extras.sql) | Verifikasi pesanan, kedaluwarsa otomatis, batas per-IP, `site_meta`, bukti pembayaran |
+| 5 | [`00000000000004_staff_self_service.sql`](supabase/migrations/00000000000004_staff_self_service.sql) | Kelola pengurus dari dashboard, akun pertama otomatis admin |
 
 Semuanya aman dijalankan ulang — memakai `if not exists` dan
 `on conflict do nothing`.
@@ -116,27 +117,42 @@ Semuanya aman dijalankan ulang — memakai `if not exists` dan
 ## 4. Membuat akun pengurus (dashboard)
 
 Dashboard `/admin` hanya bisa diakses akun yang **(a)** terdaftar di Supabase
-Auth **dan (b)** punya baris di tabel `staff`. Dua-duanya wajib.
+Auth **dan (b)** punya baris di tabel `staff`. Dua-duanya wajib — masuk
+membuktikan *siapa kamu*, baris `staff` menentukan *apa yang boleh dilihat*.
+
+> **Akun pertama otomatis jadi admin.** Di database yang masih kosong, user
+> pertama yang dibuat langsung didaftarkan sebagai admin. Jadi untuk akun
+> pertama cukup langkah 4a — tidak perlu SQL sama sekali.
 
 ### 4a. Buat user
 
 **Authentication** → **Users** → **Add user** → **Create new user**
 
 - Email: misal `kasir@himatl.com`
-- Password: buat yang kuat
+- Password: buat yang kuat (pakai password manager)
 - Centang **Auto Confirm User** (supaya tidak perlu verifikasi email)
 
-### 4b. Daftarkan sebagai pengurus
+Hanya Supabase yang bisa menetapkan password — password disimpan sebagai
+hash bcrypt dan tidak pernah bisa diisi lewat SQL.
 
-Langkah ini **tidak ada passwordnya** — dan itu memang disengaja. Password
-sudah dibuat di langkah 4a lewat form Supabase. Perintah di bawah hanya
-menghubungkan akun yang sudah ada itu ke tabel `staff`, yaitu yang dicek
-oleh semua aturan keamanan.
+### 4b. Beri akses — lewat dashboard, bukan SQL
 
-Supabase menyimpan password sebagai hash bcrypt di kolom
-`auth.users.encrypted_password`. Password asli tidak pernah disimpan dan
-tidak bisa dimasukkan lewat SQL biasa — kalau ada panduan yang menyuruh
-menulis password di dalam `insert`, itu keliru dan tidak aman.
+Buka **`/admin/pengguna`**. Akun yang sudah dibuat tapi belum punya akses
+muncul di bagian **"Menunggu akses"**. Klik **Jadikan kasir** atau
+**atau admin**. Selesai.
+
+Di halaman yang sama kamu juga bisa menaikkan/menurunkan peran dan mencabut
+akses. Semua tanpa menyentuh SQL Editor.
+
+> Halaman ini hanya bisa dipakai **admin**. Kasir melihat daftar pengurus
+> tapi tidak bisa mengubahnya.
+>
+> Admin terakhir tidak bisa menghapus dirinya sendiri atau dihapus — supaya
+> dashboard tidak pernah terkunci tanpa admin.
+
+### 4b (cara lama, kalau perlu)
+
+Masih bisa lewat SQL Editor kalau memang lebih suka:
 
 **SQL Editor** → jalankan (ganti emailnya agar cocok dengan 4a):
 
@@ -148,9 +164,9 @@ where email = 'kasir@himatl.com'
 on conflict (id) do nothing;
 ```
 
-Perintah itu mencari user berdasarkan email, mengambil `id`-nya, lalu
-menyalinnya ke `staff`. Kalau hasilnya `0 rows`, berarti emailnya tidak
-cocok dengan yang dibuat di 4a.
+Perintah ini tidak berisi password — password sudah dibuat di 4a. Yang
+dilakukan hanya mencari user berdasarkan email lalu menyalin `id`-nya ke
+`staff`. Kalau hasilnya `0 rows`, emailnya tidak cocok dengan 4a.
 
 `role` boleh `admin` atau `kasir`.
 
@@ -166,12 +182,10 @@ Coba masuk lewat `/admin/login`.
 
 ### Menghapus akses pengurus
 
-```sql
-delete from public.staff where email = 'orang@himatl.com';
-```
+Lewat **`/admin/pengguna`** → ikon 🗑 di baris orangnya.
 
-Akun masih bisa login tapi tidak melihat apa pun. Untuk mencabut total,
-hapus juga usernya di **Authentication → Users**.
+Setelah dicabut, akunnya masih bisa masuk tapi tidak melihat apa pun. Untuk
+menutup total, hapus juga usernya di **Authentication → Users**.
 
 ---
 
