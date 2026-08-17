@@ -22,13 +22,11 @@ export default function AdminBeritaPage() {
     ascending: false,
   });
   const [editing, setEditing] = useState<Article | null>(null);
-  const [, setIsNew] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleSave = async (article: Article) => {
     if (!(await save(article))) return;
     setEditing(null);
-    setIsNew(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -36,7 +34,6 @@ export default function AdminBeritaPage() {
   };
 
   const openNew = () => {
-    setIsNew(true);
     setEditing({
       id: `news-${Date.now()}`,
       title: "",
@@ -149,7 +146,6 @@ export default function AdminBeritaPage() {
                       </Link>
                       <button
                         onClick={() => {
-                          setIsNew(false);
                           setEditing(article);
                         }}
                         className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
@@ -178,7 +174,6 @@ export default function AdminBeritaPage() {
           onSave={handleSave}
           onClose={() => {
             setEditing(null);
-            setIsNew(false);
           }}
         />
       )}

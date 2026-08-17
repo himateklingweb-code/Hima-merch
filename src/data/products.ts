@@ -154,3 +154,13 @@ export function formatPrice(price: number): string {
     minimumFractionDigits: 0,
   }).format(price);
 }
+
+/** URL-safe slug from a product name, used when the field is left blank. */
+export function slugifyName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}

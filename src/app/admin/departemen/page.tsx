@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { iconFromName } from "@/lib/icons";
+import { iconFromName, ICON_NAMES } from "@/lib/icons";
+import DeptIcon from "@/components/DeptIcon";
 import {
   departments as seedDepts,
   Department,
@@ -26,6 +27,11 @@ export default function AdminDepartemenPage() {
     deptId: string;
     member: DepartmentMember | null;
   } | null>(null);
+  const [editingDept, setEditingDept] = useState<{
+    dept: Department;
+    creating: boolean;
+  } | null>(null);
+  const [deleteDeptId, setDeleteDeptId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const supabase = getSupabase();
@@ -131,6 +137,73 @@ export default function AdminDepartemenPage() {
     setEditingMember(null);
   };
 
+  /**
+   * Departments themselves were read-only — you could edit who is in one but
+   * not create, rename or remove one.
+   *
+   * A new department also gets an active period, because members hang off a
+   * period and a department without one silently refuses every member you
+   * try to add.
+   */
+  const handleSaveDept = async (dept: Department, creating: boolean) => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      setError("Supabase belum dikonfigurasi — perubahan tidak tersimpan.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    const { error: writeError } = await supabase.from("departments").upsert({
+      id: dept.id,
+      name: dept.name,
+      slug: dept.slug,
+      description: dept.description,
+      icon: dept.icon,
+      order_index: depts.length,
+    });
+
+    if (!writeError && creating) {
+      const year = new Date().getFullYear();
+      await supabase.from("department_periods").insert({
+        id: `period-${dept.id}-${Date.now()}`,
+        department_id: dept.id,
+        period_label: `${year}/${year + 1}`,
+        is_active: true,
+        start_date: `${year}-01-01`,
+        end_date: `${year}-12-31`,
+      });
+    }
+
+    setSaving(false);
+    if (writeError) {
+      setError(writeError.message);
+      return;
+    }
+    await reload();
+    setEditingDept(null);
+  };
+
+  const handleDeleteDept = async (deptId: string) => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    setSaving(true);
+    setError(null);
+    // Periods and members cascade, so this removes the whole branch.
+    const { error: delError } = await supabase
+      .from("departments")
+      .delete()
+      .eq("id", deptId);
+    setSaving(false);
+    if (delError) {
+      setError(delError.message);
+      return;
+    }
+    await reload();
+    setDeleteDeptId(null);
+  };
+
   const handleDeleteMember = async (deptId: string, memberId: string) => {
     const supabase = getSupabase();
     if (!supabase) {
@@ -162,7 +235,28 @@ export default function AdminDepartemenPage() {
             Kelola pengurus inti &amp; departemen
           </p>
         </div>
-        <DbStatus live={live} loading={loading} error={error} saving={saving} />
+        <div className="flex items-center gap-3">
+          <DbStatus live={live} loading={loading} error={error} saving={saving} />
+          <button
+            onClick={() =>
+              setEditingDept({
+                creating: true,
+                dept: {
+                  id: `dept-${Date.now()}`,
+                  name: "",
+                  slug: "",
+                  description: "",
+                  icon: "Users",
+                  periods: [],
+                },
+              })
+            }
+            className="inline-flex items-center gap-2 bg-emerald-600 text-white font-medium px-4 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah Departemen
+          </button>
+        </div>
       </div>
 
       {/* ── BPH Section ── */}
@@ -265,19 +359,42 @@ export default function AdminDepartemenPage() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() =>
-                    setEditingMember({ deptId: dept.id, member: null })
-                  }
-                  className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() =>
+                      setEditingMember({ deptId: dept.id, member: null })
+                    }
+                    className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                    title="Tambah pengurus"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setEditingDept({ dept, creating: false })}
+                    className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                    title="Edit departemen"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteDeptId(dept.id)}
+                    className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-red-600 transition-colors"
+                    title="Hapus departemen"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <p className="text-sm text-gray-500 mt-3 line-clamp-2">
                 {dept.description}
               </p>
+
+              {!activePeriod && (
+                <p className="mt-3 text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
+                  Belum ada periode aktif — pengurus belum bisa ditambahkan.
+                </p>
+              )}
 
               {activePeriod && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
@@ -346,6 +463,174 @@ export default function AdminDepartemenPage() {
           onClose={() => setEditingMember(null)}
         />
       )}
+
+      {/* ── Department Edit Modal ── */}
+      {editingDept && (
+        <DeptModal
+          dept={editingDept.dept}
+          creating={editingDept.creating}
+          onSave={(d) => handleSaveDept(d, editingDept.creating)}
+          onClose={() => setEditingDept(null)}
+        />
+      )}
+
+      {deleteDeptId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
+            <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-3" />
+            <h3 className="font-bold text-gray-900 mb-1">Hapus Departemen?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Semua periode dan pengurus di dalamnya ikut terhapus permanen.
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setDeleteDeptId(null)}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleDeleteDept(deleteDeptId)}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DeptModal({
+  dept,
+  creating,
+  onSave,
+  onClose,
+}: {
+  dept: Department;
+  creating: boolean;
+  onSave: (d: Department) => void | Promise<void>;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({ ...dept });
+  const field =
+    "w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm";
+
+  const autoSlug = form.name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave({ ...form, slug: form.slug || autoSlug });
+        }}
+        className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8 p-6"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-gray-900 text-lg">
+            {creating ? "Departemen Baru" : "Edit Departemen"}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nama Departemen
+            </label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+              className={field}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Slug (URL)
+            </label>
+            <input
+              value={form.slug}
+              onChange={(e) => setForm({ ...form, slug: e.target.value })}
+              placeholder={autoSlug || "otomatis dari nama"}
+              className={`${field} font-mono`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Deskripsi
+            </label>
+            <textarea
+              value={form.description}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+              rows={3}
+              className={`${field} resize-none`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ikon
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {ICON_NAMES.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setForm({ ...form, icon: name })}
+                  title={name}
+                  className={`w-10 h-10 rounded-lg border grid place-items-center transition-colors ${
+                    form.icon === name
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  <DeptIcon name={name} className="w-4 h-4" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {creating && (
+            <p className="text-xs text-gray-400">
+              Periode aktif tahun ini dibuat otomatis, supaya pengurus bisa
+              langsung ditambahkan.
+            </p>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
