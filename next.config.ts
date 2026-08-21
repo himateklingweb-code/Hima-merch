@@ -16,19 +16,25 @@ import type { NextConfig } from "next";
 const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const isDev = process.env.NODE_ENV === "development";
 
+// Cloudflare Turnstile (the anti-bot check on the login form) loads a script
+// and renders an iframe from this host, and posts back to it.
+const turnstile = "https://challenges.cloudflare.com";
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
+  // Turnstile renders its challenge in an iframe from Cloudflare.
+  `frame-src 'self' ${turnstile}`,
   // Turbopack's dev client needs eval; production does not.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' ${turnstile}${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
-  // Google Drive thumbnails back the article and sponsor artwork.
+  // Google profile photos + Drive thumbnails back avatars and artwork.
   "img-src 'self' data: blob: https://lh3.googleusercontent.com https://drive.google.com",
-  `connect-src 'self' ${supabaseOrigin} ${
+  `connect-src 'self' ${supabaseOrigin} ${turnstile} ${
     supabaseOrigin ? supabaseOrigin.replace("https://", "wss://") : ""
   }${isDev ? " ws://localhost:* http://localhost:*" : ""}`.trim(),
   // Production only: in dev it rewrites the HMR socket's ws:// to wss://

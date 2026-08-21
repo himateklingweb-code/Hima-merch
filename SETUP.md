@@ -154,6 +154,33 @@ Email → Confirm email**:
 
 Login Google tidak terpengaruh penyetelan ini — akun Google selalu langsung aktif.
 
+### 3e. Anti-bot (opsional tapi disarankan)
+
+Login sudah cukup terlindungi tanpa konfigurasi tambahan:
+
+- **Login wajib untuk memesan** + Google (Google sendiri sudah menyaring bot).
+- **Honeypot** tersembunyi di form email — bot yang mengisi semua kolom
+  otomatis ditolak.
+- **Batas per-IP & per-nomor** pada pembuatan pesanan (5/nomor & 15/jaringan
+  per jam), plus batas bawaan Supabase Auth.
+
+Untuk lapisan **captcha** (paling ampuh melawan pendaftaran email massal):
+
+1. **Konfirmasi email** — nyalakan di [3d.c](#3d-nyalakan-login-pembeli-google--email).
+   Akun email yang belum dikonfirmasi tidak bisa memesan.
+2. **Cloudflare Turnstile** (gratis):
+   - Buat widget di <https://dash.cloudflare.com> → Turnstile → salin
+     **Site key** dan **Secret key**.
+   - **Site key** → env `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (di `.env.local` dan
+     Vercel). Ini yang memunculkan kotak verifikasi di halaman `/masuk`.
+   - **Secret key** → Supabase **Authentication → Attack Protection** →
+     aktifkan **Enable Captcha protection** → pilih **Turnstile** → tempel
+     secret.
+   - > ⚠️ **Pasang keduanya bersamaan.** Kalau captcha dinyalakan di Supabase
+     > tapi `NEXT_PUBLIC_TURNSTILE_SITE_KEY` kosong (atau sebaliknya), login
+     > email akan gagal. Kalau env kosong, captcha di Supabase harus **mati**.
+   - Login Google tidak butuh captcha dan tidak terpengaruh.
+
 ---
 
 ## 4. Membuat akun pengurus (dashboard)

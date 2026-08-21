@@ -149,7 +149,7 @@ function OrderCard({ order }: { order: PublicOrderReceipt }) {
 
 export default function AkunPage() {
   const router = useRouter();
-  const { user, loading, displayName, signOut } = useAuth();
+  const { user, loading, displayName, avatarUrl, signOut } = useAuth();
   const [orders, setOrders] = useState<PublicOrderReceipt[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
 
@@ -190,16 +190,34 @@ export default function AkunPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
       <div className="mb-6 flex items-start justify-between gap-4 sm:mb-8">
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
-            Akun Saya
-          </h1>
-          <p className="mt-1 truncate text-sm text-gray-500">
-            {displayName}
-            {user.email && displayName !== user.email && (
-              <span className="text-gray-400"> · {user.email}</span>
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-emerald-100 sm:h-14 sm:w-14">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt=""
+                width={56}
+                height={56}
+                referrerPolicy="no-referrer"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-lg font-bold text-emerald-700">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
             )}
-          </p>
+          </div>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold text-gray-900 sm:text-2xl">
+              {displayName}
+            </h1>
+            {user.email && (
+              <p className="truncate text-xs text-gray-500 sm:text-sm">
+                {user.email}
+              </p>
+            )}
+          </div>
         </div>
         <button
           onClick={handleSignOut}

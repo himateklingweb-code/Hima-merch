@@ -12,6 +12,10 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
+import Turnstile from "@/components/Turnstile";
+
+/** Anti-bot check on the email form. Empty string = off (widget not shown). */
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 
 /** Google "G" mark — inline so it needs no external asset under the CSP. */
 function GoogleMark() {
@@ -57,6 +61,9 @@ function MasukInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmSent, setConfirmSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  // Honeypot: a real person never fills this hidden field; a bot fills them all.
+  const [trap, setTrap] = useState("");
 
   // Already signed in? Nothing to do here — go where they were headed.
   useEffect(() => {
@@ -78,6 +85,9 @@ function MasukInner() {
     e.preventDefault();
     setError(null);
 
+    // Bot filled the hidden field — refuse quietly, no hint about why.
+    if (trap) return;
+
     if (!email.trim() || !password) {
       setError("Email dan kata sandi wajib diisi.");
       return;
@@ -86,10 +96,15 @@ function MasukInner() {
       setError("Kata sandi minimal 8 karakter.");
       return;
     }
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      setError("Selesaikan verifikasi keamanan dulu.");
+      return;
+    }
 
     setBusy(true);
+    const token = captchaToken ?? undefined;
     if (mode === "signin") {
-      const { error } = await signInWithEmail(email, password);
+      const { error } = await signInWithEmail(email, password, token);
       if (error) {
         setError(error);
         setBusy(false);
@@ -100,7 +115,8 @@ function MasukInner() {
       const { error, needsConfirmation } = await signUpWithEmail(
         email,
         password,
-        name
+        name,
+        token
       );
       if (error) {
         setError(error);
@@ -176,6 +192,24 @@ function MasukInner() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Honeypot — hidden from people, catches naive bots. */}
+          <input
+            type="text"
+            name="company"
+            tabIndex={-1}
+            autoComplete="off"
+            value={trap}
+            onChange={(e) => setTrap(e.target.value)}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              left: "-9999px",
+              width: 1,
+              height: 1,
+              opacity: 0,
+            }}
+          />
+
           {mode === "signup" && (
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -238,6 +272,10 @@ function MasukInner() {
               </button>
             </div>
           </div>
+
+          {TURNSTILE_SITE_KEY && (
+            <Turnstile siteKey={TURNSTILE_SITE_KEY} onToken={setCaptchaToken} />
+          )}
 
           {error && (
             <div className="flex gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">

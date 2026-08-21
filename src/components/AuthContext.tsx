@@ -25,10 +25,13 @@ interface AuthValue {
   loading: boolean;
   /** Best display name we have for the account. */
   displayName: string;
+  /** Google profile photo, when the account signed in with Google. */
+  avatarUrl: string;
   signInWithGoogle: (redirectTo?: string) => Promise<{ error?: string }>;
   signInWithEmail: (
     email: string,
-    password: string
+    password: string,
+    captchaToken?: string
   ) => Promise<{ error?: string }>;
   /**
    * Create a local account. `needsConfirmation` is true when Supabase is
@@ -37,7 +40,8 @@ interface AuthValue {
   signUpWithEmail: (
     email: string,
     password: string,
-    fullName?: string
+    fullName?: string,
+    captchaToken?: string
   ) => Promise<{ error?: string; needsConfirmation?: boolean }>;
   signOut: () => Promise<void>;
 }
@@ -60,6 +64,13 @@ export function nameFromUser(user: User | null): string {
     user.email ||
     "Akun"
   );
+}
+
+/** Google returns the profile photo under avatar_url / picture. */
+export function avatarFromUser(user: User | null): string {
+  if (!user) return "";
+  const meta = user.user_metadata ?? {};
+  return (meta.avatar_url as string) || (meta.picture as string) || "";
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -103,12 +114,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithEmail = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, captchaToken?: string) => {
       const supabase = getSupabase();
       if (!supabase) return { error: "Supabase belum dikonfigurasi." };
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
+        // Anti-bot: when captcha protection is on, Supabase verifies this
+        // token server-side and rejects the request without it.
+        ...(captchaToken ? { options: { captchaToken } } : {}),
       });
       // Vague on purpose — telling apart "wrong password" from "no such
       // account" leaks which emails are registered.
@@ -118,7 +132,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string, fullName?: string) => {
+    async (
+      email: string,
+      password: string,
+      fullName?: string,
+      captchaToken?: string
+    ) => {
       const supabase = getSupabase();
       if (!supabase) return { error: "Supabase belum dikonfigurasi." };
       const { data, error } = await supabase.auth.signUp({
@@ -127,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: fullName ? { full_name: fullName.trim() } : undefined,
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          ...(captchaToken ? { captchaToken } : {}),
         },
       });
       if (error) return { error: error.message };
@@ -147,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       displayName: nameFromUser(user),
+      avatarUrl: avatarFromUser(user),
       signInWithGoogle,
       signInWithEmail,
       signUpWithEmail,

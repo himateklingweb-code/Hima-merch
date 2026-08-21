@@ -22,7 +22,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const { itemCount } = useCart();
-  const { user } = useAuth();
+  const { user, avatarUrl } = useAuth();
 
   const activeKey =
     navLinks.find((l) => l.href === pathname)?.key || "";
@@ -209,7 +209,24 @@ export default function Navbar() {
           aria-label={user ? "Akun saya" : "Masuk"}
           title={user ? "Akun saya" : "Masuk"}
         >
-          <User size={17} strokeWidth={1.9} />
+          {user && avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt=""
+              width={38}
+              height={38}
+              referrerPolicy="no-referrer"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                borderRadius: 2,
+              }}
+            />
+          ) : (
+            <User size={17} strokeWidth={1.9} />
+          )}
         </Link>
 
         {/* Basket — sits outside the hamburger so it stays reachable at
