@@ -100,7 +100,7 @@ export default function AdminSeoPage() {
               table: "products" as const,
               path: `/merchandise/${p.slug}`,
               label: p.name as string,
-              title: o.title || `${p.name} — Merchandise HIMA TL UNTAN`,
+              title: o.title || `${p.name} — Merchandise HMTL UNTAN`,
               description: o.description || String(p.description ?? "").slice(0, 160),
               ogImage: o.ogImage ?? "",
             };
@@ -117,7 +117,7 @@ export default function AdminSeoPage() {
               table: "articles" as const,
               path: `/berita/${a.slug}`,
               label: a.title as string,
-              title: o.title || `${a.title} — Berita HIMA TL UNTAN`,
+              title: o.title || `${a.title} — Berita HMTL UNTAN`,
               description: o.description || String(a.excerpt ?? "").slice(0, 160),
               ogImage: o.ogImage ?? (a.image as string) ?? "",
             };

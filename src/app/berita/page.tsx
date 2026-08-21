@@ -63,7 +63,7 @@ export default async function BeritaPage() {
               margin: 0,
               fontSize: "clamp(36px,5vw,64px)",
               fontWeight: 700,
-              letterSpacing: "-.03em",
+              letterSpacing: "-.01em",
               lineHeight: 0.95,
             }}
           >
@@ -178,7 +178,7 @@ export default async function BeritaPage() {
                   fontSize: "clamp(22px,2.6vw,32px)",
                   fontWeight: 700,
                   lineHeight: 1.18,
-                  letterSpacing: "-.02em",
+                  letterSpacing: "-.01em",
                 }}
               >
                 {sorted[0].title}

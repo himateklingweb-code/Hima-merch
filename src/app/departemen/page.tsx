@@ -19,22 +19,76 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+// BPH is the executive board, not a department — it sits above the
+// departments as its own block. Identified by its stable slug.
+const BPH_SLUG = "bph";
 
 // Read fresh at most once a minute so stock and new content appear
 // without a redeploy.
 export const revalidate = 60;
 
-export default async function DepartemenPage() {
-  const departments = await getDepartments();
+export default async function KepengurusanPage() {
+  const all = await getDepartments();
+  const bph = all.find((d) => d.slug === BPH_SLUG);
+  const departments = all.filter((d) => d.slug !== BPH_SLUG);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
       <div className="max-w-2xl mb-5 sm:mb-10">
-        <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Departemen</h1>
+        <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">
+          Kepengurusan
+        </h1>
         <p className="text-gray-500 mt-1 sm:mt-3 text-sm sm:text-lg">
-          6 departemen yang menjalankan program kerja organisasi.
+          Badan Pengurus Harian bersama {departments.length} departemen yang
+          menjalankan program kerja organisasi.
         </p>
       </div>
 
+      {/* Badan Pengurus Harian — the executive board, above the departments */}
+      {bph &&
+        (() => {
+          const activePeriod = bph.periods.find((p) => p.is_active);
+          const Icon = iconFromName(bph.icon);
+          return (
+            <div className="mb-8 sm:mb-12">
+              <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-[.16em] text-emerald-700">
+                  Badan Pengurus Harian
+                </span>
+                <span className="h-px flex-1 bg-gray-200" />
+              </div>
+              <Link
+                href={`/departemen/${bph.slug}`}
+                className="group flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 sm:p-7 hover:border-emerald-300 hover:shadow-lg active:scale-[0.99] transition-all"
+              >
+                <div className="flex-shrink-0 w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center">
+                  <Icon className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">
+                    {bph.name}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2">
+                    {bph.description}
+                  </p>
+                  <div className="mt-2 sm:mt-3 flex items-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-gray-400">
+                    <span>{activePeriod?.members.length ?? 0} pengurus inti</span>
+                    <span>Periode {activePeriod?.period_label}</span>
+                  </div>
+                </div>
+                <ArrowRight className="hidden sm:block w-5 h-5 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            </div>
+          );
+        })()}
+
+      {/* Departments */}
+      <div className="flex items-center gap-2 mb-3 sm:mb-4">
+        <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-[.16em] text-emerald-700">
+          Departemen
+        </span>
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
         {departments.map((dept) => {
           const activePeriod = dept.periods.find((p) => p.is_active);

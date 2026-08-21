@@ -44,10 +44,14 @@ export function getSupabase(): SupabaseClient | null {
   if (!cached) {
     cached = createClient(url, anonKey, {
       auth: {
-        // The dashboard signs staff in with Supabase Auth, so the session
+        // Staff and customers both sign in with Supabase Auth, so the session
         // has to survive a reload and refresh itself.
         persistSession: true,
         autoRefreshToken: true,
+        // PKCE for the Google OAuth flow. The /auth/callback page exchanges
+        // the returned code for a session explicitly, so URL detection stays
+        // off (nothing else in the app expects tokens in the URL).
+        flowType: "pkce",
         detectSessionInUrl: false,
       },
     });

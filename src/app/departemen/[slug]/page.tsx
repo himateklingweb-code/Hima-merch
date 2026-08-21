@@ -19,7 +19,7 @@ export async function generateMetadata({
   const dept = await getDepartmentBySlug(slug);
   if (!dept) return {};
   return {
-    title: `Departemen ${dept.name}`,
+    title: dept.slug === "bph" ? dept.name : `Departemen ${dept.name}`,
     description: dept.description,
   };
 }
@@ -33,6 +33,8 @@ export default async function DepartemenDetailPage({
   const dept = await getDepartmentBySlug(slug);
   if (!dept) notFound();
 
+  // BPH is the executive board, not a department — don't prefix it "Dept."
+  const isBph = dept.slug === "bph";
   const activePeriod = dept.periods.find((p) => p.is_active);
   const pastPeriods = dept.periods.filter((p) => !p.is_active);
 
@@ -43,7 +45,7 @@ export default async function DepartemenDetailPage({
         className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-emerald-700 hover:underline mb-4 sm:mb-6"
       >
         <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        Semua Departemen
+        Kepengurusan
       </Link>
 
       <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -51,7 +53,9 @@ export default async function DepartemenDetailPage({
           <DeptIcon name={dept.icon} className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.75} />
         </div>
         <div>
-          <h1 className="text-xl sm:text-4xl font-bold text-gray-900">Dept. {dept.name}</h1>
+          <h1 className="text-xl sm:text-4xl font-bold text-gray-900">
+            {isBph ? dept.name : `Dept. ${dept.name}`}
+          </h1>
           <p className="text-xs sm:text-base text-gray-500 mt-0.5">HIMA Teknik Lingkungan UNTAN</p>
         </div>
       </div>

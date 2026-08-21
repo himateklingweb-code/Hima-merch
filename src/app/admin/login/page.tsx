@@ -52,7 +52,7 @@ export default function AdminLoginPage() {
       await supabase.auth.signOut();
       setBusy(false);
       setError(
-        "Akun ini belum terdaftar sebagai pengurus. Hubungi admin HIMA TL."
+        "Akun ini belum terdaftar sebagai pengurus. Hubungi admin HMTL."
       );
       return;
     }
@@ -140,7 +140,7 @@ export default function AdminLoginPage() {
           </form>
 
           <p className="mt-4 text-xs text-gray-400">
-            Akses khusus pengurus HIMA TL. Akun dibuat oleh admin melalui
+            Akses khusus pengurus HMTL. Akun dibuat oleh admin melalui
             Supabase.
           </p>
         </div>

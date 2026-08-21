@@ -20,6 +20,8 @@ export interface OrderRecord {
   order_code: string;
   buyer_name: string;
   buyer_wa: string;
+  /** Email of the signed-in account that placed the order, if any. */
+  buyer_email?: string | null;
   buyer_nim?: string | null;
   buyer_prodi?: string | null;
   buyer_address: string;
@@ -300,6 +302,23 @@ export async function signedProofUrl(
     .createSignedUrl(path, 300);
 
   return error ? null : (data?.signedUrl ?? null);
+}
+
+/**
+ * The signed-in customer's own orders, newest first.
+ *
+ * Goes through the `list_my_orders` RPC, which filters by `auth.uid()` inside
+ * the database, so a buyer only ever gets their own rows and the order tables
+ * stay closed to them otherwise. Returns an empty list when signed out or
+ * when Supabase is unconfigured.
+ */
+export async function fetchMyOrders(): Promise<PublicOrderReceipt[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase.rpc("list_my_orders");
+  if (error || !data) return [];
+  return data as unknown as PublicOrderReceipt[];
 }
 
 /** Look up one order by the code on the buyer's receipt. */

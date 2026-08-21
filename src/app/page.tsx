@@ -53,6 +53,9 @@ export default async function HomePage() {
   ]);
 
   const now = Date.now();
+  // BPH is the executive board, not a department — keep it out of the
+  // "Departemen" grid and count, but its members still count as pengurus.
+  const realDepartments = departments.filter((d) => d.slug !== "bph");
   const activeMembers = departments.reduce(
     (n, d) =>
       n +
@@ -63,7 +66,7 @@ export default async function HomePage() {
   );
   const stats = [
     { key: "pengurus", value: activeMembers, label: "Pengurus aktif" },
-    { key: "dept", value: departments.length, label: "Departemen" },
+    { key: "dept", value: realDepartments.length, label: "Departemen" },
     { key: "produk", value: products.length, label: "Produk merchandise" },
     {
       key: "mitra",
@@ -238,10 +241,14 @@ export default async function HomePage() {
             <h1
               style={{
                 margin: 0,
-                fontSize: "clamp(38px,9.5vw,124px)",
+                // Sized so the longest word — LINGKUNGAN — fits its column
+                // with margin at every width; the old 9.5vw/124px overflowed
+                // and clipped it. Tracking loosened from -.035em so the
+                // display letters breathe.
+                fontSize: "clamp(33px,7.4vw,94px)",
                 lineHeight: 0.86,
                 fontWeight: 700,
-                letterSpacing: "-.035em",
+                letterSpacing: "-.01em",
               }}
             >
               <span
@@ -757,7 +764,7 @@ export default async function HomePage() {
                   fontSize: "clamp(23px,5.6vw,52px)",
                   lineHeight: 1.04,
                   fontWeight: 700,
-                  letterSpacing: "-.03em",
+                  letterSpacing: "-.01em",
                 }}
               >
                 Wadah mahasiswa
@@ -781,7 +788,7 @@ export default async function HomePage() {
                   maxWidth: "52ch",
                 }}
               >
-                HIMA TL UNTAN menaungi aspirasi, pengembangan diri, dan
+                HMTL UNTAN menaungi aspirasi, pengembangan diri, dan
                 kontribusi nyata mahasiswa Teknik Lingkungan bagi masyarakat
                 Kalimantan Barat — lewat kajian, aksi lapangan, dan kolaborasi
                 lintas lembaga.
@@ -888,7 +895,7 @@ export default async function HomePage() {
               gap: 20,
             }}
           >
-            {departments.map((dept, i) => {
+            {realDepartments.map((dept, i) => {
               const Icon = iconFromName(dept.icon);
               const activeCount =
                 dept.periods.find((p) => p.is_active)?.members.length ?? 0;
@@ -923,7 +930,7 @@ export default async function HomePage() {
                     style={{
                       fontSize: "clamp(17px,4.4vw,20px)",
                       fontWeight: 700,
-                      letterSpacing: "-.02em",
+                      letterSpacing: "-.01em",
                       lineHeight: 1.15,
                     }}
                   >
@@ -958,7 +965,7 @@ export default async function HomePage() {
             })}
           </div>
           <div className="home-mobile-carousel">
-            <HomeCarousels type="departments" departments={departments} />
+            <HomeCarousels type="departments" departments={realDepartments} />
           </div>
         </div>
       </section>

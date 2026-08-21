@@ -25,12 +25,12 @@ export interface Product {
 export const products: Product[] = [
   {
     id: "prod-1",
-    name: "Kaos HIMA TL UNTAN 2025",
+    name: "Kaos HMTL UNTAN 2025",
     slug: "kaos-hima-tl-2025",
     description:
       "Kaos resmi HIMA Teknik Lingkungan UNTAN edisi 2025. Bahan cotton combed 30s, sablon DTF premium. Tersedia dalam warna hitam dan putih.",
     price: 85000,
-    images: [{ url: "/placeholder-product.png", alt_text: "Kaos HIMA TL UNTAN 2025 tampak depan" }],
+    images: [{ url: "/placeholder-product.png", alt_text: "Kaos HMTL UNTAN 2025 tampak depan" }],
     stock_type: "ready_stock",
     stock: 45,
     stock_reserved: 3,
@@ -59,12 +59,12 @@ export const products: Product[] = [
   },
   {
     id: "prod-3",
-    name: "Tote Bag HIMA TL",
+    name: "Tote Bag HMTL",
     slug: "tote-bag-hima-tl",
     description:
-      "Tote bag kanvas tebal dengan desain eksklusif HIMA TL UNTAN. Ramah lingkungan, cocok untuk mahasiswa yang peduli bumi.",
+      "Tote bag kanvas tebal dengan desain eksklusif HMTL UNTAN. Ramah lingkungan, cocok untuk mahasiswa yang peduli bumi.",
     price: 45000,
-    images: [{ url: "/placeholder-product.png", alt_text: "Tote Bag HIMA TL" }],
+    images: [{ url: "/placeholder-product.png", alt_text: "Tote Bag HMTL" }],
     stock_type: "ready_stock",
     stock: 0,
     stock_reserved: 0,
@@ -79,7 +79,7 @@ export const products: Product[] = [
     name: "Sticker Pack Enviro",
     slug: "sticker-pack-enviro",
     description:
-      "Paket stiker bertema lingkungan hidup, berisi 10 lembar stiker vinyl tahan air dengan desain original HIMA TL.",
+      "Paket stiker bertema lingkungan hidup, berisi 10 lembar stiker vinyl tahan air dengan desain original HMTL.",
     price: 15000,
     images: [{ url: "/placeholder-product.png", alt_text: "Sticker Pack Enviro" }],
     stock_type: "ready_stock",
@@ -139,7 +139,7 @@ export function getProductBadge(product: Product): {
  */
 export function productSeo(product: Product): ResolvedSeo {
   return resolveSeo(product.seo, {
-    title: `${product.name} — Merchandise HIMA TL UNTAN`,
+    title: `${product.name} — Merchandise HMTL UNTAN`,
     description: product.description.slice(0, 160),
     ogImage:
       product.images.find((i) => i.url && !i.url.startsWith("/placeholder"))

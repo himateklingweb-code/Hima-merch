@@ -139,7 +139,7 @@ export default function AdminLayout({
               </div>
               <div>
                 <div className="font-bold text-gray-900 text-sm">Admin Panel</div>
-                <div className="text-[10px] text-gray-400">HIMA TL UNTAN</div>
+                <div className="text-[10px] text-gray-400">HMTL UNTAN</div>
               </div>
               <button
                 className="ml-auto lg:hidden p-1 rounded text-gray-400 hover:bg-gray-100"

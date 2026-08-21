@@ -323,7 +323,7 @@ const SITE_META_FALLBACK: Record<string, { title: string; description: string }>
   "/merchandise": {
     title: "Merchandise — HIMA Teknik Lingkungan UNTAN",
     description:
-      "Etalase merchandise resmi HIMA TL UNTAN — kaos, jaket, hoodie, dan lainnya.",
+      "Etalase merchandise resmi HMTL UNTAN — kaos, jaket, hoodie, dan lainnya.",
   },
   "/berita": {
     title: "Berita — HIMA Teknik Lingkungan UNTAN",

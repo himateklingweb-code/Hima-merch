@@ -30,18 +30,19 @@ export default function KontakPage() {
               {
                 icon: MapPin,
                 title: "Alamat",
-                content: "Fakultas Teknik, Universitas Tanjungpura\nJl. Prof. Dr. H. Hadari Nawawi\nPontianak 78124",
+                content: "Komp. UKM Fakultas Teknik, Universitas Tanjungpura\nJl. Prof. Dr. Hadari Nawawi\nPontianak 78124",
               },
               {
                 icon: Mail,
                 title: "Email",
-                content: "himatl@teknik.untan.ac.id",
-                href: "mailto:himatl@teknik.untan.ac.id",
+                content: "hmtl.ft.untan13@gmail.com",
+                href: "mailto:hmtl.ft.untan13@gmail.com",
               },
               {
                 icon: Phone,
                 title: "WhatsApp",
-                content: "+62 812-3456-7890",
+                content: "+62 896-9398-4597",
+                href: "https://wa.me/6289693984597",
               },
             ].map((item) => (
               <div key={item.title} className="flex items-start gap-3">

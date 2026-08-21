@@ -30,7 +30,7 @@ export default function Error({
       </h1>
       <p className="mb-8 text-sm leading-relaxed text-gray-500">
         Halaman ini gagal dimuat. Coba muat ulang — kalau masih bermasalah,
-        hubungi pengurus HIMA TL.
+        hubungi pengurus HMTL.
       </p>
       <div className="flex flex-wrap justify-center gap-3">
         <button

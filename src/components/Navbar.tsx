@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, ShoppingBag } from "lucide-react";
+import { Menu, X, ShoppingBag, User } from "lucide-react";
 import { useCart } from "./CartContext";
+import { useAuth } from "./AuthContext";
 
 const navLinks = [
   { href: "/", label: "Beranda", key: "beranda" },
   { href: "/tentang", label: "Tentang", key: "tentang" },
-  { href: "/departemen", label: "Departemen", key: "departemen" },
+  { href: "/departemen", label: "Kepengurusan", key: "departemen" },
   { href: "/merchandise", label: "Merchandise", key: "merch" },
   { href: "/berita", label: "Berita", key: "berita" },
   { href: "/pesanan/cek", label: "Cek Pesanan", key: "pesanan" },
@@ -21,6 +22,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const { itemCount } = useCart();
+  const { user } = useAuth();
 
   const activeKey =
     navLinks.find((l) => l.href === pathname)?.key || "";
@@ -199,6 +201,17 @@ export default function Navbar() {
           </button>
         </div>
 
+        {/* Account — signed-in users go to their orders, guests to sign in.
+            Sits beside the basket, reachable at every width. */}
+        <Link
+          href={user ? "/akun" : "/masuk"}
+          className="site-nav-cart"
+          aria-label={user ? "Akun saya" : "Masuk"}
+          title={user ? "Akun saya" : "Masuk"}
+        >
+          <User size={17} strokeWidth={1.9} />
+        </Link>
+
         {/* Basket — sits outside the hamburger so it stays reachable at
             every width, and only draws attention once it has something. */}
         <Link
@@ -247,6 +260,21 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <Link
+              href={user ? "/akun" : "/masuk"}
+              className="site-nav-mobile-link"
+              onClick={() => setMenuOpen(false)}
+              style={{
+                padding: "12px 14px",
+                borderRadius: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 9,
+              }}
+            >
+              <User size={16} strokeWidth={1.9} />
+              {user ? "Akun Saya" : "Masuk / Daftar"}
+            </Link>
             <Link
               href="/merchandise"
               onClick={() => setMenuOpen(false)}

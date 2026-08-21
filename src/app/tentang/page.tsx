@@ -23,8 +23,8 @@ export default function TentangPage() {
 
       <div className="prose prose-emerald max-w-none">
         <p className="text-sm sm:text-lg text-gray-600 leading-relaxed">
-          Himpunan Mahasiswa Teknik Lingkungan (HIMA TL) adalah organisasi kemahasiswaan tingkat program studi
-          di Fakultas Teknik, Universitas Tanjungpura, Pontianak, Kalimantan Barat. HIMA TL berdiri sebagai
+          Himpunan Mahasiswa Teknik Lingkungan (HMTL) adalah organisasi kemahasiswaan tingkat program studi
+          di Fakultas Teknik, Universitas Tanjungpura, Pontianak, Kalimantan Barat. HMTL berdiri sebagai
           wadah aspirasi, pengembangan diri, dan kontribusi mahasiswa Teknik Lingkungan bagi masyarakat dan lingkungan.
         </p>
 
@@ -65,15 +65,15 @@ export default function TentangPage() {
           <div className="space-y-3 sm:space-y-4 text-xs sm:text-base text-gray-600 leading-relaxed">
             <p>
               HIMA Teknik Lingkungan Universitas Tanjungpura didirikan seiring dengan berdirinya Program Studi
-              Teknik Lingkungan di Fakultas Teknik UNTAN. Sejak awal berdiri, HIMA TL telah aktif menjalankan
+              Teknik Lingkungan di Fakultas Teknik UNTAN. Sejak awal berdiri, HMTL telah aktif menjalankan
               berbagai program kerja yang berfokus pada pengembangan mahasiswa dan kepedulian terhadap lingkungan.
             </p>
             <p>
               Dengan enam departemen yang saling melengkapi — Dalam Negeri, Luar Negeri, Kewirausahaan,
-              Pendidikan, Rumah Tangga, dan Kominfo — HIMA TL terus berbenah dan berkembang dari periode ke periode.
+              Pendidikan, Rumah Tangga, dan Kominfo — HMTL terus berbenah dan berkembang dari periode ke periode.
             </p>
             <p>
-              Saat ini, HIMA TL UNTAN memasuki periode kepengurusan 2025/2026 dengan semangat dan komitmen
+              Saat ini, HMTL UNTAN memasuki periode kepengurusan 2025/2026 dengan semangat dan komitmen
               baru untuk membawa organisasi menjadi lebih baik.
             </p>
           </div>

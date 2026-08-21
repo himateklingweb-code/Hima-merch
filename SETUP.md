@@ -94,6 +94,7 @@ secara berurutan** (isi seluruhnya, satu per satu):
 | 3 | [`00000000000002_seed_content.sql`](supabase/migrations/00000000000002_seed_content.sql) | Isi awal berita, departemen, mitra, iklan |
 | 4 | [`00000000000003_lifecycle_and_extras.sql`](supabase/migrations/00000000000003_lifecycle_and_extras.sql) | Verifikasi pesanan, kedaluwarsa otomatis, batas per-IP, `site_meta`, bukti pembayaran |
 | 5 | [`00000000000004_staff_self_service.sql`](supabase/migrations/00000000000004_staff_self_service.sql) | Kelola pengurus dari dashboard, akun pertama otomatis admin |
+| 6 | [`00000000000005_customer_accounts.sql`](supabase/migrations/00000000000005_customer_accounts.sql) | Akun pembeli — pesanan terikat ke akun, login wajib untuk memesan, halaman `/akun` |
 
 Semuanya aman dijalankan ulang — memakai `if not exists` dan
 `on conflict do nothing`.
@@ -111,6 +112,47 @@ Semuanya aman dijalankan ulang — memakai `if not exists` dan
 > aturan keamanan. Apa pun yang berawalan `NEXT_PUBLIC_` ikut terkirim ke
 > browser pengunjung — cukup pakai publishable key, keamanannya dijaga oleh
 > RLS di database.
+
+### 3d. Nyalakan login pembeli (Google + email)
+
+Sejak migration ke-6, **memesan wajib login** — pembeli masuk dengan akun
+Google atau akun email, dan setiap pesanan otomatis terikat ke akunnya lalu
+muncul di halaman **`/akun`** miliknya. Dua penyetelan di dashboard Supabase:
+
+**a. Alamat redirect** — **Authentication → URL Configuration**:
+
+| Kolom | Isi |
+|---|---|
+| **Site URL** | `https://hima.tekniklingkungan.com` (produksi). Saat mengembangkan di lokal boleh `http://localhost:3000` |
+| **Redirect URLs** (Add URL) | `https://hima.tekniklingkungan.com/auth/callback` **dan** `http://localhost:3000/auth/callback` |
+
+Tanpa ini, login Google akan ditolak dengan "redirect_uri mismatch". Tambahkan
+alamat lokal **dan** produksi supaya keduanya bisa dipakai.
+
+**b. Google** — **Authentication → Sign In / Providers → Google** harus
+**Enabled** (Client ID & Secret dari Google Cloud Console; di project ini
+sudah menyala). Pastikan `https://<project>.supabase.co/auth/v1/callback`
+terdaftar sebagai *Authorized redirect URI* di Google Cloud.
+
+Untuk project ini, di **Google Cloud Console → OAuth client → Authorized
+redirect URIs** harus ada:
+
+```
+https://qpdpfmjgahcddkqebsnk.supabase.co/auth/v1/callback
+```
+
+Biasanya sudah ada (itu syarat provider bisa "Enabled"). Kalau login Google
+memunculkan `redirect_uri_mismatch`, baris inilah yang perlu dicek.
+
+**c. Konfirmasi email (opsional)** — **Authentication → Sign In / Providers →
+Email → Confirm email**:
+
+- **Aktif** (default): pendaftar akun email harus klik tautan konfirmasi
+  dulu; halaman masuk menampilkan "Cek email kamu". Paling aman.
+- **Nonaktif**: akun langsung bisa dipakai tanpa verifikasi. Lebih mulus,
+  tapi email tidak terbukti benar.
+
+Login Google tidak terpengaruh penyetelan ini — akun Google selalu langsung aktif.
 
 ---
 
@@ -225,7 +267,9 @@ ikuti instruksi DNS dari Vercel.
 
 Setelah domain aktif, ubah `SITE_URL` di
 [`src/data/seo.ts`](src/data/seo.ts) supaya sitemap dan metadata memakai
-alamat yang benar.
+alamat yang benar. **Lalu tambahkan `https://hima.tekniklingkungan.com/auth/callback`
+ke Redirect URLs Supabase** ([bagian 3d](#3d-nyalakan-login-pembeli-google--email)),
+kalau belum — tanpa itu login Google gagal di produksi.
 
 ---
 
@@ -235,8 +279,12 @@ Cek satu per satu:
 
 - [ ] Beranda terbuka, gambar muncul
 - [ ] `/merchandise` menampilkan produk
-- [ ] Tambah ke keranjang → checkout → WhatsApp terbuka berisi ringkasan
+- [ ] Tambah ke keranjang → checkout **menuntut login dulu** (Google/email)
+- [ ] Login Google berhasil dan kembali ke situs (Redirect URLs sudah diisi)
+- [ ] Setelah login: checkout → WhatsApp terbuka berisi ringkasan
 - [ ] Kode pesanan muncul di layar setelah checkout
+- [ ] Pesanan muncul di `/akun` milik pembeli
+- [ ] Email pembeli muncul di baris pesanan pada `/admin/pesanan`
 - [ ] Kode itu bisa dicari di `/pesanan/cek`
 - [ ] Pesanan muncul di `/admin/pesanan` dengan label **Data live**
 - [ ] `/admin` menolak akses tanpa login
@@ -255,16 +303,25 @@ Mahasiswa                    Website                  Database
    |-- pilih produk ----------->|                        |
    |                       keranjang                     |
    |                    (tersimpan di HP)                |
+   |-- masuk (Google/email) --->|   login wajib          |
    |-- isi data & checkout ---->|                        |
    |                            |-- create_order() ----->|
+   |                            |                   cek login
    |                            |                   cek harga
    |                            |                   cek stok
    |                            |                   kunci stok
+   |                            |               ikat ke akun
    |                            |<-- kode pesanan -------|
    |<-- WhatsApp kasir ---------|                        |
    |                                                     |
-Kasir konfirmasi bayar → ubah status di /admin/pesanan
+Pembeli lihat pesanannya di /akun · Kasir ubah status di /admin/pesanan
 ```
+
+**Kenapa harus login?** Supaya setiap pesanan terikat ke akun pembeli: dia
+bisa melacak semua pesanannya di `/akun`, dan kasir tahu akun mana yang
+memesan (email pembeli muncul di `/admin/pesanan`). Login diwajibkan di
+database, bukan hanya di tampilan — `create_order()` menolak permintaan tanpa
+akun.
 
 **Kenapa harga tidak dikirim dari browser?** Karena browser bisa dimanipulasi.
 Yang dikirim hanya *produk apa* dan *berapa banyak*; harga dibaca database
@@ -367,6 +424,7 @@ Semua yang dulu tercatat di sini sudah selesai:
 | Pesanan kedaluwarsa | ✅ Otomatis tiap jam — pesanan belum bayar lewat 24 jam jadi kadaluarsa dan stoknya dilepas |
 | Pembatasan pesanan | ✅ 5 per nomor **dan** 15 per jaringan, per jam |
 | Bukti pembayaran | ✅ Pembeli mengunggah dari halaman lacak pesanan; hanya kasir yang bisa membukanya |
+| Akun pembeli & login | ✅ Login Google/email wajib untuk memesan; pesanan terikat ke akun dan muncul di `/akun`; email pembeli terlihat di `/admin/pesanan` |
 
 ### Yang masih perlu perhatian
 

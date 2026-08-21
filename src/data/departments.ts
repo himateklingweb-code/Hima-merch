@@ -33,7 +33,7 @@ export const departments: Department[] = [
     name: "Badan Pengurus Harian",
     slug: "bph",
     description:
-      "Badan Pengurus Harian (BPH) merupakan pengurus inti HIMA TL UNTAN yang terdiri dari Ketua, Sekretaris, dan Bendahara. BPH bertanggung jawab atas koordinasi seluruh kegiatan organisasi dan pengambilan keputusan strategis.",
+      "Badan Pengurus Harian (BPH) merupakan pengurus inti HMTL UNTAN yang terdiri dari Ketua, Sekretaris, dan Bendahara. BPH bertanggung jawab atas koordinasi seluruh kegiatan organisasi dan pengambilan keputusan strategis.",
     icon: "Star",
     periods: [
       {
@@ -67,10 +67,10 @@ export const departments: Department[] = [
         start_date: "2025-01-01",
         end_date: "2025-12-31",
         members: [
-          { id: "m1", name: "Ahmad Rizki", position: "Ketua Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
-          { id: "m2", name: "Siti Nurhaliza", position: "Wakil Ketua", photo: "/placeholder-avatar.png", order_index: 2 },
-          { id: "m3", name: "Budi Santoso", position: "Staff", photo: "/placeholder-avatar.png", order_index: 3 },
-          { id: "m4", name: "Dewi Lestari", position: "Staff", photo: "/placeholder-avatar.png", order_index: 4 },
+          { id: "m1", name: "Ahmad Rizki", position: "Kepala Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
+          { id: "m2", name: "Siti Nurhaliza", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 2 },
+          { id: "m3", name: "Budi Santoso", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 3 },
+          { id: "m4", name: "Dewi Lestari", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 4 },
         ],
       },
       {
@@ -81,8 +81,8 @@ export const departments: Department[] = [
         start_date: "2024-01-01",
         end_date: "2024-12-31",
         members: [
-          { id: "m5", name: "Rudi Hartono", position: "Ketua Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
-          { id: "m6", name: "Ani Wijaya", position: "Wakil Ketua", photo: "/placeholder-avatar.png", order_index: 2 },
+          { id: "m5", name: "Rudi Hartono", position: "Kepala Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
+          { id: "m6", name: "Ani Wijaya", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 2 },
         ],
       },
     ],
@@ -92,7 +92,7 @@ export const departments: Department[] = [
     name: "Luar Negeri",
     slug: "lugri",
     description:
-      "Departemen Luar Negeri bertugas menjalin dan memperkuat hubungan eksternal HIMA TL UNTAN dengan organisasi mahasiswa lain, instansi pemerintah, serta pihak-pihak terkait di luar kampus.",
+      "Departemen Luar Negeri bertugas menjalin dan memperkuat hubungan eksternal HMTL UNTAN dengan organisasi mahasiswa lain, instansi pemerintah, serta pihak-pihak terkait di luar kampus.",
     icon: "Globe",
     periods: [
       {
@@ -103,9 +103,9 @@ export const departments: Department[] = [
         start_date: "2025-01-01",
         end_date: "2025-12-31",
         members: [
-          { id: "m7", name: "Fajar Nugraha", position: "Ketua Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
-          { id: "m8", name: "Maya Putri", position: "Wakil Ketua", photo: "/placeholder-avatar.png", order_index: 2 },
-          { id: "m9", name: "Rizal Firmansyah", position: "Staff", photo: "/placeholder-avatar.png", order_index: 3 },
+          { id: "m7", name: "Fajar Nugraha", position: "Kepala Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
+          { id: "m8", name: "Maya Putri", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 2 },
+          { id: "m9", name: "Rizal Firmansyah", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 3 },
         ],
       },
     ],
@@ -115,7 +115,7 @@ export const departments: Department[] = [
     name: "Kewirausahaan",
     slug: "kwu",
     description:
-      "Departemen Kewirausahaan mengelola kegiatan wirausaha HIMA TL UNTAN, termasuk merchandise resmi, bazar, dan program pengembangan jiwa kewirausahaan mahasiswa.",
+      "Departemen Kewirausahaan mengelola kegiatan wirausaha HMTL UNTAN, termasuk merchandise resmi, bazar, dan program pengembangan jiwa kewirausahaan mahasiswa.",
     icon: "Briefcase",
     periods: [
       {
@@ -126,10 +126,10 @@ export const departments: Department[] = [
         start_date: "2025-01-01",
         end_date: "2025-12-31",
         members: [
-          { id: "m10", name: "Dian Permata", position: "Ketua Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
-          { id: "m11", name: "Eko Prasetyo", position: "Wakil Ketua", photo: "/placeholder-avatar.png", order_index: 2 },
-          { id: "m12", name: "Fitri Handayani", position: "Staff", photo: "/placeholder-avatar.png", order_index: 3 },
-          { id: "m13", name: "Gilang Ramadhan", position: "Staff", photo: "/placeholder-avatar.png", order_index: 4 },
+          { id: "m10", name: "Dian Permata", position: "Kepala Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
+          { id: "m11", name: "Eko Prasetyo", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 2 },
+          { id: "m12", name: "Fitri Handayani", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 3 },
+          { id: "m13", name: "Gilang Ramadhan", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 4 },
         ],
       },
     ],
@@ -150,8 +150,8 @@ export const departments: Department[] = [
         start_date: "2025-01-01",
         end_date: "2025-12-31",
         members: [
-          { id: "m14", name: "Hana Safira", position: "Ketua Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
-          { id: "m15", name: "Irfan Maulana", position: "Wakil Ketua", photo: "/placeholder-avatar.png", order_index: 2 },
+          { id: "m14", name: "Hana Safira", position: "Kepala Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
+          { id: "m15", name: "Irfan Maulana", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 2 },
         ],
       },
     ],
@@ -172,8 +172,8 @@ export const departments: Department[] = [
         start_date: "2025-01-01",
         end_date: "2025-12-31",
         members: [
-          { id: "m16", name: "Joko Widodo", position: "Ketua Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
-          { id: "m17", name: "Kartika Sari", position: "Staff", photo: "/placeholder-avatar.png", order_index: 2 },
+          { id: "m16", name: "Joko Widodo", position: "Kepala Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
+          { id: "m17", name: "Kartika Sari", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 2 },
         ],
       },
     ],
@@ -183,7 +183,7 @@ export const departments: Department[] = [
     name: "Kominfo",
     slug: "kominfo",
     description:
-      "Departemen Komunikasi dan Informasi mengelola media sosial, website, dokumentasi kegiatan, dan seluruh publikasi informasi HIMA TL UNTAN kepada publik.",
+      "Departemen Komunikasi dan Informasi mengelola media sosial, website, dokumentasi kegiatan, dan seluruh publikasi informasi HMTL UNTAN kepada publik.",
     icon: "Megaphone",
     periods: [
       {
@@ -194,9 +194,9 @@ export const departments: Department[] = [
         start_date: "2025-01-01",
         end_date: "2025-12-31",
         members: [
-          { id: "m18", name: "Lina Marlina", position: "Ketua Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
-          { id: "m19", name: "Muhammad Aldi", position: "Wakil Ketua", photo: "/placeholder-avatar.png", order_index: 2 },
-          { id: "m20", name: "Nadia Putri", position: "Staff", photo: "/placeholder-avatar.png", order_index: 3 },
+          { id: "m18", name: "Lina Marlina", position: "Kepala Departemen", photo: "/placeholder-avatar.png", order_index: 1 },
+          { id: "m19", name: "Muhammad Aldi", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 2 },
+          { id: "m20", name: "Nadia Putri", position: "Anggota", photo: "/placeholder-avatar.png", order_index: 3 },
         ],
       },
     ],

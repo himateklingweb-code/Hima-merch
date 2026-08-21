@@ -9,7 +9,7 @@ const footerLinks = [
 ];
 
 // lucide-react (this build) ships no brand marks, so the social glyphs
-// are inlined. TODO: swap the placeholder hrefs for the real HIMA TL
+// are inlined. TODO: swap the placeholder hrefs for the real HMTL
 // account URLs.
 const socials = [
   {
@@ -63,7 +63,7 @@ export default function Footer() {
                 fontSize: "clamp(26px,7vw,68px)",
                 lineHeight: 0.98,
                 fontWeight: 700,
-                letterSpacing: "-.035em",
+                letterSpacing: "-.01em",
               }}
             >
               Sekretariat
@@ -74,7 +74,7 @@ export default function Footer() {
                   WebkitTextStroke: "1.4px #ffffff",
                 } as React.CSSProperties}
               >
-                HIMA TL
+                HMTL
               </span>
             </h2>
             <p
@@ -86,8 +86,8 @@ export default function Footer() {
                 maxWidth: "44ch",
               }}
             >
-              Gedung Fakultas Teknik, Universitas Tanjungpura, Jalan
-              Prof. Dr. H. Hadari Nawawi, Pontianak, Kalimantan Barat.
+              Jalan Prof. Dr. Hadari Nawawi, Komp. UKM Fakultas Teknik,
+              Universitas Tanjungpura, Pontianak 78124.
             </p>
             <div
               style={{
@@ -102,19 +102,6 @@ export default function Footer() {
                 className="site-footer-cta-primary btn-sheen"
                 style={{
                   padding: "14px 24px",
-                  borderRadius: 2,
-                  fontSize: "12.5px",
-                  letterSpacing: ".09em",
-                  textTransform: "uppercase",
-                }}
-              >
-                WhatsApp kasir
-              </Link>
-              <Link
-                href="/kontak"
-                className="site-footer-cta-outline"
-                style={{
-                  padding: "13px 22px",
                   borderRadius: 2,
                   fontSize: "12.5px",
                   letterSpacing: ".09em",

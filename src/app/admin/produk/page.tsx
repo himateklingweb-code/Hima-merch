@@ -72,7 +72,7 @@ export default function AdminProdukPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Produk</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Kelola merchandise HIMA TL UNTAN
+            Kelola merchandise HMTL UNTAN
           </p>
         </div>
         <div className="flex items-center gap-3">

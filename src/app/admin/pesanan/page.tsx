@@ -208,6 +208,11 @@ export default function AdminPesananPage() {
                           {order.buyer_name}
                         </div>
                         <div className="text-xs text-gray-400">{order.buyer_wa}</div>
+                        {order.buyer_email && (
+                          <div className="text-[11px] text-emerald-700 mt-0.5 max-w-[220px] truncate">
+                            {order.buyer_email}
+                          </div>
+                        )}
                         {order.buyer_address && order.buyer_address !== "—" && (
                           <div className="text-[11px] text-gray-400 mt-0.5 max-w-[220px] truncate">
                             {order.buyer_address}

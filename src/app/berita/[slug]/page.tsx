@@ -137,7 +137,7 @@ export default async function ArticleDetailPage({
             fontSize: "clamp(28px,4.5vw,48px)",
             fontWeight: 700,
             lineHeight: 1.1,
-            letterSpacing: "-.025em",
+            letterSpacing: "-.01em",
           }}
         >
           {article.title}
