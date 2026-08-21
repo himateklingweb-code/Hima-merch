@@ -16,7 +16,6 @@ import {
 import { formatPrice } from "@/data/products";
 import { fetchMyOrders, type PublicOrderReceipt } from "@/lib/orders-repo";
 import { useAuth } from "@/components/AuthContext";
-import PaymentProofUpload from "@/app/pesanan/cek/PaymentProofUpload";
 
 const statusConfig = {
   pending_verifikasi: {
@@ -121,19 +120,12 @@ function OrderCard({ order }: { order: PublicOrderReceipt }) {
         </div>
 
         {order.order_status === "pending_verifikasi" && (
-          <>
-            <div className="rounded-lg bg-yellow-50 p-3 text-xs text-yellow-800">
-              <p className="font-medium">Menunggu verifikasi kasir.</p>
-              <p className="mt-0.5 text-yellow-600">
-                Sudah transfer? Unggah buktinya supaya kasir bisa memverifikasi
-                lebih cepat.
-              </p>
-            </div>
-            <PaymentProofUpload
-              orderCode={order.order_code}
-              alreadyUploaded={Boolean(order.has_payment_proof)}
-            />
-          </>
+          <div className="rounded-lg bg-yellow-50 p-3 text-xs text-yellow-800">
+            <p className="font-medium">Menunggu verifikasi kasir.</p>
+            <p className="mt-0.5 text-yellow-600">
+              Kasir akan mengonfirmasi pembayaran lewat WhatsApp.
+            </p>
+          </div>
         )}
 
         {order.order_status === "kadaluarsa" && (

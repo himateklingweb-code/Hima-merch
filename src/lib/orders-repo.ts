@@ -258,37 +258,6 @@ export async function setOrderStatus(
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
-/**
- * Attach a transfer receipt to an order.
- *
- * Uploads to a private bucket, then records the path through an RPC keyed
- * on the order code. The buyer is not signed in, so the code — which
- * carries a random suffix — is what authorises the write.
- */
-export async function uploadPaymentProof(
-  orderCode: string,
-  file: File
-): Promise<{ ok: boolean; error?: string }> {
-  const supabase = getSupabase();
-  if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
-
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `${orderCode}/${Date.now()}.${ext}`;
-
-  const { error: upErr } = await supabase.storage
-    .from("payment-proofs")
-    .upload(path, file, { upsert: false, contentType: file.type });
-
-  if (upErr) return { ok: false, error: upErr.message };
-
-  const { error: rpcErr } = await supabase.rpc("attach_payment_proof", {
-    p_code: orderCode,
-    p_url: `payment-proofs/${path}`,
-  });
-
-  return rpcErr ? { ok: false, error: rpcErr.message } : { ok: true };
-}
-
 /** Short-lived link so staff can view a receipt from the private bucket. */
 export async function signedProofUrl(
   storedPath: string
