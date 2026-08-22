@@ -6,6 +6,7 @@ import { ads as seedAds, Ad } from "@/data/ads";
 import { useCollection } from "@/lib/use-collection";
 import DbStatus from "@/components/admin/DbStatus";
 import { gdriveThumbnail } from "@/data/news";
+import ImageUpload from "@/components/admin/ImageUpload";
 import {
   Plus,
   Pencil,
@@ -282,17 +283,9 @@ function AdModal({
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ ...ad });
-  const [previewLogo, setPreviewLogo] = useState(
-    ad.logo ? gdriveThumbnail(ad.logo) : ""
-  );
 
   const set = <K extends keyof Ad>(key: K, val: Ad[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }));
-
-  const handleLogoChange = (url: string) => {
-    set("logo", url);
-    setPreviewLogo(url ? gdriveThumbnail(url) : "");
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
@@ -350,33 +343,12 @@ function AdModal({
           </div>
 
           {/* Sponsor logo */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Logo Sponsor (Google Drive)
-            </label>
-            <input
-              value={form.logo}
-              onChange={(e) => handleLogoChange(e.target.value)}
-              placeholder="https://drive.google.com/file/d/FILE_ID/view"
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-mono"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Paste link Google Drive. File harus di-share &quot;Anyone with
-              link&quot;. Kosongkan untuk memakai nama mitra sebagai teks.
-            </p>
-            {previewLogo && (
-              <div className="mt-2 w-full max-w-xs aspect-video rounded-lg overflow-hidden bg-gray-50 border border-gray-200 flex items-center justify-center p-3">
-                <img
-                  src={previewLogo}
-                  alt="Preview"
-                  className="max-w-full max-h-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              </div>
-            )}
-          </div>
+          <ImageUpload
+            label="Logo Sponsor"
+            value={form.logo}
+            onChange={(url) => set("logo", url)}
+            hint="Kosongkan untuk memakai nama mitra sebagai teks."
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

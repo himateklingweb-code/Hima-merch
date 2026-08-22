@@ -13,6 +13,7 @@ import {
 import { productSeo } from "@/data/products";
 import { articleSeo } from "@/data/news";
 import { getSupabase } from "@/lib/supabase";
+import ImageUpload from "@/components/admin/ImageUpload";
 import { products as seedProducts } from "@/data/products";
 import { articles as seedArticles } from "@/data/news";
 import { seoIssues, seoScore, TITLE_MAX, DESC_MAX } from "@/data/seo";
@@ -447,17 +448,12 @@ function SeoSection({
                       className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm resize-none"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      OG Image URL (Google Drive)
-                    </label>
-                    <input
-                      value={page.ogImage}
-                      onChange={(e) => update(idx, "ogImage", e.target.value)}
-                      placeholder="https://drive.google.com/file/d/FILE_ID/view"
-                      className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-mono"
-                    />
-                  </div>
+                  <ImageUpload
+                    label="OG Image"
+                    value={page.ogImage}
+                    onChange={(url) => update(idx, "ogImage", url)}
+                    hint="Muncul saat halaman dibagikan ke media sosial."
+                  />
                 </div>
               )}
             </div>

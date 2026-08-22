@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
 import { articles as seedArticles, Article, gdriveThumbnail, slugify } from "@/data/news";
+import ImageUpload from "@/components/admin/ImageUpload";
 import { useCollection } from "@/lib/use-collection";
 import DbStatus from "@/components/admin/DbStatus";
 import { Plus, Pencil, Eye, Trash2, X, Image as ImageIcon } from "lucide-react";
@@ -218,11 +219,6 @@ function ArticleModal({
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ ...article });
-  const [previewImg, setPreviewImg] = useState(
-    article.image && article.image !== "/placeholder-news.png"
-      ? gdriveThumbnail(article.image)
-      : ""
-  );
 
   const set = (key: keyof Article, val: string) =>
     setForm((prev) => ({
@@ -230,11 +226,6 @@ function ArticleModal({
       [key]: val,
       ...(key === "title" && !article.title ? { slug: slugify(val) } : {}),
     }));
-
-  const handleImageChange = (url: string) => {
-    setForm((prev) => ({ ...prev, image: url }));
-    setPreviewImg(url ? gdriveThumbnail(url) : "");
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
@@ -325,34 +316,12 @@ function ArticleModal({
             </div>
           </div>
 
-          {/* Google Drive Image */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Foto Sampul (Google Drive)
-            </label>
-            <input
-              value={form.image === "/placeholder-news.png" ? "" : form.image}
-              onChange={(e) => handleImageChange(e.target.value)}
-              placeholder="https://drive.google.com/file/d/FILE_ID/view"
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm font-mono"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              Paste link Google Drive. File harus di-share &quot;Anyone with
-              link&quot;.
-            </p>
-            {previewImg && (
-              <div className="mt-2 relative w-full max-w-xs aspect-video rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                <img
-                  src={previewImg}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              </div>
-            )}
-          </div>
+          {/* Cover photo */}
+          <ImageUpload
+            label="Foto Sampul"
+            value={form.image === "/placeholder-news.png" ? "" : form.image}
+            onChange={(url) => setForm((prev) => ({ ...prev, image: url }))}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

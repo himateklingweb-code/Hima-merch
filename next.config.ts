@@ -32,8 +32,8 @@ const csp = [
   `script-src 'self' 'unsafe-inline' ${turnstile}${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
-  // Google profile photos + Drive thumbnails back avatars and artwork.
-  "img-src 'self' data: blob: https://lh3.googleusercontent.com https://drive.google.com",
+  // Google profile photos (lh3) + uploaded content images (Supabase storage).
+  `img-src 'self' data: blob: https://lh3.googleusercontent.com ${supabaseOrigin}`.trim(),
   `connect-src 'self' ${supabaseOrigin} ${turnstile} ${
     supabaseOrigin ? supabaseOrigin.replace("https://", "wss://") : ""
   }${isDev ? " ws://localhost:* http://localhost:*" : ""}`.trim(),

@@ -15,10 +15,15 @@ export interface Article {
   seo?: SeoOverride;
 }
 
+/**
+ * Returns the image URL to display.
+ *
+ * Images are uploaded to Supabase storage now, so this just passes the stored
+ * URL through. (Google Drive support was removed; the `width` argument is kept
+ * only so existing call sites need no change.)
+ */
 export function gdriveThumbnail(url: string, width = 800): string {
-  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match) return `https://lh3.googleusercontent.com/d/${match[1]}=w${width}`;
-  if (url.includes("lh3.googleusercontent.com")) return url;
+  void width;
   return url;
 }
 
