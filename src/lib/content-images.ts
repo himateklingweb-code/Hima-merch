@@ -22,6 +22,13 @@ export function validateImage(file: File): string | null {
   return null;
 }
 
+async function sha256Hex(file: File): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export async function uploadContentImage(
   file: File
 ): Promise<{ url?: string; error?: string }> {
@@ -31,13 +38,23 @@ export async function uploadContentImage(
   const err = validateImage(file);
   if (err) return { error: err };
 
+  // Content-addressed path: the same picture always hashes to the same
+  // path, so re-uploading a logo or cover that's already in the bucket
+  // (a partner's logo reused across sponsors, the same photo used twice)
+  // resolves to the existing object instead of storing another copy.
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}.${ext}`;
+  const path = `${await sha256Hex(file)}.${ext}`;
 
   const { error: upErr } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { contentType: file.type, upsert: false });
-  if (upErr) return { error: upErr.message };
+
+  // A conflict here means this exact image is already stored under this
+  // path — that's a hit, not a failure, so it resolves the same as a
+  // fresh upload rather than surfacing an error.
+  if (upErr && !/exist/i.test(upErr.message)) {
+    return { error: upErr.message };
+  }
 
   return { url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl };
 }

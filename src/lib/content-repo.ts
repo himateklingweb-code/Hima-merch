@@ -71,7 +71,10 @@ export async function getProducts(): Promise<Product[]> {
     .eq("is_active", true)
     .order("created_at", { ascending: true });
 
-  if (error || !data?.length) return seedProducts;
+  // Only a failed query falls back to seed data — a real empty result (the
+  // last product got unpublished or deleted) must render as an empty
+  // catalogue, not resurrect the old demo seed content.
+  if (error) return seedProducts;
   return (data as ProductRow[]).map(toProduct);
 }
 
@@ -132,7 +135,7 @@ export async function getArticles(): Promise<Article[]> {
     .eq("is_published", true)
     .order("published_at", { ascending: false });
 
-  if (error || !data?.length) return seedArticles;
+  if (error) return seedArticles;
   return (data as ArticleRow[]).map(toArticle);
 }
 
@@ -227,7 +230,7 @@ export async function getDepartments(): Promise<Department[]> {
     .select(DEPARTMENT_SELECT)
     .order("order_index", { ascending: true });
 
-  if (error || !data?.length) return seedDepartments;
+  if (error) return seedDepartments;
   return (data as unknown as DepartmentRow[]).map(toDepartment);
 }
 
@@ -259,7 +262,7 @@ export async function getPartners(): Promise<Partner[]> {
     .eq("is_active", true)
     .order("order_index", { ascending: true });
 
-  if (error || !data?.length) return seedPartners;
+  if (error) return seedPartners;
   return data.map((r) => ({
     id: r.id as string,
     name: r.name as string,
@@ -282,7 +285,7 @@ export async function getActiveAds(): Promise<Ad[]> {
     .eq("active", true)
     .order("order_index", { ascending: true });
 
-  if (error || !data?.length) return seedAds.filter((a) => a.active);
+  if (error) return seedAds.filter((a) => a.active);
   return data.map((r) => ({
     id: r.id as string,
     name: r.name as string,
