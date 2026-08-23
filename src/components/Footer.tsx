@@ -5,7 +5,7 @@ const footerLinks = [
   { href: "/pesanan/cek", label: "Cek status pesanan", cat: "Pesanan" },
   { href: "/departemen", label: "Pengurus & pendahulu", cat: "Struktur" },
   { href: "/berita", label: "Kegiatan & prestasi", cat: "Berita" },
-  { href: "/admin/login", label: "Dashboard kasir", cat: "Internal" },
+  { href: "/kemitraan", label: "Kerja sama & sponsor", cat: "Mitra" },
 ];
 
 // lucide-react (this build) ships no brand marks, so the social glyphs

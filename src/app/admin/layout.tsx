@@ -25,6 +25,7 @@ const sidebarLinks = [
   { href: "/admin/pesanan", label: "Pesanan", icon: ShoppingCart },
   { href: "/admin/departemen", label: "Departemen", icon: Building2 },
   { href: "/admin/berita", label: "Berita", icon: FileText },
+  { href: "/admin/mitra", label: "Mitra & Sponsor", icon: Building2 },
   { href: "/admin/iklan", label: "Iklan Mitra", icon: Megaphone },
   { href: "/admin/seo", label: "SEO", icon: Settings },
   { href: "/admin/pengguna", label: "Pengguna", icon: Users },

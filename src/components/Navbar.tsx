@@ -13,6 +13,7 @@ const navLinks = [
   { href: "/departemen", label: "Kepengurusan", key: "departemen" },
   { href: "/merchandise", label: "Merchandise", key: "merch" },
   { href: "/berita", label: "Berita", key: "berita" },
+  { href: "/kemitraan", label: "Mitra", key: "kemitraan" },
   { href: "/pesanan/cek", label: "Cek Pesanan", key: "pesanan" },
   { href: "/kontak", label: "Kontak", key: "kontak" },
 ];
