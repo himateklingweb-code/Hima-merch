@@ -35,6 +35,21 @@ interface GlobalPeriodInput {
 }
 
 /**
+ * A fixed list instead of free text — the org chart and department-head
+ * lookups on the public site match members by position text (e.g.
+ * "kepala" for a head, "ketua" but not "wakil" for the chair), so a typo
+ * here silently drops someone off those views. Locking the field to a
+ * dropdown makes that impossible.
+ */
+const POSITION_OPTIONS: string[] = [
+  "Ketua Himpunan",
+  "Sekretaris",
+  "Bendahara",
+  "Kepala Departemen",
+  "Anggota",
+];
+
+/**
  * Members are edited against the department's *active* period. The nested
  * shape (department → periods → members) is why this screen loads its own
  * data instead of using the flat useCollection hook.
@@ -1040,7 +1055,11 @@ function MemberModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState(member?.name ?? "");
-  const [position, setPosition] = useState(member?.position ?? "");
+  const [position, setPosition] = useState(
+    member?.position && POSITION_OPTIONS.includes(member.position)
+      ? member.position
+      : POSITION_OPTIONS[0]
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1087,13 +1106,21 @@ function MemberModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Jabatan
             </label>
-            <input
+            <select
               value={position}
               onChange={(e) => setPosition(e.target.value)}
               required
-              placeholder="Ketua, Sekretaris, Staff, ..."
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
-            />
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm bg-white"
+            >
+              {POSITION_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              Dipilih dari daftar tetap supaya tidak ada salah ketik jabatan.
+            </p>
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">

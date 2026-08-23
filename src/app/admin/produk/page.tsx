@@ -2,10 +2,82 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Pencil, Eye, Trash2, X, AlertTriangle } from "lucide-react";
+import * as XLSX from "xlsx";
+import {
+  Plus,
+  Pencil,
+  Eye,
+  Trash2,
+  X,
+  AlertTriangle,
+  FileDown,
+  Loader2,
+} from "lucide-react";
 import { formatPrice, slugifyName } from "@/data/products";
 import { useCollection } from "@/lib/use-collection";
 import DbStatus from "@/components/admin/DbStatus";
+import { fetchOrders } from "@/lib/orders-repo";
+
+const paymentLabel: Record<string, string> = {
+  lunas: "Lunas",
+  dp: "DP",
+  belum_lunas: "Belum bayar",
+};
+
+const orderStatusLabel: Record<string, string> = {
+  pending_verifikasi: "Pending",
+  terjual: "Terjual",
+  dibatalkan: "Batal",
+  kadaluarsa: "Expired",
+};
+
+/**
+ * Recap of everyone who ordered one specific product — one row per
+ * basket line matching that product, across every order regardless of
+ * status, so staff can filter/sort in Excel however they need instead of
+ * this screen guessing which subset they want.
+ */
+async function exportProductBuyers(product: {
+  id: string;
+  name: string;
+  slug: string;
+}) {
+  const { orders } = await fetchOrders();
+  const rows: Record<string, string | number>[] = [];
+
+  for (const order of orders) {
+    for (const item of order.items ?? []) {
+      if (item.product_id !== product.id) continue;
+      rows.push({
+        "Kode Pesanan": order.order_code,
+        Tanggal: new Date(order.created_at).toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+        Pembeli: order.buyer_name,
+        WhatsApp: order.buyer_wa,
+        Alamat: order.buyer_address || "",
+        Varian: item.variant || "",
+        Qty: item.qty,
+        Subtotal: item.subtotal,
+        "Status Bayar": paymentLabel[order.payment_status] ?? order.payment_status,
+        "Status Pesanan":
+          orderStatusLabel[order.order_status] ?? order.order_status,
+      });
+    }
+  }
+
+  if (rows.length === 0) {
+    alert(`Belum ada yang memesan "${product.name}".`);
+    return;
+  }
+
+  const sheet = XLSX.utils.json_to_sheet(rows);
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, "Pembeli");
+  XLSX.writeFile(book, `pembeli-${product.slug || product.id}.xlsx`);
+}
 
 /** The products table as stored, which is what the form edits. */
 interface ProductRow {
@@ -56,11 +128,18 @@ export default function AdminProdukPage() {
   const [editing, setEditing] = useState<ProductRow | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
 
   const handleSave = async (row: ProductRow) => {
     if (!(await save(row))) return;
     setEditing(null);
     setIsNew(false);
+  };
+
+  const handleExportBuyers = async (p: ProductRow) => {
+    setExportingId(p.id);
+    await exportProductBuyers(p);
+    setExportingId(null);
   };
 
   const toggleActive = async (p: ProductRow) =>
@@ -165,6 +244,18 @@ export default function AdminProdukPage() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleExportBuyers(p)}
+                          disabled={exportingId === p.id}
+                          className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-emerald-700 disabled:opacity-60 transition-colors"
+                          title="Export daftar pembeli produk ini ke Excel"
+                        >
+                          {exportingId === p.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <FileDown className="w-4 h-4" />
+                          )}
+                        </button>
                         <Link
                           href={`/merchandise/${p.slug}`}
                           target="_blank"
