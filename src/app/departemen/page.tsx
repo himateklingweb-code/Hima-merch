@@ -61,19 +61,30 @@ export default async function KepengurusanPage() {
         </p>
       </div>
 
-      {/* Org chart — BPH on top, department heads below, so the reporting
-          structure reads at a glance before the detail sections beneath. */}
+      {/* Org chart — Ketua at the top, Sekretaris & Bendahara level below
+          it, department heads at the bottom, so the reporting structure
+          reads at a glance before the detail sections beneath. */}
       {bph &&
         (() => {
           const activePeriod = bph.periods.find((p) => p.is_active);
           const bphMembers = [...(activePeriod?.members ?? [])].sort(
             (a, b) => a.order_index - b.order_index
           );
+          // "Ketua" leads the chart alone; everyone else in BPH (Sekretaris,
+          // Bendahara, and any other core roles) sits one level below,
+          // side by side. "Wakil Ketua" is excluded from the ketua match
+          // so a deputy chair doesn't get mistaken for the chair.
+          const ketua =
+            bphMembers.find(
+              (m) => /ketua/i.test(m.position) && !/wakil/i.test(m.position)
+            ) ?? bphMembers[0] ?? null;
+          const secondTier = bphMembers.filter((m) => m.id !== ketua?.id);
+
           const heads = departments
             .map((d) => ({ dept: d, head: departmentHead(d) }))
             .filter((x): x is { dept: Department; head: NonNullable<ReturnType<typeof departmentHead>> } => !!x.head);
 
-          if (bphMembers.length === 0 && heads.length === 0) return null;
+          if (!ketua && heads.length === 0) return null;
 
           return (
             <div className="mb-10 sm:mb-14">
@@ -86,10 +97,30 @@ export default async function KepengurusanPage() {
 
               <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-8 overflow-x-auto">
                 <div className="min-w-[560px] flex flex-col items-center">
-                  {/* BPH row */}
-                  {bphMembers.length > 0 && (
+                  {/* Level 1 — Ketua */}
+                  {ketua && (
+                    <div className="w-36 sm:w-44 rounded-xl border-2 border-emerald-300 bg-emerald-100 p-3 sm:p-4 text-center">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-600 text-white mx-auto mb-2 flex items-center justify-center">
+                        <User className="w-5 h-5 sm:w-6 sm:h-6" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 text-xs sm:text-sm truncate">
+                        {ketua.name}
+                      </h3>
+                      <p className="text-[10px] sm:text-xs text-emerald-700 mt-0.5">
+                        {ketua.position}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Connector */}
+                  {ketua && secondTier.length > 0 && (
+                    <div className="w-px h-6 sm:h-8 bg-gray-300" />
+                  )}
+
+                  {/* Level 2 — Sekretaris & Bendahara (and any other BPH members) */}
+                  {secondTier.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-                      {bphMembers.map((m) => (
+                      {secondTier.map((m) => (
                         <div
                           key={m.id}
                           className="w-32 sm:w-40 rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3 sm:p-4 text-center"
@@ -109,11 +140,11 @@ export default async function KepengurusanPage() {
                   )}
 
                   {/* Connector */}
-                  {bphMembers.length > 0 && heads.length > 0 && (
+                  {(ketua || secondTier.length > 0) && heads.length > 0 && (
                     <div className="w-px h-6 sm:h-8 bg-gray-300" />
                   )}
 
-                  {/* Department heads row */}
+                  {/* Level 3 — Department heads */}
                   {heads.length > 0 && (
                     <div className="w-full">
                       <div className="mx-auto h-px bg-gray-300" style={{ maxWidth: `${Math.min(heads.length, 6) * 130}px` }} />

@@ -1,17 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { iconFromName, ICON_NAMES } from "@/lib/icons";
 import DeptIcon from "@/components/DeptIcon";
 import {
   departments as seedDepts,
   Department,
   DepartmentMember,
-  DepartmentPeriod,
 } from "@/data/departments";
 import { getSupabase } from "@/lib/supabase";
 import DbStatus from "@/components/admin/DbStatus";
 import { Pencil, Users, Plus, Trash2, Star, X, Calendar, Check } from "lucide-react";
+
+/**
+ * A "periode" is org-wide, not per-department — the schema stores one
+ * department_periods row per department, but the label is the join key
+ * that ties them into a single package. Switching the active period
+ * anywhere switches it everywhere, so past pengurus stay grouped by year
+ * across BPH and every department together.
+ */
+interface GlobalPeriod {
+  label: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  deptCount: number;
+}
+
+interface GlobalPeriodInput {
+  label: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+}
 
 /**
  * Members are edited against the department's *active* period. The nested
@@ -33,14 +54,37 @@ export default function AdminDepartemenPage() {
     creating: boolean;
   } | null>(null);
   const [deleteDeptId, setDeleteDeptId] = useState<string | null>(null);
-  const [managingPeriodsFor, setManagingPeriodsFor] = useState<string | null>(
-    null
-  );
-  const [editingPeriod, setEditingPeriod] = useState<{
-    deptId: string;
-    period: DepartmentPeriod | null;
+  const [showPeriodManager, setShowPeriodManager] = useState(false);
+  const [editingGlobalPeriod, setEditingGlobalPeriod] = useState<{
+    original: GlobalPeriod | null;
   } | null>(null);
-  const [deletePeriodId, setDeletePeriodId] = useState<string | null>(null);
+  const [deleteGlobalPeriodLabel, setDeleteGlobalPeriodLabel] = useState<
+    string | null
+  >(null);
+
+  const globalPeriods = useMemo<GlobalPeriod[]>(() => {
+    const map = new Map<string, GlobalPeriod>();
+    for (const d of depts) {
+      for (const p of d.periods) {
+        const existing = map.get(p.period_label);
+        if (existing) {
+          existing.deptCount += 1;
+          if (p.is_active) existing.is_active = true;
+        } else {
+          map.set(p.period_label, {
+            label: p.period_label,
+            start_date: p.start_date,
+            end_date: p.end_date,
+            is_active: p.is_active,
+            deptCount: 1,
+          });
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      b.label.localeCompare(a.label)
+    );
+  }, [depts]);
 
   const reload = useCallback(async () => {
     const supabase = getSupabase();
@@ -174,14 +218,18 @@ export default function AdminDepartemenPage() {
     });
 
     if (!writeError && creating) {
+      // A new department joins whichever period is currently active
+      // org-wide, so it lines up with BPH and the rest of the departments
+      // instead of starting its own separate period.
+      const activeGlobal = globalPeriods.find((p) => p.is_active);
       const year = new Date().getFullYear();
       await supabase.from("department_periods").insert({
         id: `period-${dept.id}-${Date.now()}`,
         department_id: dept.id,
-        period_label: `${year}/${year + 1}`,
+        period_label: activeGlobal?.label ?? `${year}/${year + 1}`,
         is_active: true,
-        start_date: `${year}-01-01`,
-        end_date: `${year}-12-31`,
+        start_date: activeGlobal?.start_date || `${year}-01-01`,
+        end_date: activeGlobal?.end_date || `${year}-12-31`,
       });
     }
 
@@ -236,13 +284,82 @@ export default function AdminDepartemenPage() {
   };
 
   /**
-   * Periods were only ever created implicitly (one per new department) —
-   * there was no way to add a new year, rename a label, or switch which
-   * period is active. This lets staff manage the full period history.
+   * Activates `label` for every department at once — the "sepaket" model
+   * the user asked for: switching BPH's period switches all departments
+   * with it, instead of each department carrying its own independent
+   * active period.
+   *
+   * Departments that never had a row for this label (e.g. a department
+   * created after the period existed elsewhere) get one created here, so
+   * the whole org ends up on the same period even if history is uneven.
    */
-  const handleSavePeriod = async (
-    deptId: string,
-    period: DepartmentPeriod
+  const activateLabelAcrossOrg = async (
+    label: string,
+    fallbackStart?: string,
+    fallbackEnd?: string
+  ): Promise<string | null> => {
+    const supabase = getSupabase();
+    if (!supabase) return "Supabase belum dikonfigurasi — perubahan tidak tersimpan.";
+
+    const { error: clearError } = await supabase
+      .from("department_periods")
+      .update({ is_active: false })
+      .neq("period_label", label);
+    if (clearError) return clearError.message;
+
+    const { error: activateError } = await supabase
+      .from("department_periods")
+      .update({ is_active: true })
+      .eq("period_label", label);
+    if (activateError) return activateError.message;
+
+    const missing = depts.filter(
+      (d) => !d.periods.some((p) => p.period_label === label)
+    );
+    if (missing.length > 0) {
+      const { error: insertError } = await supabase
+        .from("department_periods")
+        .insert(
+          missing.map((d) => ({
+            id: `period-${d.id}-${Date.now()}`,
+            department_id: d.id,
+            period_label: label,
+            is_active: true,
+            start_date: fallbackStart || null,
+            end_date: fallbackEnd || null,
+          }))
+        );
+      if (insertError) return insertError.message;
+    }
+    return null;
+  };
+
+  const handleSetGlobalActive = async (label: string) => {
+    const template = globalPeriods.find((p) => p.label === label);
+    setSaving(true);
+    setError(null);
+    const err = await activateLabelAcrossOrg(
+      label,
+      template?.start_date,
+      template?.end_date
+    );
+    setSaving(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+    await reload();
+  };
+
+  /**
+   * Periods used to be created implicitly (one per new department) with no
+   * way to add a new year, rename a label, or switch which period is
+   * active org-wide. This lets staff manage the full period history as one
+   * package shared by BPH and every department.
+   */
+  const handleSaveGlobalPeriod = async (
+    original: GlobalPeriod | null,
+    updated: GlobalPeriodInput
   ) => {
     const supabase = getSupabase();
     if (!supabase) {
@@ -253,72 +370,76 @@ export default function AdminDepartemenPage() {
     setSaving(true);
     setError(null);
 
-    // A newly-active period must be the only active one for its
-    // department, so the exclusivity flip happens before the upsert.
-    if (period.is_active) {
-      const { error: clearError } = await supabase
+    if (original) {
+      // Renaming/redating an existing label updates every department's row
+      // for it in one shot.
+      const { error: updateError } = await supabase
         .from("department_periods")
-        .update({ is_active: false })
-        .eq("department_id", deptId);
-      if (clearError) {
+        .update({
+          period_label: updated.label,
+          start_date: updated.start_date || null,
+          end_date: updated.end_date || null,
+        })
+        .eq("period_label", original.label);
+      if (updateError) {
         setSaving(false);
-        setError(clearError.message);
+        setError(updateError.message);
         return;
+      }
+
+      if (updated.is_active) {
+        const err = await activateLabelAcrossOrg(
+          updated.label,
+          updated.start_date,
+          updated.end_date
+        );
+        if (err) {
+          setSaving(false);
+          setError(err);
+          return;
+        }
+      }
+    } else {
+      // New period: every department gets a row for it (empty of members
+      // until staff fills them in) so the whole org is covered from the
+      // start.
+      const { error: insertError } = await supabase
+        .from("department_periods")
+        .insert(
+          depts.map((d) => ({
+            id: `period-${d.id}-${Date.now()}`,
+            department_id: d.id,
+            period_label: updated.label,
+            is_active: updated.is_active,
+            start_date: updated.start_date || null,
+            end_date: updated.end_date || null,
+          }))
+        );
+      if (insertError) {
+        setSaving(false);
+        setError(insertError.message);
+        return;
+      }
+
+      if (updated.is_active) {
+        const { error: clearError } = await supabase
+          .from("department_periods")
+          .update({ is_active: false })
+          .neq("period_label", updated.label);
+        if (clearError) {
+          setSaving(false);
+          setError(clearError.message);
+          return;
+        }
       }
     }
 
-    const { error: writeError } = await supabase
-      .from("department_periods")
-      .upsert({
-        id: period.id,
-        department_id: deptId,
-        period_label: period.period_label,
-        is_active: period.is_active,
-        start_date: period.start_date || null,
-        end_date: period.end_date || null,
-      });
-
     setSaving(false);
-    if (writeError) {
-      setError(writeError.message);
-      return;
-    }
-    await reload();
-    setEditingPeriod(null);
-  };
-
-  const handleSetActivePeriod = async (deptId: string, periodId: string) => {
-    const supabase = getSupabase();
-    if (!supabase) {
-      setError("Supabase belum dikonfigurasi — perubahan tidak tersimpan.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-
-    const { error: clearError } = await supabase
-      .from("department_periods")
-      .update({ is_active: false })
-      .eq("department_id", deptId);
-    if (clearError) {
-      setSaving(false);
-      setError(clearError.message);
-      return;
-    }
-    const { error: setError_ } = await supabase
-      .from("department_periods")
-      .update({ is_active: true })
-      .eq("id", periodId);
-
-    setSaving(false);
-    if (setError_) {
-      setError(setError_.message);
-      return;
-    }
+    setEditingGlobalPeriod(null);
     await reload();
   };
 
-  const handleDeletePeriod = async (periodId: string) => {
+  const handleDeleteGlobalPeriod = async (label: string) => {
     const supabase = getSupabase();
     if (!supabase) return;
     setSaving(true);
@@ -326,14 +447,14 @@ export default function AdminDepartemenPage() {
     const { error: delError } = await supabase
       .from("department_periods")
       .delete()
-      .eq("id", periodId);
+      .eq("period_label", label);
     setSaving(false);
     if (delError) {
       setError(delError.message);
       return;
     }
     await reload();
-    setDeletePeriodId(null);
+    setDeleteGlobalPeriodLabel(null);
   };
 
   return (
@@ -347,6 +468,13 @@ export default function AdminDepartemenPage() {
         </div>
         <div className="flex items-center gap-3">
           <DbStatus live={live} loading={loading} error={error} saving={saving} />
+          <button
+            onClick={() => setShowPeriodManager(true)}
+            className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-medium px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+          >
+            <Calendar className="w-4 h-4" />
+            Kelola Periode
+          </button>
           <button
             onClick={() =>
               setEditingDept({
@@ -390,20 +518,13 @@ export default function AdminDepartemenPage() {
                     {bph.description}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {activePeriod && (
-                    <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2.5 py-1 rounded">
-                      Periode {activePeriod.period_label}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => setManagingPeriodsFor(bph.id)}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-white border border-amber-200 px-2.5 py-1 rounded hover:bg-amber-50 transition-colors"
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    Kelola Periode
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowPeriodManager(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-100 px-2.5 py-1 rounded hover:bg-amber-200 transition-colors"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  {activePeriod ? `Periode ${activePeriod.period_label}` : "Atur Periode"}
+                </button>
               </div>
               {activePeriod && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
@@ -513,7 +634,7 @@ export default function AdminDepartemenPage() {
                 <div className="mt-3 flex items-center justify-between gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
                   <span>Belum ada periode aktif — pengurus belum bisa ditambahkan.</span>
                   <button
-                    onClick={() => setManagingPeriodsFor(dept.id)}
+                    onClick={() => setShowPeriodManager(true)}
                     className="inline-flex items-center gap-1 font-medium whitespace-nowrap hover:underline"
                   >
                     <Calendar className="w-3.5 h-3.5" />
@@ -526,7 +647,7 @@ export default function AdminDepartemenPage() {
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center justify-between mb-2">
                     <button
-                      onClick={() => setManagingPeriodsFor(dept.id)}
+                      onClick={() => setShowPeriodManager(true)}
                       className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded hover:bg-emerald-100 transition-colors"
                     >
                       Periode {activePeriod.period_label}
@@ -603,141 +724,135 @@ export default function AdminDepartemenPage() {
         />
       )}
 
-      {/* ── Period Manager Modal ── */}
-      {managingPeriodsFor && (() => {
-        const dept = depts.find((d) => d.id === managingPeriodsFor);
-        if (!dept) return null;
-        return (
-          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8 p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg">
-                    Periode — {dept.name}
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Kelola tahun kepengurusan &amp; tentukan periode aktif.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setManagingPeriodsFor(null)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+      {/* ── Period Manager Modal (org-wide) ── */}
+      {showPeriodManager && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">
+                  Periode Kepengurusan
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Satu periode berlaku untuk seluruh organisasi — mengaktifkan
+                  periode di sini mengganti periode BPH dan semua departemen
+                  sekaligus.
+                </p>
               </div>
+              <button
+                onClick={() => setShowPeriodManager(false)}
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div className="space-y-2">
-                {dept.periods.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-4">
-                    Belum ada periode.
-                  </p>
-                )}
-                {dept.periods.map((p) => (
-                  <div
-                    key={p.id}
-                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
-                      p.is_active
-                        ? "border-emerald-300 bg-emerald-50"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 text-sm">
-                          {p.period_label}
+            <div className="space-y-2">
+              {globalPeriods.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-4">
+                  Belum ada periode.
+                </p>
+              )}
+              {globalPeriods.map((p) => (
+                <div
+                  key={p.label}
+                  className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
+                    p.is_active
+                      ? "border-emerald-300 bg-emerald-50"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900 text-sm">
+                        {p.label}
+                      </span>
+                      {p.is_active && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                          <Check className="w-3 h-3" />
+                          Aktif
                         </span>
-                        {p.is_active && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
-                            <Check className="w-3 h-3" />
-                            Aktif
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {p.members.length} anggota
-                        {p.start_date && ` · ${p.start_date} – ${p.end_date || "?"}`}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {!p.is_active && (
-                        <button
-                          onClick={() => handleSetActivePeriod(dept.id, p.id)}
-                          className="px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
-                        >
-                          Jadikan Aktif
-                        </button>
                       )}
-                      <button
-                        onClick={() =>
-                          setEditingPeriod({ deptId: dept.id, period: p })
-                        }
-                        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeletePeriodId(p.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-red-600"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {p.deptCount}/{depts.length} departemen tercatat
+                      {p.start_date && ` · ${p.start_date} – ${p.end_date || "?"}`}
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!p.is_active && (
+                      <button
+                        onClick={() => handleSetGlobalActive(p.label)}
+                        className="px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                      >
+                        Jadikan Aktif
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setEditingGlobalPeriod({ original: p })}
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteGlobalPeriodLabel(p.label)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
 
+            <button
+              onClick={() => setEditingGlobalPeriod({ original: null })}
+              className="mt-4 w-full border-2 border-dashed border-gray-200 rounded-lg p-3 flex items-center justify-center gap-2 text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Tambah Periode
+            </button>
+
+            <div className="flex justify-end mt-6">
               <button
-                onClick={() =>
-                  setEditingPeriod({ deptId: dept.id, period: null })
-                }
-                className="mt-4 w-full border-2 border-dashed border-gray-200 rounded-lg p-3 flex items-center justify-center gap-2 text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm"
+                onClick={() => setShowPeriodManager(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
               >
-                <Plus className="w-4 h-4" />
-                Tambah Periode
+                Tutup
               </button>
-
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setManagingPeriodsFor(null)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                  Tutup
-                </button>
-              </div>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
-      {/* ── Period Edit/Create Modal ── */}
-      {editingPeriod && (
-        <PeriodModal
-          period={editingPeriod.period}
-          onSave={(p) => handleSavePeriod(editingPeriod.deptId, p)}
-          onClose={() => setEditingPeriod(null)}
+      {/* ── Period Edit/Create Modal (org-wide) ── */}
+      {editingGlobalPeriod && (
+        <GlobalPeriodModal
+          original={editingGlobalPeriod.original}
+          onSave={(p) => handleSaveGlobalPeriod(editingGlobalPeriod.original, p)}
+          onClose={() => setEditingGlobalPeriod(null)}
         />
       )}
 
       {/* ── Delete Period Confirm ── */}
-      {deletePeriodId && (
+      {deleteGlobalPeriodLabel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
             <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-3" />
             <h3 className="font-bold text-gray-900 mb-1">Hapus Periode?</h3>
             <p className="text-sm text-gray-500 mb-5">
-              Semua pengurus yang tercatat di periode ini ikut terhapus
-              permanen.
+              Periode ini akan dihapus dari BPH dan seluruh departemen,
+              beserta semua pengurus yang tercatat di dalamnya.
             </p>
             <div className="flex justify-center gap-3">
               <button
-                onClick={() => setDeletePeriodId(null)}
+                onClick={() => setDeleteGlobalPeriodLabel(null)}
                 className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
               >
                 Batal
               </button>
               <button
-                onClick={() => handleDeletePeriod(deletePeriodId)}
+                onClick={() => handleDeleteGlobalPeriod(deleteGlobalPeriodLabel)}
                 className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
               >
                 Hapus
@@ -882,8 +997,8 @@ function DeptModal({
 
           {creating && (
             <p className="text-xs text-gray-400">
-              Periode aktif tahun ini dibuat otomatis, supaya pengurus bisa
-              langsung ditambahkan.
+              Departemen ini otomatis mengikuti periode yang sedang aktif,
+              supaya pengurus bisa langsung ditambahkan.
             </p>
           )}
         </div>
@@ -999,40 +1114,37 @@ function MemberModal({
   );
 }
 
-function PeriodModal({
-  period,
+function GlobalPeriodModal({
+  original,
   onSave,
   onClose,
 }: {
-  period: DepartmentPeriod | null;
-  onSave: (p: DepartmentPeriod) => void | Promise<void>;
+  original: GlobalPeriod | null;
+  onSave: (p: GlobalPeriodInput) => void | Promise<void>;
   onClose: () => void;
 }) {
-  const creating = !period;
+  const creating = !original;
   const currentYear = new Date().getFullYear();
   const [label, setLabel] = useState(
-    period?.period_label ?? `${currentYear}/${currentYear + 1}`
+    original?.label ?? `${currentYear}/${currentYear + 1}`
   );
   const [startDate, setStartDate] = useState(
-    period?.start_date ?? `${currentYear}-01-01`
+    original?.start_date || `${currentYear}-01-01`
   );
   const [endDate, setEndDate] = useState(
-    period?.end_date ?? `${currentYear}-12-31`
+    original?.end_date || `${currentYear}-12-31`
   );
-  const [isActive, setIsActive] = useState(period?.is_active ?? true);
+  const [isActive, setIsActive] = useState(original?.is_active ?? true);
   const field =
     "w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
-      id: period?.id ?? `period-${Date.now()}`,
-      department_id: period?.department_id ?? "",
-      period_label: label,
+      label,
       is_active: isActive,
       start_date: startDate,
       end_date: endDate,
-      members: period?.members ?? [],
     });
   };
 
@@ -1102,7 +1214,8 @@ function PeriodModal({
           </label>
           {isActive && (
             <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
-              Periode aktif lain di departemen ini akan otomatis dinonaktifkan.
+              Periode aktif lain di seluruh organisasi (BPH &amp; semua
+              departemen) akan otomatis dinonaktifkan.
             </p>
           )}
         </div>
