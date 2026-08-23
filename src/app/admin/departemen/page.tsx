@@ -7,10 +7,11 @@ import {
   departments as seedDepts,
   Department,
   DepartmentMember,
+  DepartmentPeriod,
 } from "@/data/departments";
 import { getSupabase } from "@/lib/supabase";
 import DbStatus from "@/components/admin/DbStatus";
-import { Pencil, Users, Plus, Trash2, Star, X } from "lucide-react";
+import { Pencil, Users, Plus, Trash2, Star, X, Calendar, Check } from "lucide-react";
 
 /**
  * Members are edited against the department's *active* period. The nested
@@ -32,6 +33,14 @@ export default function AdminDepartemenPage() {
     creating: boolean;
   } | null>(null);
   const [deleteDeptId, setDeleteDeptId] = useState<string | null>(null);
+  const [managingPeriodsFor, setManagingPeriodsFor] = useState<string | null>(
+    null
+  );
+  const [editingPeriod, setEditingPeriod] = useState<{
+    deptId: string;
+    period: DepartmentPeriod | null;
+  } | null>(null);
+  const [deletePeriodId, setDeletePeriodId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const supabase = getSupabase();
@@ -226,6 +235,107 @@ export default function AdminDepartemenPage() {
     await reload();
   };
 
+  /**
+   * Periods were only ever created implicitly (one per new department) —
+   * there was no way to add a new year, rename a label, or switch which
+   * period is active. This lets staff manage the full period history.
+   */
+  const handleSavePeriod = async (
+    deptId: string,
+    period: DepartmentPeriod
+  ) => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      setError("Supabase belum dikonfigurasi — perubahan tidak tersimpan.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    // A newly-active period must be the only active one for its
+    // department, so the exclusivity flip happens before the upsert.
+    if (period.is_active) {
+      const { error: clearError } = await supabase
+        .from("department_periods")
+        .update({ is_active: false })
+        .eq("department_id", deptId);
+      if (clearError) {
+        setSaving(false);
+        setError(clearError.message);
+        return;
+      }
+    }
+
+    const { error: writeError } = await supabase
+      .from("department_periods")
+      .upsert({
+        id: period.id,
+        department_id: deptId,
+        period_label: period.period_label,
+        is_active: period.is_active,
+        start_date: period.start_date || null,
+        end_date: period.end_date || null,
+      });
+
+    setSaving(false);
+    if (writeError) {
+      setError(writeError.message);
+      return;
+    }
+    await reload();
+    setEditingPeriod(null);
+  };
+
+  const handleSetActivePeriod = async (deptId: string, periodId: string) => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      setError("Supabase belum dikonfigurasi — perubahan tidak tersimpan.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+
+    const { error: clearError } = await supabase
+      .from("department_periods")
+      .update({ is_active: false })
+      .eq("department_id", deptId);
+    if (clearError) {
+      setSaving(false);
+      setError(clearError.message);
+      return;
+    }
+    const { error: setError_ } = await supabase
+      .from("department_periods")
+      .update({ is_active: true })
+      .eq("id", periodId);
+
+    setSaving(false);
+    if (setError_) {
+      setError(setError_.message);
+      return;
+    }
+    await reload();
+  };
+
+  const handleDeletePeriod = async (periodId: string) => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    setSaving(true);
+    setError(null);
+    const { error: delError } = await supabase
+      .from("department_periods")
+      .delete()
+      .eq("id", periodId);
+    setSaving(false);
+    if (delError) {
+      setError(delError.message);
+      return;
+    }
+    await reload();
+    setDeletePeriodId(null);
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
@@ -280,11 +390,20 @@ export default function AdminDepartemenPage() {
                     {bph.description}
                   </p>
                 </div>
-                {activePeriod && (
-                  <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2.5 py-1 rounded">
-                    Periode {activePeriod.period_label}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {activePeriod && (
+                    <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2.5 py-1 rounded">
+                      Periode {activePeriod.period_label}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setManagingPeriodsFor(bph.id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-white border border-amber-200 px-2.5 py-1 rounded hover:bg-amber-50 transition-colors"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    Kelola Periode
+                  </button>
+                </div>
               </div>
               {activePeriod && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
@@ -391,17 +510,27 @@ export default function AdminDepartemenPage() {
               </p>
 
               {!activePeriod && (
-                <p className="mt-3 text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
-                  Belum ada periode aktif — pengurus belum bisa ditambahkan.
-                </p>
+                <div className="mt-3 flex items-center justify-between gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
+                  <span>Belum ada periode aktif — pengurus belum bisa ditambahkan.</span>
+                  <button
+                    onClick={() => setManagingPeriodsFor(dept.id)}
+                    className="inline-flex items-center gap-1 font-medium whitespace-nowrap hover:underline"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    Kelola
+                  </button>
+                </div>
               )}
 
               {activePeriod && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                    <button
+                      onClick={() => setManagingPeriodsFor(dept.id)}
+                      className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded hover:bg-emerald-100 transition-colors"
+                    >
                       Periode {activePeriod.period_label}
-                    </span>
+                    </button>
                     <span className="text-xs text-gray-400 flex items-center gap-1">
                       <Users className="w-3.5 h-3.5" />
                       {activePeriod.members.length} anggota
@@ -472,6 +601,150 @@ export default function AdminDepartemenPage() {
           onSave={(d) => handleSaveDept(d, editingDept.creating)}
           onClose={() => setEditingDept(null)}
         />
+      )}
+
+      {/* ── Period Manager Modal ── */}
+      {managingPeriodsFor && (() => {
+        const dept = depts.find((d) => d.id === managingPeriodsFor);
+        if (!dept) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    Periode — {dept.name}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Kelola tahun kepengurusan &amp; tentukan periode aktif.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setManagingPeriodsFor(null)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {dept.periods.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    Belum ada periode.
+                  </p>
+                )}
+                {dept.periods.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
+                      p.is_active
+                        ? "border-emerald-300 bg-emerald-50"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900 text-sm">
+                          {p.period_label}
+                        </span>
+                        {p.is_active && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                            <Check className="w-3 h-3" />
+                            Aktif
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {p.members.length} anggota
+                        {p.start_date && ` · ${p.start_date} – ${p.end_date || "?"}`}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {!p.is_active && (
+                        <button
+                          onClick={() => handleSetActivePeriod(dept.id, p.id)}
+                          className="px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                        >
+                          Jadikan Aktif
+                        </button>
+                      )}
+                      <button
+                        onClick={() =>
+                          setEditingPeriod({ deptId: dept.id, period: p })
+                        }
+                        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeletePeriodId(p.id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-red-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() =>
+                  setEditingPeriod({ deptId: dept.id, period: null })
+                }
+                className="mt-4 w-full border-2 border-dashed border-gray-200 rounded-lg p-3 flex items-center justify-center gap-2 text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-colors text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Tambah Periode
+              </button>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setManagingPeriodsFor(null)}
+                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Period Edit/Create Modal ── */}
+      {editingPeriod && (
+        <PeriodModal
+          period={editingPeriod.period}
+          onSave={(p) => handleSavePeriod(editingPeriod.deptId, p)}
+          onClose={() => setEditingPeriod(null)}
+        />
+      )}
+
+      {/* ── Delete Period Confirm ── */}
+      {deletePeriodId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 text-center">
+            <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-3" />
+            <h3 className="font-bold text-gray-900 mb-1">Hapus Periode?</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Semua pengurus yang tercatat di periode ini ikut terhapus
+              permanen.
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setDeletePeriodId(null)}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleDeletePeriod(deletePeriodId)}
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {deleteDeptId && (
@@ -721,6 +994,133 @@ function MemberModal({
         <p className="text-xs text-gray-400 mt-3">
           Demo — perubahan hanya berlaku di sesi ini.
         </p>
+      </form>
+    </div>
+  );
+}
+
+function PeriodModal({
+  period,
+  onSave,
+  onClose,
+}: {
+  period: DepartmentPeriod | null;
+  onSave: (p: DepartmentPeriod) => void | Promise<void>;
+  onClose: () => void;
+}) {
+  const creating = !period;
+  const currentYear = new Date().getFullYear();
+  const [label, setLabel] = useState(
+    period?.period_label ?? `${currentYear}/${currentYear + 1}`
+  );
+  const [startDate, setStartDate] = useState(
+    period?.start_date ?? `${currentYear}-01-01`
+  );
+  const [endDate, setEndDate] = useState(
+    period?.end_date ?? `${currentYear}-12-31`
+  );
+  const [isActive, setIsActive] = useState(period?.is_active ?? true);
+  const field =
+    "w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm";
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      id: period?.id ?? `period-${Date.now()}`,
+      department_id: period?.department_id ?? "",
+      period_label: label,
+      is_active: isActive,
+      start_date: startDate,
+      end_date: endDate,
+      members: period?.members ?? [],
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl shadow-xl w-full max-w-md p-6"
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-gray-900">
+            {creating ? "Tambah Periode" : "Edit Periode"}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Label Periode
+            </label>
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              required
+              placeholder="2026/2027"
+              className={field}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mulai
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className={field}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Berakhir
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className={field}
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            Jadikan periode aktif
+          </label>
+          {isActive && (
+            <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
+              Periode aktif lain di departemen ini akan otomatis dinonaktifkan.
+            </p>
+          )}
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            Simpan
+          </button>
+        </div>
       </form>
     </div>
   );

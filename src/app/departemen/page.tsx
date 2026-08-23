@@ -2,7 +2,24 @@ import Link from "next/link";
 import { iconFromName } from "@/lib/icons";
 import { Metadata } from "next";
 import { getDepartments, getSiteMeta } from "@/lib/content-repo";
-import { ArrowRight } from "lucide-react";
+import { Department } from "@/data/departments";
+import { ArrowRight, User } from "lucide-react";
+
+// A department's "head" is whoever holds the leading position in its
+// active period — matched by title rather than assumed to be
+// order_index 1, since staff can reorder members freely in admin.
+function departmentHead(dept: Department) {
+  const activePeriod = dept.periods.find((p) => p.is_active);
+  if (!activePeriod) return null;
+  const members = [...activePeriod.members].sort(
+    (a, b) => a.order_index - b.order_index
+  );
+  return (
+    members.find((m) => m.position.toLowerCase().includes("kepala")) ??
+    members[0] ??
+    null
+  );
+}
 
 // Editable in /admin/seo — falls back to the previous hardcoded values.
 export async function generateMetadata(): Promise<Metadata> {
@@ -43,6 +60,91 @@ export default async function KepengurusanPage() {
           menjalankan program kerja organisasi.
         </p>
       </div>
+
+      {/* Org chart — BPH on top, department heads below, so the reporting
+          structure reads at a glance before the detail sections beneath. */}
+      {bph &&
+        (() => {
+          const activePeriod = bph.periods.find((p) => p.is_active);
+          const bphMembers = [...(activePeriod?.members ?? [])].sort(
+            (a, b) => a.order_index - b.order_index
+          );
+          const heads = departments
+            .map((d) => ({ dept: d, head: departmentHead(d) }))
+            .filter((x): x is { dept: Department; head: NonNullable<ReturnType<typeof departmentHead>> } => !!x.head);
+
+          if (bphMembers.length === 0 && heads.length === 0) return null;
+
+          return (
+            <div className="mb-10 sm:mb-14">
+              <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-[.16em] text-emerald-700">
+                  Bagan Struktur Organisasi
+                </span>
+                <span className="h-px flex-1 bg-gray-200" />
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-8 overflow-x-auto">
+                <div className="min-w-[560px] flex flex-col items-center">
+                  {/* BPH row */}
+                  {bphMembers.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+                      {bphMembers.map((m) => (
+                        <div
+                          key={m.id}
+                          className="w-32 sm:w-40 rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3 sm:p-4 text-center"
+                        >
+                          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-emerald-600 text-white mx-auto mb-2 flex items-center justify-center">
+                            <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </div>
+                          <h3 className="font-semibold text-gray-900 text-xs sm:text-sm truncate">
+                            {m.name}
+                          </h3>
+                          <p className="text-[10px] sm:text-xs text-emerald-700 mt-0.5">
+                            {m.position}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Connector */}
+                  {bphMembers.length > 0 && heads.length > 0 && (
+                    <div className="w-px h-6 sm:h-8 bg-gray-300" />
+                  )}
+
+                  {/* Department heads row */}
+                  {heads.length > 0 && (
+                    <div className="w-full">
+                      <div className="mx-auto h-px bg-gray-300" style={{ maxWidth: `${Math.min(heads.length, 6) * 130}px` }} />
+                      <div className="flex flex-wrap justify-center gap-x-3 gap-y-5 sm:gap-x-4 mt-0">
+                        {heads.map(({ dept, head }) => (
+                          <div key={dept.id} className="flex flex-col items-center">
+                            <div className="w-px h-4 sm:h-5 bg-gray-300" />
+                            <Link
+                              href={`/departemen/${dept.slug}`}
+                              className="w-28 sm:w-36 rounded-xl border border-gray-200 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50 transition-colors p-2.5 sm:p-3.5 text-center"
+                            >
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border border-gray-200 mx-auto mb-1.5 sm:mb-2 flex items-center justify-center">
+                                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                              </div>
+                              <h4 className="font-medium text-gray-900 text-[11px] sm:text-xs truncate">
+                                {head.name}
+                              </h4>
+                              <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                                {dept.name}
+                              </p>
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       {/* Badan Pengurus Harian — the executive board, above the departments */}
       {bph &&

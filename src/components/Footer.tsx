@@ -215,10 +215,6 @@ export default function Footer() {
               flexWrap: "wrap",
             }}
           >
-            <span>hima.tekniklingkungan.com</span>
-            <span aria-hidden="true" style={{ opacity: 0.4 }}>
-              /
-            </span>
             <a
               href="https://sayba.id"
               target="_blank"
@@ -226,7 +222,7 @@ export default function Footer() {
               className="site-watermark link-underline"
               style={{ letterSpacing: ".16em" }}
             >
-              Dirancang oleh sayba.arc
+              Powered By Sayba Arc
             </a>
           </span>
         </div>
