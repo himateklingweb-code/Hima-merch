@@ -123,6 +123,11 @@ export default function AdminProdukPage() {
     useCollection<ProductRow>("products", [], {
       orderBy: "created_at",
       ascending: true,
+      revalidate: (row) => [
+        "/",
+        "/merchandise",
+        ...(row?.slug ? [`/merchandise/${row.slug}`] : []),
+      ],
     });
 
   const [editing, setEditing] = useState<ProductRow | null>(null);

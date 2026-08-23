@@ -21,6 +21,11 @@ export default function AdminBeritaPage() {
   } = useCollection<Article>("articles", seedArticles, {
     orderBy: "published_at",
     ascending: false,
+    revalidate: (row) => [
+      "/",
+      "/berita",
+      ...(row?.slug ? [`/berita/${row.slug}`] : []),
+    ],
   });
   const [editing, setEditing] = useState<Article | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);

@@ -59,6 +59,7 @@ export default function AdminIklanPage() {
   } = useCollection<AdRow>("ads", seedAds.map(toRow), {
     orderBy: "order_index",
     ascending: true,
+    revalidate: () => ["/"],
   });
   const items: Ad[] = rows.map(fromRow);
   const [editing, setEditing] = useState<Ad | null>(null);

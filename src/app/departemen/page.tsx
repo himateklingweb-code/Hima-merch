@@ -1,9 +1,14 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { iconFromName } from "@/lib/icons";
 import { Metadata } from "next";
 import { getDepartments, getSiteMeta } from "@/lib/content-repo";
-import { Department } from "@/data/departments";
+import { Department, DepartmentMember } from "@/data/departments";
 import { ArrowRight, User } from "lucide-react";
+
+function hasPhoto(member: DepartmentMember) {
+  return Boolean(member.photo) && member.photo !== "/placeholder-avatar.png";
+}
 
 // A department's "head" is whoever holds the leading position in its
 // active period — matched by title rather than assumed to be
@@ -100,8 +105,16 @@ export default async function KepengurusanPage() {
                   {/* Level 1 — Ketua */}
                   {ketua && (
                     <div className="w-36 sm:w-44 rounded-xl border-2 border-emerald-300 bg-emerald-100 p-3 sm:p-4 text-center">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-600 text-white mx-auto mb-2 flex items-center justify-center">
-                        <User className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-600 text-white mx-auto mb-2 flex items-center justify-center overflow-hidden">
+                        {hasPhoto(ketua) ? (
+                          <img
+                            src={ketua.photo}
+                            alt={ketua.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 sm:w-6 sm:h-6" />
+                        )}
                       </div>
                       <h3 className="font-semibold text-gray-900 text-xs sm:text-sm truncate">
                         {ketua.name}
@@ -125,8 +138,16 @@ export default async function KepengurusanPage() {
                           key={m.id}
                           className="w-32 sm:w-40 rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3 sm:p-4 text-center"
                         >
-                          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-emerald-600 text-white mx-auto mb-2 flex items-center justify-center">
-                            <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-emerald-600 text-white mx-auto mb-2 flex items-center justify-center overflow-hidden">
+                            {hasPhoto(m) ? (
+                              <img
+                                src={m.photo}
+                                alt={m.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                            )}
                           </div>
                           <h3 className="font-semibold text-gray-900 text-xs sm:text-sm truncate">
                             {m.name}
@@ -156,8 +177,16 @@ export default async function KepengurusanPage() {
                               href={`/departemen/${dept.slug}`}
                               className="w-28 sm:w-36 rounded-xl border border-gray-200 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50 transition-colors p-2.5 sm:p-3.5 text-center"
                             >
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border border-gray-200 mx-auto mb-1.5 sm:mb-2 flex items-center justify-center">
-                                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border border-gray-200 mx-auto mb-1.5 sm:mb-2 flex items-center justify-center overflow-hidden">
+                                {hasPhoto(head) ? (
+                                  <img
+                                    src={head.photo}
+                                    alt={head.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" />
+                                )}
                               </div>
                               <h4 className="font-medium text-gray-900 text-[11px] sm:text-xs truncate">
                                 {head.name}

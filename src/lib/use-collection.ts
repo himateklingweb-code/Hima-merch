@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getSupabase } from "./supabase";
+import { revalidatePublicPaths } from "./revalidate";
 
 export interface CollectionState<T> {
   items: T[];
@@ -30,9 +31,15 @@ export interface CollectionState<T> {
 export function useCollection<T extends { id: string }>(
   table: string,
   seed: T[],
-  options: { orderBy?: string; ascending?: boolean } = {}
+  options: {
+    orderBy?: string;
+    ascending?: boolean;
+    /** Public pages to refresh after a write/delete lands, e.g. `["/", "/berita"]`
+     *  or, for row-specific detail pages, a function of the saved row. */
+    revalidate?: (row?: T) => string[];
+  } = {}
 ): CollectionState<T> {
-  const { orderBy = "created_at", ascending = false } = options;
+  const { orderBy = "created_at", ascending = false, revalidate } = options;
 
   // Starts empty rather than pre-filled with `seed` — painting the demo
   // rows first and swapping them out after the real fetch lands is what
@@ -99,8 +106,9 @@ export function useCollection<T extends { id: string }>(
       return false;
     }
     await reload();
+    if (revalidate) void revalidatePublicPaths(revalidate(row));
     return true;
-  }, [table, reload]);
+  }, [table, reload, revalidate]);
 
   const remove = useCallback(async (id: string) => {
     const supabase = getSupabase();
@@ -119,8 +127,9 @@ export function useCollection<T extends { id: string }>(
       return false;
     }
     await reload();
+    if (revalidate) void revalidatePublicPaths(revalidate());
     return true;
-  }, [table, reload]);
+  }, [table, reload, revalidate]);
 
   return { items, loading, live, error, saving, save, remove, reload };
 }

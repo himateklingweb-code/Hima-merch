@@ -1,9 +1,15 @@
+/* eslint-disable @next/next/no-img-element */
 import { Metadata } from "next";
 import DeptIcon from "@/components/DeptIcon";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDepartments, getDepartmentBySlug } from "@/lib/content-repo";
 import { ArrowLeft, User } from "lucide-react";
+import type { DepartmentMember } from "@/data/departments";
+
+function hasPhoto(member: DepartmentMember) {
+  return Boolean(member.photo) && member.photo !== "/placeholder-avatar.png";
+}
 
 export async function generateStaticParams() {
   const departments = await getDepartments();
@@ -82,8 +88,16 @@ export default async function DepartemenDetailPage({
                   key={member.id}
                   className="bg-white rounded-xl border border-gray-200 p-3.5 sm:p-5 text-center"
                 >
-                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-gray-100 mx-auto mb-2 sm:mb-3 flex items-center justify-center">
-                    <User className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-gray-100 mx-auto mb-2 sm:mb-3 flex items-center justify-center overflow-hidden">
+                    {hasPhoto(member) ? (
+                      <img
+                        src={member.photo}
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
+                    )}
                   </div>
                   <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">{member.name}</h3>
                   <p className="text-[10px] sm:text-xs text-emerald-600 mt-0.5">{member.position}</p>
@@ -107,8 +121,16 @@ export default async function DepartemenDetailPage({
                   .sort((a, b) => a.order_index - b.order_index)
                   .map((member) => (
                     <div key={member.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 text-center">
-                      <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gray-200 mx-auto mb-1.5 flex items-center justify-center">
-                        <User className="w-4 h-4 sm:w-6 sm:h-6 text-gray-400" />
+                      <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-gray-200 mx-auto mb-1.5 flex items-center justify-center overflow-hidden">
+                        {hasPhoto(member) ? (
+                          <img
+                            src={member.photo}
+                            alt={member.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-4 h-4 sm:w-6 sm:h-6 text-gray-400" />
+                        )}
                       </div>
                       <h4 className="font-medium text-gray-700 text-[11px] sm:text-sm">{member.name}</h4>
                       <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{member.position}</p>

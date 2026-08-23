@@ -9,7 +9,9 @@ import {
   DepartmentMember,
 } from "@/data/departments";
 import { getSupabase } from "@/lib/supabase";
+import { revalidatePublicPaths } from "@/lib/revalidate";
 import DbStatus from "@/components/admin/DbStatus";
+import ImageUpload from "@/components/admin/ImageUpload";
 import { Pencil, Users, Plus, Trash2, Star, X, Calendar, Check } from "lucide-react";
 
 /**
@@ -170,6 +172,15 @@ export default function AdminDepartemenPage() {
   const bph = depts.find((d) => d.slug === "bph");
   const regularDepts = depts.filter((d) => d.slug !== "bph");
 
+  // Clears the ISR cache for the index and every department detail page so
+  // an edit here shows up immediately on the public site instead of
+  // waiting out the revalidate window.
+  const revalidateDeptPages = () =>
+    void revalidatePublicPaths([
+      "/departemen",
+      ...depts.map((d) => `/departemen/${d.slug}`),
+    ]);
+
   const handleSaveMember = async (
     deptId: string,
     member: DepartmentMember
@@ -207,6 +218,7 @@ export default function AdminDepartemenPage() {
       return;
     }
     await reload();
+    revalidateDeptPages();
     setEditingMember(null);
   };
 
@@ -259,6 +271,7 @@ export default function AdminDepartemenPage() {
       return;
     }
     await reload();
+    revalidateDeptPages();
     setEditingDept(null);
   };
 
@@ -278,6 +291,7 @@ export default function AdminDepartemenPage() {
       return;
     }
     await reload();
+    revalidateDeptPages();
     setDeleteDeptId(null);
   };
 
@@ -301,6 +315,7 @@ export default function AdminDepartemenPage() {
       return;
     }
     await reload();
+    revalidateDeptPages();
   };
 
   /**
@@ -369,6 +384,7 @@ export default function AdminDepartemenPage() {
       return;
     }
     await reload();
+    revalidateDeptPages();
   };
 
   /**
@@ -457,6 +473,7 @@ export default function AdminDepartemenPage() {
     setSaving(false);
     setEditingGlobalPeriod(null);
     await reload();
+    revalidateDeptPages();
   };
 
   const handleDeleteGlobalPeriod = async (label: string) => {
@@ -474,6 +491,7 @@ export default function AdminDepartemenPage() {
       return;
     }
     await reload();
+    revalidateDeptPages();
     setDeleteGlobalPeriodLabel(null);
   };
 
@@ -1060,6 +1078,11 @@ function MemberModal({
       ? member.position
       : POSITION_OPTIONS[0]
   );
+  const [photo, setPhoto] = useState(
+    member?.photo && member.photo !== "/placeholder-avatar.png"
+      ? member.photo
+      : ""
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1067,7 +1090,7 @@ function MemberModal({
       id: member?.id ?? `m-${Date.now()}`,
       name,
       position,
-      photo: member?.photo ?? "/placeholder-avatar.png",
+      photo: photo || "/placeholder-avatar.png",
       order_index: member?.order_index ?? 99,
     });
   };
@@ -1122,6 +1145,14 @@ function MemberModal({
               Dipilih dari daftar tetap supaya tidak ada salah ketik jabatan.
             </p>
           </div>
+
+          <ImageUpload
+            label="Foto"
+            value={photo}
+            onChange={setPhoto}
+            aspect="square"
+            hint="Kosongkan untuk memakai foto placeholder."
+          />
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button

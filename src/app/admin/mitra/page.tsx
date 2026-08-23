@@ -67,6 +67,7 @@ export default function AdminMitraPage() {
   } = useCollection<PartnerRow>("partners", seedRows, {
     orderBy: "order_index",
     ascending: true,
+    revalidate: () => ["/", "/kemitraan"],
   });
   const items = rows.map(fromRow);
   const [editing, setEditing] = useState<EditablePartner | null>(null);
