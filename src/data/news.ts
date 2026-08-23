@@ -11,6 +11,10 @@ export interface Article {
   image: string;
   image_alt: string;
   published_at: string;
+  /** Optional CTA button at the end of the article. Renders only when both
+   *  are non-empty. */
+  cta_label?: string;
+  cta_url?: string;
   /** Search-result overrides, editable in /admin/seo. */
   seo?: SeoOverride;
 }

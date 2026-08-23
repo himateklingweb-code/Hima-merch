@@ -106,6 +106,8 @@ interface ArticleRow {
   image: string | null;
   image_alt: string | null;
   published_at: string;
+  cta_label: string | null;
+  cta_url: string | null;
   seo: Article["seo"] | null;
 }
 
@@ -121,6 +123,8 @@ function toArticle(r: ArticleRow): Article {
     image: r.image ?? "",
     image_alt: r.image_alt ?? "",
     published_at: r.published_at,
+    cta_label: r.cta_label ?? undefined,
+    cta_url: r.cta_url ?? undefined,
     seo: r.seo ?? undefined,
   };
 }

@@ -2,6 +2,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { articleSeo, gdriveThumbnail } from "@/data/news";
 import { getArticles, getArticleBySlug } from "@/lib/content-repo";
 
@@ -219,6 +220,51 @@ export default async function ArticleDetailPage({
             }}
           />
         </div>
+
+        {/* Optional CTA — only when both a label and a link are set */}
+        {article.cta_label && article.cta_url && (
+          <div style={{ marginTop: 40 }}>
+            {article.cta_url.startsWith("/") ? (
+              <Link
+                href={article.cta_url}
+                className="beranda-hero-cta btn-sheen"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "16px 28px",
+                  borderRadius: 2,
+                  fontSize: "12.5px",
+                  letterSpacing: ".09em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {article.cta_label}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <a
+                href={article.cta_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="beranda-hero-cta btn-sheen"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "16px 28px",
+                  borderRadius: 2,
+                  fontSize: "12.5px",
+                  letterSpacing: ".09em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {article.cta_label}
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Related */}
         <div

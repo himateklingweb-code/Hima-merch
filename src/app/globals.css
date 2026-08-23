@@ -671,11 +671,10 @@ body::before {
   height: 74px;
   padding: 0 18px;
   overflow: hidden;
-  filter: grayscale(1);
-  opacity: .62;
-  transition: opacity .3s, filter .3s;
+  opacity: .85;
+  transition: opacity .3s;
 }
-.sponsor-logo:hover { filter: none; opacity: 1; }
+.sponsor-logo:hover { opacity: 1; }
 /* `height`/`width` here (not `max-height`/`max-width`) — a percentage max
    doesn't resolve reliably against a `place-items: center` grid item, which
    let logos render taller than this 74px box and get clipped by the
