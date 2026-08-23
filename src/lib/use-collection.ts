@@ -34,7 +34,11 @@ export function useCollection<T extends { id: string }>(
 ): CollectionState<T> {
   const { orderBy = "created_at", ascending = false } = options;
 
-  const [items, setItems] = useState<T[]>(seed);
+  // Starts empty rather than pre-filled with `seed` — painting the demo
+  // rows first and swapping them out after the real fetch lands is what
+  // made deleted/old items visibly flash on screen for a moment. `reload`
+  // below decides whether `seed` or live rows belong here at all.
+  const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);

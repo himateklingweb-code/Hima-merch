@@ -670,12 +670,18 @@ body::before {
   place-items: center;
   height: 74px;
   padding: 0 18px;
+  overflow: hidden;
   filter: grayscale(1);
   opacity: .62;
   transition: opacity .3s, filter .3s;
 }
 .sponsor-logo:hover { filter: none; opacity: 1; }
-.sponsor-logo img { max-height: 100%; max-width: 100%; object-fit: contain; }
+/* `height`/`width` here (not `max-height`/`max-width`) — a percentage max
+   doesn't resolve reliably against a `place-items: center` grid item, which
+   let logos render taller than this 74px box and get clipped by the
+   carousel's overflow. Matches the same 100%/100%/contain pattern already
+   used for .ad-card-logo img. */
+.sponsor-logo img { height: 100%; width: 100%; object-fit: contain; }
 
 /* ── Article prose ── */
 .prose-article p { margin: 0 0 1.2em; }

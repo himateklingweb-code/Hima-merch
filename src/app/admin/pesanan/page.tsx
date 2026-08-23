@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 import { OrderStatus, PaymentStatus } from "@/data/orders";
 import { formatPrice } from "@/data/products";
 import {
@@ -13,6 +14,7 @@ import {
   Database,
   Loader2,
   Receipt,
+  FileDown,
 } from "lucide-react";
 import {
   fetchOrders,
@@ -20,6 +22,83 @@ import {
   signedProofUrl,
   type OrderRecord,
 } from "@/lib/orders-repo";
+
+const paymentLabel: Record<PaymentStatus, string> = {
+  lunas: "Lunas",
+  dp: "DP",
+  belum_lunas: "Belum bayar",
+};
+
+/**
+ * One row per basket item, order-level fields repeated on the first row of
+ * each order — the layout a cashier expects when reconciling a printed
+ * recap against the items actually packed, rather than one opaque row per
+ * order with a JSON blob of items in it.
+ */
+function exportOrdersToExcel(
+  orders: OrderRecord[],
+  statusLabel: Record<OrderStatus, string>
+) {
+  const rows: Record<string, string | number>[] = [];
+
+  for (const order of orders) {
+    const items = order.items ?? [];
+    const total =
+      order.total_amount || items.reduce((s, i) => s + i.subtotal, 0);
+    const base = {
+      "Kode Pesanan": order.order_code,
+      Tanggal: new Date(order.created_at).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      Pembeli: order.buyer_name,
+      WhatsApp: order.buyer_wa,
+      Alamat: order.buyer_address || "",
+      "Total Pesanan": total,
+      "Status Bayar": paymentLabel[order.payment_status],
+      "Status Pesanan": statusLabel[order.order_status],
+    };
+
+    if (items.length === 0) {
+      rows.push({ ...base, Produk: "", Varian: "", Qty: "", "Subtotal Item": "" });
+      continue;
+    }
+
+    items.forEach((item, i) => {
+      rows.push({
+        ...(i === 0
+          ? base
+          : {
+              "Kode Pesanan": "",
+              Tanggal: "",
+              Pembeli: "",
+              WhatsApp: "",
+              Alamat: "",
+              "Total Pesanan": "",
+              "Status Bayar": "",
+              "Status Pesanan": "",
+            }),
+        Produk: item.product_name,
+        Varian: item.variant || "",
+        Qty: item.qty,
+        "Subtotal Item": item.subtotal,
+      });
+    });
+  }
+
+  const sheet = XLSX.utils.json_to_sheet(rows);
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, "Pesanan");
+
+  const filename =
+    orders.length === 1
+      ? `rekap-pesanan-${orders[0].order_code}.xlsx`
+      : `rekap-pesanan-${orders.length}-${new Date()
+          .toISOString()
+          .slice(0, 10)}.xlsx`;
+  XLSX.writeFile(book, filename);
+}
 
 const statusConfig: Record<
   OrderStatus,
@@ -35,6 +114,10 @@ const statusConfig: Record<
   kadaluarsa: { label: "Expired", color: "bg-gray-100 text-gray-500", icon: AlertCircle },
 };
 
+const statusLabels: Record<OrderStatus, string> = Object.fromEntries(
+  Object.entries(statusConfig).map(([k, v]) => [k, v.label])
+) as Record<OrderStatus, string>;
+
 export default function AdminPesananPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -42,6 +125,16 @@ export default function AdminPesananPage() {
   const [loading, setLoading] = useState(true);
   const [busyCode, setBusyCode] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (code: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
 
   const refresh = async () => {
     const res = await fetchOrders();
@@ -124,27 +217,48 @@ export default function AdminPesananPage() {
       )}
 
       {/* Filters */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <Filter className="w-4 h-4 text-gray-400" />
-        {(
-          ["all", "pending_verifikasi", "terjual", "kadaluarsa", "dibatalkan"] as const
-        ).map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(status)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
-              statusFilter === status
-                ? "bg-emerald-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {status === "all"
-              ? `Semua (${orders.length})`
-              : `${statusConfig[status].label} (${
-                  orders.filter((o) => o.order_status === status).length
-                })`}
-          </button>
-        ))}
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-4 h-4 text-gray-400" />
+          {(
+            ["all", "pending_verifikasi", "terjual", "kadaluarsa", "dibatalkan"] as const
+          ).map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
+                statusFilter === status
+                  ? "bg-emerald-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {status === "all"
+                ? `Semua (${orders.length})`
+                : `${statusConfig[status].label} (${
+                    orders.filter((o) => o.order_status === status).length
+                  })`}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() =>
+            exportOrdersToExcel(
+              filtered.filter((o) => selected.has(o.order_code)),
+              statusLabels
+            )
+          }
+          disabled={selected.size === 0}
+          className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title={
+            selected.size === 0
+              ? "Pilih pesanan terlebih dahulu"
+              : `Unduh rekap ${selected.size} pesanan sebagai Excel`
+          }
+        >
+          <FileDown className="w-3.5 h-3.5" />
+          Export Excel {selected.size > 0 && `(${selected.size})`}
+        </button>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -152,6 +266,24 @@ export default function AdminPesananPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="w-10 px-5 py-3">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    checked={
+                      filtered.length > 0 &&
+                      filtered.every((o) => selected.has(o.order_code))
+                    }
+                    onChange={(e) =>
+                      setSelected(
+                        e.target.checked
+                          ? new Set(filtered.map((o) => o.order_code))
+                          : new Set()
+                      )
+                    }
+                    aria-label="Pilih semua pesanan"
+                  />
+                </th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Kode</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Pembeli</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Produk</th>
@@ -165,7 +297,7 @@ export default function AdminPesananPage() {
             <tbody className="divide-y divide-gray-100">
               {loading && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-gray-400">
+                  <td colSpan={9} className="px-5 py-10 text-center text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                     Memuat pesanan…
                   </td>
@@ -174,7 +306,7 @@ export default function AdminPesananPage() {
 
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-gray-400">
+                  <td colSpan={9} className="px-5 py-10 text-center text-gray-400">
                     Belum ada pesanan.
                   </td>
                 </tr>
@@ -192,6 +324,15 @@ export default function AdminPesananPage() {
 
                   return (
                     <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3 align-top">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          checked={selected.has(order.order_code)}
+                          onChange={() => toggleSelect(order.order_code)}
+                          aria-label={`Pilih pesanan ${order.order_code}`}
+                        />
+                      </td>
                       <td className="px-5 py-3 align-top">
                         <span className="font-mono text-xs font-medium text-gray-900">
                           {order.order_code}
@@ -269,6 +410,15 @@ export default function AdminPesananPage() {
                       </td>
                       <td className="px-5 py-3 align-top">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() =>
+                              exportOrdersToExcel([order], statusLabels)
+                            }
+                            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-emerald-700 transition-colors"
+                            title="Export pesanan ini ke Excel"
+                          >
+                            <FileDown className="w-4 h-4" />
+                          </button>
                           {order.payment_proof_url && (
                             <button
                               onClick={() => viewProof(order.payment_proof_url!)}

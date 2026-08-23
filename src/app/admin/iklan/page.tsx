@@ -248,7 +248,7 @@ export default function AdminIklanPage() {
             <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-3" />
             <h3 className="font-bold text-gray-900 mb-1">Hapus Iklan?</h3>
             <p className="text-sm text-gray-500 mb-5">
-              Kartu akan hilang dari carousel beranda. (Demo — tidak permanen)
+              Kartu akan hilang dari carousel beranda secara permanen.
             </p>
             <div className="flex justify-center gap-3">
               <button
@@ -407,9 +407,6 @@ function AdModal({
             Simpan
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-3">
-          Demo — perubahan hanya berlaku di sesi ini.
-        </p>
       </form>
     </div>
   );

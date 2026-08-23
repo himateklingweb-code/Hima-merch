@@ -40,7 +40,10 @@ interface GlobalPeriodInput {
  * data instead of using the flat useCollection hook.
  */
 export default function AdminDepartemenPage() {
-  const [depts, setDepts] = useState<Department[]>(seedDepts);
+  // Starts empty rather than pre-filled with the seed departments —
+  // painting demo rows first and swapping them out once the real fetch
+  // lands is what made already-deleted entries visibly flash on screen.
+  const [depts, setDepts] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -89,6 +92,7 @@ export default function AdminDepartemenPage() {
   const reload = useCallback(async () => {
     const supabase = getSupabase();
     if (!supabase) {
+      setDepts(seedDepts);
       setLive(false);
       setLoading(false);
       return;
@@ -100,6 +104,7 @@ export default function AdminDepartemenPage() {
       .order("order_index", { ascending: true });
 
     if (readError || !data) {
+      setDepts(seedDepts);
       setLive(false);
       setLoading(false);
       return;
@@ -1106,9 +1111,6 @@ function MemberModal({
             Simpan
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-3">
-          Demo — perubahan hanya berlaku di sesi ini.
-        </p>
       </form>
     </div>
   );

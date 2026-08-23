@@ -186,7 +186,7 @@ export default function AdminBeritaPage() {
             <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-3" />
             <h3 className="font-bold text-gray-900 mb-1">Hapus Artikel?</h3>
             <p className="text-sm text-gray-500 mb-5">
-              Artikel akan dihapus dari daftar. (Demo — tidak permanen)
+              Artikel akan dihapus dari daftar secara permanen.
             </p>
             <div className="flex justify-center gap-3">
               <button
@@ -375,9 +375,6 @@ function ArticleModal({
             Simpan
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-3">
-          Demo — perubahan hanya berlaku di sesi ini.
-        </p>
       </form>
     </div>
   );
