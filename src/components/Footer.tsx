@@ -206,7 +206,22 @@ export default function Footer() {
             gap: 16,
           }}
         >
-          <span>&copy; {new Date().getFullYear()} HIMA Teknik Lingkungan UNTAN</span>
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>&copy; {new Date().getFullYear()} HIMA Teknik Lingkungan UNTAN</span>
+            <span aria-hidden="true" style={{ opacity: 0.4 }}>
+              /
+            </span>
+            <Link href="/privasi" className="link-underline">
+              Kebijakan Privasi
+            </Link>
+          </span>
           <span
             style={{
               display: "flex",

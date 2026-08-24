@@ -346,6 +346,11 @@ const SITE_META_FALLBACK: Record<string, { title: string; description: string }>
     title: "Kontak — HIMA Teknik Lingkungan UNTAN",
     description: "Hubungi HIMA Teknik Lingkungan UNTAN via WhatsApp atau Instagram.",
   },
+  "/privasi": {
+    title: "Kebijakan Privasi — HIMA Teknik Lingkungan UNTAN",
+    description:
+      "Data apa yang dikumpulkan situs HMTL UNTAN, untuk apa dipakai, dan siapa saja yang bisa mengaksesnya.",
+  },
 };
 
 /**
