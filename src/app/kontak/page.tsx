@@ -41,8 +41,8 @@ export default function KontakPage() {
               {
                 icon: Phone,
                 title: "WhatsApp",
-                content: "+62 896-9398-4597",
-                href: "https://wa.me/6289693984597",
+                content: "+62 812-1854-2747",
+                href: "https://wa.me/6281218542747",
               },
             ].map((item) => (
               <div key={item.title} className="flex items-start gap-3">

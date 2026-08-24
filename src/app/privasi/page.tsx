@@ -340,10 +340,10 @@ export default function PrivasiPage() {
           <li>
             WhatsApp:{" "}
             <a
-              href="https://wa.me/6289693984597"
+              href="https://wa.me/6281218542747"
               className="text-emerald-700 hover:underline"
             >
-              +62 896-9398-4597
+              +62 812-1854-2747
             </a>
           </li>
           <li>
