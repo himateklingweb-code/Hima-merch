@@ -89,22 +89,14 @@ export default function Navbar() {
             minWidth: 0,
           }}
         >
-          <span
-            className="site-nav-mark"
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 2,
-              display: "grid",
-              placeItems: "center",
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "-.02em",
-              flexShrink: 0,
-            }}
-          >
-            TL
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-hmtl.png"
+            alt="Logo HMTL UNTAN"
+            width={32}
+            height={32}
+            style={{ width: 32, height: 32, flexShrink: 0 }}
+          />
           <span style={{ display: "grid", lineHeight: 1.05, minWidth: 0 }}>
             <span
               className="site-nav-title"

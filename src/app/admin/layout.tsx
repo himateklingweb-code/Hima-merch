@@ -135,9 +135,12 @@ export default function AdminLayout({
         <div className="h-full flex flex-col">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-xs">
-                TL
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-hmtl-192.png"
+                alt="Logo HMTL UNTAN"
+                className="w-8 h-8"
+              />
               <div>
                 <div className="font-bold text-gray-900 text-sm">Admin Panel</div>
                 <div className="text-[10px] text-gray-400">HMTL UNTAN</div>
