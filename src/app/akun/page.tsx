@@ -26,7 +26,7 @@ import { useAuth } from "@/components/AuthContext";
 import AttendanceScanner from "@/components/AttendanceScanner";
 import { fetchMyAttendance, type MyAttendance } from "@/lib/attendance-repo";
 import { NAME_MAX, saveDisplayName } from "@/lib/profile-repo";
-import { ROLE_LABEL } from "@/lib/roles";
+import { KIND_LABEL, ROLE_LABEL, accountKind } from "@/lib/roles";
 
 const statusConfig = {
   pending_verifikasi: {
@@ -287,6 +287,7 @@ export default function AkunPage() {
   }
 
   const isMember = Boolean(profile?.department_id);
+  const kind = accountKind(profile?.staff_role ?? null, profile?.department_id ?? null);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
@@ -323,16 +324,16 @@ export default function AkunPage() {
               {profile?.department_name ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">
                   <Building2 className="h-3 w-3" />
-                  Anggota · {profile.department_name}
+                  {profile.department_name}
                 </span>
-              ) : (
-                <span className="text-gray-500">Akun pembeli</span>
-              )}
-              {profile?.staff_role && (
-                <span className="rounded-full bg-gray-900 px-2 py-0.5 font-medium text-white">
-                  {ROLE_LABEL[profile.staff_role]}
-                </span>
-              )}
+              ) : null}
+              <span
+                className={`rounded-full px-2 py-0.5 font-medium ${
+                  profile?.staff_role ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {KIND_LABEL[kind]}
+              </span>
             </div>
           </div>
         </div>
@@ -360,7 +361,7 @@ export default function AkunPage() {
             <span className="block text-xs opacity-80">
               {isMember
                 ? "Scan QR kegiatan. Butuh izin kamera & lokasi."
-                : "Hubungi admin agar akunmu dimasukkan ke departemen."}
+                : "Akunmu masih pengunjung. Minta admin memasukkanmu ke departemen."}
             </span>
           </span>
         </button>

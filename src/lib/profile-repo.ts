@@ -9,6 +9,8 @@ export interface MyProfile {
   department_name: string | null;
   department_slug: string | null;
   staff_role: StaffRole | null;
+  /** Menu panel yang boleh dibuka (admin: semua). */
+  sections: string[];
 }
 
 export async function fetchMyProfile(): Promise<MyProfile | null> {
@@ -24,6 +26,9 @@ export async function fetchMyProfile(): Promise<MyProfile | null> {
     department_name: (row.department_name as string | null) ?? null,
     department_slug: (row.department_slug as string | null) ?? null,
     staff_role: isStaffRole(row.staff_role) ? row.staff_role : null,
+    sections: Array.isArray(row.sections)
+      ? (row.sections as unknown[]).filter((s): s is string => typeof s === "string")
+      : [],
   };
 }
 

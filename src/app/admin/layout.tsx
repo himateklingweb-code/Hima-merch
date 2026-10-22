@@ -24,12 +24,14 @@ import { useState, useEffect } from "react";
 import { getSupabase } from "@/lib/supabase";
 import {
   ADMIN_SECTIONS,
-  ROLE_BADGE,
+  KIND_BADGE,
   ROLE_LABEL,
   canAccess,
+  canOpen,
   isStaffRole,
   type StaffRole,
 } from "@/lib/roles";
+import { fetchMyProfile } from "@/lib/profile-repo";
 
 const LINK_META: Record<string, { label: string; icon: LucideIcon }> = {
   "/admin": { label: "Dashboard", icon: LayoutDashboard },
@@ -56,6 +58,8 @@ export default function AdminLayout({
 
   const [staffName, setStaffName] = useState<string>("");
   const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
+  const [sections, setSections] = useState<string[]>([]);
+  const [deptName, setDeptName] = useState<string | null>(null);
 
   // The real gate is row level security on the database — this check only
   // decides what to paint. An account without a `staff` row can hold a
@@ -83,17 +87,13 @@ export default function AdminLayout({
         return;
       }
 
-      const [{ data: staff }, { data: prof }] = await Promise.all([
+      const [{ data: staff }, prof] = await Promise.all([
         supabase
           .from("staff")
           .select("full_name, email, role")
           .eq("id", user.id)
           .maybeSingle(),
-        supabase
-          .from("profiles")
-          .select("display_name")
-          .eq("id", user.id)
-          .maybeSingle(),
+        fetchMyProfile(),
       ]);
 
       if (cancelled) return;
@@ -110,6 +110,8 @@ export default function AdminLayout({
         staff.full_name && !staff.full_name.includes("@") ? staff.full_name : "";
       setStaffName(prof?.display_name || fullName || emailLocal || "Pengurus");
       setStaffRole(staff.role);
+      setSections(prof?.sections ?? []);
+      setDeptName(prof?.department_name ?? null);
       setAuthenticated(true);
     })();
 
@@ -138,11 +140,11 @@ export default function AdminLayout({
     router.replace("/admin/login");
   };
 
-  const links = ADMIN_SECTIONS.filter(
-    (s) => staffRole && s.roles.includes(staffRole)
+  const links = ADMIN_SECTIONS.filter((s) =>
+    canOpen(staffRole, sections, s.need)
   ).map((s) => ({ href: s.href, ...LINK_META[s.href] }));
 
-  const allowed = canAccess(staffRole, pathname);
+  const allowed = canAccess(staffRole, sections, pathname);
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -219,11 +221,18 @@ export default function AdminLayout({
                   {staffName || "Pengurus"}
                 </div>
                 {staffRole && (
-                  <span
-                    className={`mt-0.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${ROLE_BADGE[staffRole]}`}
-                  >
-                    {ROLE_LABEL[staffRole]}
-                  </span>
+                  <div className="mt-0.5 flex min-w-0 items-center gap-1">
+                    <span
+                      className={`inline-block shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${KIND_BADGE[staffRole]}`}
+                    >
+                      {ROLE_LABEL[staffRole]}
+                    </span>
+                    {deptName && (
+                      <span className="truncate text-[10px] text-gray-500">
+                        {deptName}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -263,11 +272,13 @@ export default function AdminLayout({
             <div className="mx-auto mt-12 max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center">
               <ShieldAlert className="mx-auto mb-3 h-10 w-10 text-amber-500" />
               <h1 className="text-lg font-bold text-gray-900">
-                Menu ini bukan untuk peranmu
+                Menu ini belum diizinkan
               </h1>
               <p className="mt-1 text-sm text-gray-500">
-                Peran {staffRole ? ROLE_LABEL[staffRole] : "-"} tidak punya
-                akses ke halaman ini. Minta Admin bila perlu akses.
+                {staffRole === "pengurus"
+                  ? `Departemen ${deptName ?? "kamu"} belum diberi izin untuk menu ini.`
+                  : "Akunmu tidak punya akses ke halaman ini."}{" "}
+                Minta Admin mengaturnya di menu Pengguna.
               </p>
               <Link
                 href="/admin"
