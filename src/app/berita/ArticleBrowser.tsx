@@ -99,6 +99,12 @@ export default function ArticleBrowser({ articles }: { articles: ArticleCard[] }
         </p>
       )}
 
+      {articles.length === 0 && (
+        <p style={{ margin: 0, fontSize: 15, color: "#605d5d" }}>
+          Belum ada berita yang diterbitkan.
+        </p>
+      )}
+
       {filtered && shown.length === 0 && (
         <div
           style={{

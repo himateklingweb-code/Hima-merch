@@ -133,17 +133,23 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
 
       {shown.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 px-6 py-14 text-center">
-          <p className="text-sm font-medium text-gray-700">Tidak ada produk yang cocok.</p>
-          <button
-            type="button"
-            onClick={() => {
-              setQ("");
-              setFilter("all");
-            }}
-            className="mt-3 text-sm font-medium text-emerald-700 hover:underline"
-          >
-            Tampilkan semua produk
-          </button>
+          <p className="text-sm font-medium text-gray-700">
+            {products.length === 0
+              ? "Belum ada merchandise yang dijual. Pantau terus, ya."
+              : "Tidak ada produk yang cocok."}
+          </p>
+          {products.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setQ("");
+                setFilter("all");
+              }}
+              className="mt-3 text-sm font-medium text-emerald-700 hover:underline"
+            >
+              Tampilkan semua produk
+            </button>
+          )}
         </div>
       ) : (
         /* Mobile: compact 2-col grid, Desktop: 3-col */
