@@ -116,6 +116,12 @@ function EditUserDialog({
 
   useEffect(() => {
     dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+    // Kunci gulir halaman di belakang dialog.
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, []);
 
   const kind = accountKind(role || null, dept || null);
@@ -166,9 +172,9 @@ function EditUserDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-user-title"
-        className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:max-w-lg sm:rounded-2xl"
+        className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:max-w-lg sm:rounded-2xl"
       >
-        <form onSubmit={save}>
+        <form onSubmit={save} className="flex min-h-0 flex-1 flex-col">
           <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
             <div className="min-w-0">
               <h2 id="edit-user-title" className="font-semibold text-gray-900">
@@ -187,7 +193,7 @@ function EditUserDialog({
             </button>
           </div>
 
-          <div className="space-y-5 px-5 py-5">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-5">
             <div>
               <label htmlFor="eu-name" className="mb-1 block text-xs font-medium text-gray-700">
                 Nama tampilan
@@ -298,19 +304,22 @@ function EditUserDialog({
             )}
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {!dirty && (
+              <span className="mr-auto text-xs text-gray-500">Belum ada perubahan</span>
+            )}
             <button
               type="button"
               onClick={onClose}
               disabled={busy}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="min-h-11 min-w-20 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={busy || !dirty}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
+              className="inline-flex min-h-11 min-w-24 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:border disabled:border-gray-200 disabled:bg-white disabled:text-gray-400"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               Simpan
@@ -561,7 +570,7 @@ export default function AdminPenggunaPage() {
         <DbStatus live={live} loading={loading} error={error} />
       </div>
 
-      <div className="mb-5 inline-flex rounded-lg border border-gray-200 bg-white p-1" role="tablist">
+      <div className="mb-5 grid grid-cols-2 rounded-lg border border-gray-200 bg-white p-1 sm:inline-grid" role="tablist">
         {(
           [
             { v: "akun", t: "Akun", icon: Users },
@@ -573,7 +582,7 @@ export default function AdminPenggunaPage() {
             role="tab"
             aria-selected={tab === o.v}
             onClick={() => setTab(o.v)}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               tab === o.v ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-50"
             }`}
           >
@@ -673,14 +682,14 @@ export default function AdminPenggunaPage() {
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="truncate font-medium text-gray-900">{nameOf(u)}</span>
+                        <span className="line-clamp-2 break-words font-medium text-gray-900">{nameOf(u)}</span>
                         {u.id === me && (
                           <span className="shrink-0 rounded bg-gray-900 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-white">
                             Kamu
                           </span>
                         )}
                       </div>
-                      <div className="truncate text-xs text-gray-500">{u.email}</div>
+                      <div className="truncate text-xs text-gray-500" title={u.email}>{u.email}</div>
                       {!u.display_name && (
                         <div className="text-[11px] text-amber-700">Belum punya nama tampilan</div>
                       )}
