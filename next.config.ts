@@ -34,6 +34,10 @@ const csp = [
   "font-src 'self' https://fonts.gstatic.com data:",
   // Google profile photos (lh3) + uploaded content images (Supabase storage).
   `img-src 'self' data: blob: https://lh3.googleusercontent.com ${supabaseOrigin}`.trim(),
+  // Kamera scanner absensi diputar lewat <video> dari MediaStream (blob:).
+  "media-src 'self' blob:",
+  // jsQR dijalankan di main thread, tidak butuh worker eksternal.
+  "worker-src 'self' blob:",
   `connect-src 'self' ${supabaseOrigin} ${turnstile} ${
     supabaseOrigin ? supabaseOrigin.replace("https://", "wss://") : ""
   }${isDev ? " ws://localhost:* http://localhost:*" : ""}`.trim(),
@@ -49,8 +53,10 @@ const securityHeaders = [
   { key: "X-XSS-Protection", value: "0" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
+    // Kamera (scan QR absensi) dan lokasi (radius absensi) hanya untuk situs
+    // ini sendiri, tidak untuk iframe pihak ketiga. Mikrofon tetap mati.
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    value: "camera=(self), microphone=(), geolocation=(self), payment=()",
   },
   {
     key: "Strict-Transport-Security",

@@ -45,13 +45,17 @@ export default function Carousel({
 
   useEffect(() => {
     if (!emblaApi) return;
-    setScrollSnaps(emblaApi.scrollSnapList());
-    onSelect();
+    const onInit = () => {
+      setScrollSnaps(emblaApi.scrollSnapList());
+      onSelect();
+    };
+    // Dijalankan lewat microtask: tidak setState sinkron di dalam effect.
+    void Promise.resolve().then(onInit);
     emblaApi.on("select", onSelect);
-    emblaApi.on("reInit", onSelect);
+    emblaApi.on("reInit", onInit);
     return () => {
       emblaApi.off("select", onSelect);
-      emblaApi.off("reInit", onSelect);
+      emblaApi.off("reInit", onInit);
     };
   }, [emblaApi, onSelect]);
 

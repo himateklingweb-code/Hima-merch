@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Loader2, MessageCircle, AlertTriangle, Lock } from "lucide-react";
 import { useCart } from "@/components/CartContext";
@@ -78,8 +78,8 @@ export default function CheckoutForm({
   onPlaced: (order: PlacedOrder) => void;
 }) {
   const { lines, itemCount, total, clear } = useCart();
-  const { user, loading: authLoading, signInWithGoogle } = useAuth();
-  const [form, setForm] = useState<FormState>(EMPTY);
+  const { user, loading: authLoading, signInWithGoogle, displayName } = useAuth();
+  const [draft, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -88,18 +88,20 @@ export default function CheckoutForm({
 
   // Prefill the name from the signed-in account (never the email — this is a
   // name field), but leave it editable and don't clobber what they've typed.
-  useEffect(() => {
-    if (!user) return;
-    const meta = user.user_metadata ?? {};
-    const accountName =
-      (meta.full_name as string) || (meta.name as string) || "";
-    if (accountName) {
-      setForm((p) => (p.name ? p : { ...p, name: accountName }));
-    }
-  }, [user]);
+  // Dihitung saat render (bukan setState di effect): nama akun dipakai sampai
+  // pembeli mengubah kolom nama sendiri.
+  const [nameTouched, setNameTouched] = useState(false);
+  const accountName = user ? displayName : "";
+  const form: FormState = nameTouched ? draft : { ...draft, name: accountName };
 
   const set = (key: keyof FormState, val: string) => {
-    setForm((p) => ({ ...p, [key]: val }));
+    if (key === "name") setNameTouched(true);
+    // Simpan juga nama prefill saat kolom lain diubah, supaya tidak hilang.
+    setForm((p) => ({
+      ...p,
+      ...(nameTouched ? {} : { name: accountName }),
+      [key]: val,
+    }));
     setErrors((p) => ({ ...p, [key]: undefined }));
   };
 

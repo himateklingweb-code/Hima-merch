@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Menu, X, ShoppingBag, User } from "lucide-react";
 import { useCart } from "./CartContext";
 import { useAuth } from "./AuthContext";
@@ -19,18 +19,22 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Path saat menu mobile dibuka. Menu dianggap terbuka hanya selama path
+  // belum berubah, jadi pindah halaman otomatis menutupnya tanpa effect.
+  const [openPath, setOpenPath] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const { itemCount } = useCart();
   const { user, avatarUrl } = useAuth();
 
+  const menuOpen = openPath === pathname;
+  const setMenuOpen = useCallback(
+    (open: boolean) => setOpenPath(open ? pathname : null),
+    [pathname]
+  );
+
   const activeKey =
     navLinks.find((l) => l.href === pathname)?.key || "";
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
 
   // Past the first slice of the page the bar goes dark, matching the
   // footer, so it reads as a solid header rather than a tinted overlay.
@@ -43,10 +47,10 @@ export default function Navbar() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") setOpenPath(null);
     };
     const onResize = () => {
-      if (window.innerWidth >= 1080) setMenuOpen(false);
+      if (window.innerWidth >= 1080) setOpenPath(null);
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);

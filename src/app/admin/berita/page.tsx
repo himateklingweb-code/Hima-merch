@@ -1,11 +1,13 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { articles as seedArticles, Article, gdriveThumbnail, slugify } from "@/data/news";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { useCollection } from "@/lib/use-collection";
 import DbStatus from "@/components/admin/DbStatus";
+import AdminSearch from "@/components/admin/AdminSearch";
+import { matchesQuery } from "@/lib/search";
 import { Plus, Pencil, Eye, Trash2, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 
@@ -29,6 +31,22 @@ export default function AdminBeritaPage() {
   });
   const [editing, setEditing] = useState<Article | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [category, setCategory] = useState("");
+
+  const categories = useMemo(
+    () => [...new Set(items.map((a) => a.category).filter(Boolean))].sort(),
+    [items]
+  );
+  const shown = useMemo(
+    () =>
+      items.filter(
+        (a) =>
+          (!category || a.category === category) &&
+          matchesQuery(q, a.title, a.slug, a.author, a.excerpt, a.published_at)
+      ),
+    [items, q, category]
+  );
 
   const handleSave = async (article: Article) => {
     if (!(await save(article))) return;
@@ -75,6 +93,30 @@ export default function AdminBeritaPage() {
         </div>
       </div>
 
+      <AdminSearch
+        value={q}
+        onChange={setQ}
+        placeholder="Cari judul, penulis, tanggal…"
+        total={items.length}
+        shown={shown.length}
+      >
+        {categories.length > 1 && (
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            aria-label="Filter kategori"
+            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-emerald-500"
+          >
+            <option value="">Semua kategori</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        )}
+      </AdminSearch>
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -101,7 +143,14 @@ export default function AdminBeritaPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {items.map((article) => (
+              {!loading && shown.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
+                    {items.length === 0 ? "Belum ada artikel." : "Tidak ada artikel yang cocok."}
+                  </td>
+                </tr>
+              )}
+              {shown.map((article) => (
                 <tr
                   key={article.id}
                   className="hover:bg-gray-50 transition-colors"

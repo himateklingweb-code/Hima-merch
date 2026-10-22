@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { OrderStatus, PaymentStatus } from "@/data/orders";
 import { formatPrice } from "@/data/products";
 import {
@@ -20,6 +20,8 @@ import {
   signedProofUrl,
   type OrderRecord,
 } from "@/lib/orders-repo";
+import AdminSearch from "@/components/admin/AdminSearch";
+import { matchesQuery } from "@/lib/search";
 
 const statusConfig: Record<
   OrderStatus,
@@ -85,10 +87,28 @@ export default function AdminPesananPage() {
     };
   }, []);
 
-  const filtered =
-    statusFilter === "all"
-      ? orders
-      : orders.filter((o) => o.order_status === statusFilter);
+  const [q, setQ] = useState("");
+  const [payFilter, setPayFilter] = useState<PaymentStatus | "all">("all");
+
+  // Cari berdasarkan kode, nama, WA, NIM, prodi, atau nama produk.
+  const filtered = useMemo(
+    () =>
+      orders.filter(
+        (o) =>
+          (statusFilter === "all" || o.order_status === statusFilter) &&
+          (payFilter === "all" || o.payment_status === payFilter) &&
+          matchesQuery(
+            q,
+            o.order_code,
+            o.buyer_name,
+            o.buyer_wa,
+            o.buyer_nim,
+            o.buyer_prodi,
+            ...o.items.map((i) => `${i.product_name} ${i.variant ?? ""}`)
+          )
+      ),
+    [orders, statusFilter, payFilter, q]
+  );
 
   return (
     <div>
@@ -147,6 +167,26 @@ export default function AdminPesananPage() {
         ))}
       </div>
 
+      <AdminSearch
+        value={q}
+        onChange={setQ}
+        placeholder="Cari kode, nama, WA, NIM, produk…"
+        total={orders.length}
+        shown={filtered.length}
+      >
+        <select
+          value={payFilter}
+          onChange={(e) => setPayFilter(e.target.value as PaymentStatus | "all")}
+          aria-label="Filter pembayaran"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-emerald-500"
+        >
+          <option value="all">Semua pembayaran</option>
+          <option value="lunas">Lunas</option>
+          <option value="dp">DP</option>
+          <option value="belum_lunas">Belum bayar</option>
+        </select>
+      </AdminSearch>
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -175,7 +215,7 @@ export default function AdminPesananPage() {
               {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-5 py-10 text-center text-gray-400">
-                    Belum ada pesanan.
+                    {orders.length === 0 ? "Belum ada pesanan." : "Tidak ada pesanan yang cocok."}
                   </td>
                 </tr>
               )}

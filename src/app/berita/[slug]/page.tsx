@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { articleSeo, gdriveThumbnail } from "@/data/news";
 import { getArticles, getArticleBySlug } from "@/lib/content-repo";
+import { sanitizeArticleHtml } from "@/lib/sanitize";
 
 export async function generateStaticParams() {
   const articles = await getArticles();
@@ -212,7 +213,7 @@ export default async function ArticleDetailPage({
         >
           <div
             className="prose-article"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(article.content) }}
             style={{
               fontSize: 17,
               lineHeight: 1.72,

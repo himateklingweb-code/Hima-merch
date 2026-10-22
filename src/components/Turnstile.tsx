@@ -35,7 +35,10 @@ export default function Turnstile({
   const holder = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
   const cb = useRef(onToken);
-  cb.current = onToken;
+  // Selalu pakai callback terbaru tanpa menulis ref saat render.
+  useEffect(() => {
+    cb.current = onToken;
+  }, [onToken]);
 
   useEffect(() => {
     let cancelled = false;

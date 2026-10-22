@@ -5,6 +5,8 @@ import { useState } from "react";
 import { ads as seedAds, Ad } from "@/data/ads";
 import { useCollection } from "@/lib/use-collection";
 import DbStatus from "@/components/admin/DbStatus";
+import AdminSearch from "@/components/admin/AdminSearch";
+import { matchesQuery } from "@/lib/search";
 import { gdriveThumbnail } from "@/data/news";
 import ImageUpload from "@/components/admin/ImageUpload";
 import {
@@ -95,7 +97,10 @@ export default function AdminIklanPage() {
     });
   };
 
-  const sorted = [...items].sort((a, b) => a.order - b.order);
+  const [q, setQ] = useState("");
+  const sorted = [...items]
+    .sort((a, b) => a.order - b.order)
+    .filter((ad) => matchesQuery(q, ad.name, ad.blurb, ad.website));
 
   return (
     <div>
@@ -117,6 +122,14 @@ export default function AdminIklanPage() {
           </button>
         </div>
       </div>
+
+      <AdminSearch
+        value={q}
+        onChange={setQ}
+        placeholder="Cari nama iklan…"
+        total={items.length}
+        shown={sorted.length}
+      />
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -222,7 +235,9 @@ export default function AdminIklanPage() {
                     colSpan={6}
                     className="px-5 py-10 text-center text-gray-400"
                   >
-                    Belum ada iklan mitra.
+                    {items.length === 0
+                      ? "Belum ada iklan mitra."
+                      : "Tidak ada iklan yang cocok."}
                   </td>
                 </tr>
               )}

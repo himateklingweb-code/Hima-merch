@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 import {
@@ -16,6 +16,8 @@ import {
 import { formatPrice, slugifyName } from "@/data/products";
 import { useCollection } from "@/lib/use-collection";
 import DbStatus from "@/components/admin/DbStatus";
+import AdminSearch from "@/components/admin/AdminSearch";
+import { matchesQuery } from "@/lib/search";
 import { fetchOrders } from "@/lib/orders-repo";
 
 const paymentLabel: Record<string, string> = {
@@ -134,6 +136,19 @@ export default function AdminProdukPage() {
   const [isNew, setIsNew] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "ready_stock" | "pre_order" | "hidden">("all");
+
+  const shown = useMemo(
+    () =>
+      items.filter(
+        (p) =>
+          (typeFilter === "all" ||
+            (typeFilter === "hidden" ? !p.is_active : p.stock_type === typeFilter)) &&
+          matchesQuery(q, p.name, p.slug, p.description)
+      ),
+    [items, q, typeFilter]
+  );
 
   const handleSave = async (row: ProductRow) => {
     if (!(await save(row))) return;
@@ -174,6 +189,26 @@ export default function AdminProdukPage() {
         </div>
       </div>
 
+      <AdminSearch
+        value={q}
+        onChange={setQ}
+        placeholder="Cari nama atau slug produk…"
+        total={items.length}
+        shown={shown.length}
+      >
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+          aria-label="Filter tipe produk"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-emerald-500"
+        >
+          <option value="all">Semua tipe</option>
+          <option value="ready_stock">Ready stock</option>
+          <option value="pre_order">Pre-order</option>
+          <option value="hidden">Disembunyikan</option>
+        </select>
+      </AdminSearch>
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -188,15 +223,15 @@ export default function AdminProdukPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {!loading && items.length === 0 && (
+              {!loading && shown.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
-                    Belum ada produk.
+                    {items.length === 0 ? "Belum ada produk." : "Tidak ada produk yang cocok."}
                   </td>
                 </tr>
               )}
 
-              {items.map((p) => {
+              {shown.map((p) => {
                 const available =
                   p.stock_type === "ready_stock"
                     ? p.stock - p.stock_reserved

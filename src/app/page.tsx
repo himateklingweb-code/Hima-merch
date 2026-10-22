@@ -39,6 +39,11 @@ function badgeOf(p: Product, now: number) {
 
 const PLATES = ["#c2c4ad", "#626b3f", "#dfe3d0", "#e0dede", "#eceaea"];
 
+/** Waktu render server (dipakai untuk badge PO). Di luar komponen agar murni. */
+function renderTime(): number {
+  return Date.now();
+}
+
 // Content is read fresh at most once a minute; stock moves as orders come
 // in, so a stale storefront would advertise things that are gone.
 export const revalidate = 60;
@@ -52,7 +57,7 @@ export default async function HomePage() {
     getActiveAds(),
   ]);
 
-  const now = Date.now();
+  const now = renderTime();
   // BPH is the executive board, not a department — keep it out of the
   // "Departemen" grid and count, but its members still count as pengurus.
   const realDepartments = departments.filter((d) => d.slug !== "bph");

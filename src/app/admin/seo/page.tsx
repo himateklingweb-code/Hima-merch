@@ -64,7 +64,6 @@ export default function AdminSeoPage() {
   // All three groups come from the database. Products and articles are
   // listed from their own tables rather than the bundled seed, so a product
   // added after launch still shows up here.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase) return;
@@ -131,7 +130,6 @@ export default function AdminSeoPage() {
       cancelled = true;
     };
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const all = [...pages, ...prodPages, ...artPages];
   // Guard the divide: the static list starts empty until the fetch lands.

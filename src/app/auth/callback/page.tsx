@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 /**
  * Where Google (and email-confirmation links) return to.
@@ -16,14 +16,15 @@ import { getSupabase } from "@/lib/supabase";
  */
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  // Tanpa Supabase tidak ada yang bisa ditukar: tampilkan pesan langsung,
+  // bukan lewat setState di dalam effect.
+  const [error, setError] = useState<string | null>(() =>
+    isSupabaseConfigured ? null : "Supabase belum dikonfigurasi."
+  );
 
   useEffect(() => {
     const supabase = getSupabase();
-    if (!supabase) {
-      setError("Supabase belum dikonfigurasi.");
-      return;
-    }
+    if (!supabase) return;
 
     const url = new URL(window.location.href);
     const params = url.searchParams;

@@ -316,7 +316,7 @@ export default function PrivasiPage() {
       <Section id="perubahan" title="9. Perubahan Kebijakan Ini">
         <p>
           Kebijakan ini bisa kami perbarui sewaktu-waktu mengikuti perubahan
-          fitur situs. Tanggal "Terakhir diperbarui" di atas selalu
+          fitur situs. Tanggal &ldquo;Terakhir diperbarui&rdquo; di atas selalu
           mencerminkan versi terbaru. Perubahan signifikan akan kami
           umumkan lewat halaman Berita.
         </p>

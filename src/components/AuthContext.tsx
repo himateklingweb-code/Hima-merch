@@ -9,7 +9,8 @@ import {
   useState,
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { fetchMyProfile, type MyProfile } from "@/lib/profile-repo";
 
 /**
  * Customer + staff authentication, shared across the storefront.
@@ -23,10 +24,14 @@ interface AuthValue {
   user: User | null;
   /** True until the initial session read finishes, so the UI can hold still. */
   loading: boolean;
-  /** Best display name we have for the account. */
+  /** Nama tampilan, departemen, dan peran panel (null bila belum dimuat). */
+  profile: MyProfile | null;
+  /** Nama yang ditampilkan. Tidak pernah berupa alamat email lengkap. */
   displayName: string;
   /** Google profile photo, when the account signed in with Google. */
   avatarUrl: string;
+  /** Muat ulang profil setelah nama/departemen diubah. */
+  refreshProfile: () => Promise<void>;
   signInWithGoogle: (redirectTo?: string) => Promise<{ error?: string }>;
   signInWithEmail: (
     email: string,
@@ -51,19 +56,33 @@ const AuthContext = createContext<AuthValue | null>(null);
 /** Where Google should return to. Falls back to the account page. */
 function callbackUrl(redirectTo?: string): string {
   const base = `${window.location.origin}/auth/callback`;
-  const dest = redirectTo && redirectTo.startsWith("/") ? redirectTo : "/akun";
+  // "//evil.com" juga diawali "/", jadi ditolak supaya tidak jadi open redirect.
+  const dest =
+    redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
+      ? redirectTo
+      : "/akun";
   return `${base}?redirect=${encodeURIComponent(dest)}`;
 }
 
-export function nameFromUser(user: User | null): string {
+/**
+ * Nama terbaik untuk akun: nama tampilan di profil, lalu nama dari Google /
+ * pendaftaran, lalu bagian depan email (tanpa domain, email tidak bocor).
+ */
+export function nameFromUser(
+  user: User | null,
+  profileName?: string | null
+): string {
   if (!user) return "";
+  if (profileName && profileName.trim()) return profileName.trim();
   const meta = user.user_metadata ?? {};
-  return (
+  const metaName = (
     (meta.full_name as string) ||
     (meta.name as string) ||
-    user.email ||
-    "Akun"
-  );
+    ""
+  ).trim();
+  if (metaName) return metaName;
+  const local = (user.email ?? "").split("@")[0];
+  return local || "Akun";
 }
 
 /** Google returns the profile photo under avatar_url / picture. */
@@ -75,14 +94,13 @@ export function avatarFromUser(user: User | null): string {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Tanpa Supabase tidak ada sesi untuk dibaca: langsung selesai memuat.
+  const [loading, setLoading] = useState(isSupabaseConfigured);
+  const [profile, setProfile] = useState<MyProfile | null>(null);
 
   useEffect(() => {
     const supabase = getSupabase();
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
+    if (!supabase) return;
 
     let active = true;
     supabase.auth.getSession().then(({ data }) => {
@@ -101,6 +119,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       active = false;
       sub.subscription.unsubscribe();
     };
+  }, []);
+
+  // Profil ikut akun. Pemicunya id (bukan objek user) supaya refresh token
+  // berkala tidak memicu request ulang.
+  const userId = user?.id ?? null;
+  useEffect(() => {
+    let active = true;
+    const load = userId ? fetchMyProfile() : Promise.resolve(null);
+    load.then((p) => {
+      if (active) setProfile(p);
+    });
+    return () => {
+      active = false;
+    };
+  }, [userId]);
+
+  const refreshProfile = useCallback(async () => {
+    setProfile(await fetchMyProfile());
   }, []);
 
   const signInWithGoogle = useCallback(async (redirectTo?: string) => {
@@ -140,11 +176,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ) => {
       const supabase = getSupabase();
       if (!supabase) return { error: "Supabase belum dikonfigurasi." };
+      const name = fullName?.replace(/\s+/g, " ").trim();
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          data: fullName ? { full_name: fullName.trim() } : undefined,
+          data: name ? { full_name: name } : undefined,
           emailRedirectTo: `${window.location.origin}/auth/callback`,
           ...(captchaToken ? { captchaToken } : {}),
         },
@@ -160,20 +197,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     await getSupabase()?.auth.signOut();
     setUser(null);
+    setProfile(null);
   }, []);
 
   const value = useMemo<AuthValue>(
     () => ({
       user,
       loading,
-      displayName: nameFromUser(user),
+      profile,
+      displayName: nameFromUser(user, profile?.display_name),
       avatarUrl: avatarFromUser(user),
+      refreshProfile,
       signInWithGoogle,
       signInWithEmail,
       signUpWithEmail,
       signOut,
     }),
-    [user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut]
+    [
+      user,
+      loading,
+      profile,
+      refreshProfile,
+      signInWithGoogle,
+      signInWithEmail,
+      signUpWithEmail,
+      signOut,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

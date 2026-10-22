@@ -5,6 +5,8 @@ import { useState } from "react";
 import { partners as seedPartners, Partner } from "@/data/partners";
 import { useCollection } from "@/lib/use-collection";
 import DbStatus from "@/components/admin/DbStatus";
+import AdminSearch from "@/components/admin/AdminSearch";
+import { matchesQuery } from "@/lib/search";
 import ImageUpload from "@/components/admin/ImageUpload";
 import {
   Plus,
@@ -104,7 +106,15 @@ export default function AdminMitraPage() {
     });
   };
 
-  const sorted = [...items].sort((a, b) => a.order_index - b.order_index);
+  const [q, setQ] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"" | "mitra" | "sponsor">("");
+  const sorted = [...items]
+    .sort((a, b) => a.order_index - b.order_index)
+    .filter(
+      (p) =>
+        (!typeFilter || p.type === typeFilter) &&
+        matchesQuery(q, p.name, p.description, p.website)
+    );
 
   return (
     <div>
@@ -126,6 +136,25 @@ export default function AdminMitraPage() {
           </button>
         </div>
       </div>
+
+      <AdminSearch
+        value={q}
+        onChange={setQ}
+        placeholder="Cari nama mitra…"
+        total={items.length}
+        shown={sorted.length}
+      >
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+          aria-label="Filter jenis"
+          className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-emerald-500"
+        >
+          <option value="">Mitra &amp; sponsor</option>
+          <option value="mitra">Mitra</option>
+          <option value="sponsor">Sponsor</option>
+        </select>
+      </AdminSearch>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -245,7 +274,9 @@ export default function AdminMitraPage() {
                     colSpan={7}
                     className="px-5 py-10 text-center text-gray-400"
                   >
-                    Belum ada mitra atau sponsor.
+                    {items.length === 0
+                      ? "Belum ada mitra atau sponsor."
+                      : "Tidak ada mitra yang cocok."}
                   </td>
                 </tr>
               )}
