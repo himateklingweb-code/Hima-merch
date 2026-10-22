@@ -32,6 +32,9 @@ export async function fetchMyProfile(): Promise<MyProfile | null> {
   };
 }
 
+/** Event jendela: profil/izin berubah, komponen yang menampilkannya muat ulang. */
+export const PROFILE_CHANGED = "hmtl:profile-changed";
+
 export const NAME_MIN = 2;
 export const NAME_MAX = 60;
 

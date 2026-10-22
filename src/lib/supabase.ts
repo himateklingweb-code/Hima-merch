@@ -19,6 +19,7 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export const isSupabaseConfigured = Boolean(url && anonKey);
 
 let cached: SupabaseClient | null = null;
+let cachedPublic: SupabaseClient | null = null;
 
 /**
  * Client for server components.
@@ -27,16 +28,25 @@ let cached: SupabaseClient | null = null;
  * refresh. Server rendering only ever reads public content, which RLS
  * exposes to the anon role anyway, and a shared mutable session on the
  * server would leak between requests.
+ *
+ * Fungsi ini juga dipanggil dari komponen klien (dashboard admin). Di browser
+ * klien dibuat sekali dan memakai storageKey sendiri, supaya tidak muncul
+ * banyak GoTrueClient yang berebut kunci sesi login.
  */
 export function getServerSupabase(): SupabaseClient | null {
   if (!url || !anonKey) return null;
-  return createClient(url, anonKey, {
+  const isBrowser = typeof window !== "undefined";
+  if (isBrowser && cachedPublic) return cachedPublic;
+  const client = createClient(url, anonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
+      storageKey: "sb-hmtl-public-read",
     },
   });
+  if (isBrowser) cachedPublic = client;
+  return client;
 }
 
 export function getSupabase(): SupabaseClient | null {

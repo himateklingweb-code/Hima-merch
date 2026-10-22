@@ -34,7 +34,13 @@ import {
   type AdminUserRow,
   type DepartmentOption,
 } from "@/lib/users-repo";
-import { NAME_MAX, NAME_MIN, cleanName, saveDisplayName } from "@/lib/profile-repo";
+import {
+  NAME_MAX,
+  NAME_MIN,
+  PROFILE_CHANGED,
+  cleanName,
+  saveDisplayName,
+} from "@/lib/profile-repo";
 import { matchesQuery } from "@/lib/search";
 
 type KindFilter = "semua" | "panel" | "anggota" | "pengunjung";
@@ -42,7 +48,7 @@ type KindFilter = "semua" | "panel" | "anggota" | "pengunjung";
 const KIND_FILTERS: { value: KindFilter; label: string; hint: string }[] = [
   { value: "semua", label: "Semua", hint: "Semua akun" },
   { value: "panel", label: "Akses panel", hint: "Admin & pengurus" },
-  { value: "anggota", label: "Anggota", hint: "Punya departemen, tanpa panel" },
+  { value: "anggota", label: "Hanya anggota", hint: "Punya departemen, tanpa akses panel" },
   { value: "pengunjung", label: "Pengunjung", hint: "Tanpa departemen & panel" },
 ];
 
@@ -357,21 +363,23 @@ function DepartmentAccessCard({
 
   return (
     <div className="flex flex-col rounded-xl border border-gray-200 bg-white p-4">
-      <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="mb-3 flex items-start gap-2.5">
+        <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" aria-hidden />
         <div className="min-w-0">
           <h3 className="font-semibold text-gray-900">{department.name}</h3>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-600">
             {members} anggota · {panelCount} pengurus panel
           </p>
         </div>
-        <Building2 className="h-5 w-5 shrink-0 text-gray-300" />
       </div>
 
-      <div className="grid gap-1.5 sm:grid-cols-2">
-        {SECTIONS.map((s) => (
+      <div className="mb-4 grid gap-1.5 sm:grid-cols-2">
+        {SECTIONS.map((s, i) => (
           <label
             key={s.key}
             className={`flex cursor-pointer items-start gap-2 rounded-lg border px-2.5 py-2 transition-colors ${
+              i === SECTIONS.length - 1 && SECTIONS.length % 2 === 1 ? "sm:col-span-2 " : ""
+            }${
               picked.includes(s.key)
                 ? "border-emerald-300 bg-emerald-50/60"
                 : "border-gray-200 hover:bg-gray-50"
@@ -386,7 +394,7 @@ function DepartmentAccessCard({
             />
             <span className="min-w-0">
               <span className="block text-sm font-medium text-gray-900">{s.label}</span>
-              <span className="block text-[11px] text-gray-500">{s.note}</span>
+              <span className="block text-xs text-gray-600">{s.note}</span>
             </span>
           </label>
         ))}
@@ -398,7 +406,10 @@ function DepartmentAccessCard({
         </p>
       )}
 
-      <div className="mt-4 flex items-center justify-end gap-2">
+      <div className="mt-auto flex items-center justify-end gap-2 border-t border-gray-100 pt-3">
+        <span className="mr-auto text-xs text-gray-600">
+          {same ? `${sections.length} menu diizinkan` : "Ada perubahan belum disimpan"}
+        </span>
         {!same && (
           <button
             type="button"
@@ -535,6 +546,7 @@ export default function AdminPenggunaPage() {
     setError(null);
     setNotice(msg);
     await reload();
+    window.dispatchEvent(new Event(PROFILE_CHANGED));
   };
 
   return (
@@ -610,7 +622,7 @@ export default function AdminPenggunaPage() {
             </select>
           </div>
 
-          <div className="mb-4 flex flex-wrap gap-2" aria-label="Filter status akun">
+          <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filter status akun">
             {KIND_FILTERS.map((f) => (
               <button
                 key={f.value}
@@ -624,7 +636,7 @@ export default function AdminPenggunaPage() {
                 }`}
               >
                 {f.label}{" "}
-                <span className={kindFilter === f.value ? "text-gray-300" : "text-gray-400"}>
+                <span className={kindFilter === f.value ? "text-gray-300" : "text-gray-500"}>
                   {counts[f.value]}
                 </span>
               </button>
@@ -663,7 +675,7 @@ export default function AdminPenggunaPage() {
                       <div className="flex items-center gap-1.5">
                         <span className="truncate font-medium text-gray-900">{nameOf(u)}</span>
                         {u.id === me && (
-                          <span className="shrink-0 rounded bg-gray-100 px-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                          <span className="shrink-0 rounded bg-gray-900 px-1.5 text-[10px] font-semibold uppercase tracking-wider text-white">
                             Kamu
                           </span>
                         )}
@@ -696,7 +708,7 @@ export default function AdminPenggunaPage() {
                       </span>
                       <span className="truncate text-gray-700">
                         {u.department_id ? deptName[u.department_id] ?? "—" : (
-                          <span className="text-gray-400">Tanpa departemen</span>
+                          <span className="text-gray-500">Tanpa departemen</span>
                         )}
                       </span>
                       <span className="text-gray-500">

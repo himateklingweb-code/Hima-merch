@@ -31,7 +31,7 @@ import {
   isStaffRole,
   type StaffRole,
 } from "@/lib/roles";
-import { fetchMyProfile } from "@/lib/profile-repo";
+import { PROFILE_CHANGED, fetchMyProfile } from "@/lib/profile-repo";
 
 const LINK_META: Record<string, { label: string; icon: LucideIcon }> = {
   "/admin": { label: "Dashboard", icon: LayoutDashboard },
@@ -119,6 +119,22 @@ export default function AdminLayout({
       cancelled = true;
     };
   }, [onLogin, router]);
+
+  // Halaman Pengguna mengirim event ini setelah menyimpan, supaya nama,
+  // departemen, dan menu di sidebar ikut berubah tanpa muat ulang halaman.
+  useEffect(() => {
+    if (onLogin) return;
+    const refresh = async () => {
+      const prof = await fetchMyProfile();
+      if (!prof) return;
+      if (prof.display_name) setStaffName(prof.display_name);
+      if (prof.staff_role) setStaffRole(prof.staff_role);
+      setSections(prof.sections);
+      setDeptName(prof.department_name);
+    };
+    window.addEventListener(PROFILE_CHANGED, refresh);
+    return () => window.removeEventListener(PROFILE_CHANGED, refresh);
+  }, [onLogin]);
 
   if (onLogin) {
     return <>{children}</>;
