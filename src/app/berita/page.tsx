@@ -45,6 +45,8 @@ export default async function BeritaPage() {
     category: a.category,
     image: a.image,
     image_alt: a.image_alt,
+    image_width: a.image_width,
+    image_height: a.image_height,
     dateLong: fmt(a.published_at, "long"),
     dateShort: fmt(a.published_at, "short"),
     year: new Date(a.published_at).getFullYear().toString(),

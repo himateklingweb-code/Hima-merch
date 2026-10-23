@@ -62,6 +62,10 @@ export interface PublicOrderReceipt {
 /** What checkout sends. Note there is no price — the server sets that. */
 export interface NewOrderLine {
   product_id: string;
+  /** Set only when the product uses the new multi-attribute variant system. */
+  variant_id: string | null;
+  /** Free-text variant for the legacy single-axis system; ignored by the
+   *  server when variant_id is set. */
   variant: string | null;
   qty: number;
 }
@@ -168,6 +172,7 @@ export async function createOrder(
       p_items: input.items.map((i) => ({
         product_id: i.product_id,
         variant: i.variant,
+        variant_id: i.variant_id,
         qty: i.qty,
       })),
       p_buyer_nim: input.buyer_nim ?? null,

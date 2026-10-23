@@ -1,17 +1,23 @@
 import type { MetadataRoute } from "next";
-import { articles } from "@/data/news";
-import { products } from "@/data/products";
-import { departments } from "@/data/departments";
+import { getArticles, getProducts, getDepartments } from "@/lib/content-repo";
 import { SITE_URL } from "@/data/seo";
 
 /**
- * Sitemap. Built from the same content collections the pages render, so a
- * new article or product appears here without anyone remembering to add it.
+ * Sitemap. Reads the same live Supabase content the pages render (falls
+ * back to the bundled seed only when Supabase is unreachable, same as every
+ * other page), so a new article or product appears here without anyone
+ * remembering to add it.
  *
  * Admin and cart routes are deliberately absent — they are either private
  * or per-visitor and have nothing to offer a crawler.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [articles, products, departments] = await Promise.all([
+    getArticles(),
+    getProducts(),
+    getDepartments(),
+  ]);
+
   const staticRoutes = [
     { path: "", priority: 1, freq: "weekly" as const },
     { path: "/tentang", priority: 0.8, freq: "monthly" as const },

@@ -36,16 +36,72 @@ interface ProductRow {
   po_reserved: number | null;
   po_deadline: string | null;
   seo: Product["seo"] | null;
+  images?: {
+    url: string;
+    alt_text: string;
+    width: number | null;
+    height: number | null;
+    order_index: number;
+  }[];
+  attributes?: { name: string; order_index: number }[];
+  variants?: {
+    id: string;
+    label: string;
+    sku: string | null;
+    price: number | null;
+    stock: number;
+    stock_reserved: number;
+    po_quota: number | null;
+    po_filled: number | null;
+    po_reserved: number | null;
+    image: string | null;
+    is_active: boolean;
+    order_index: number;
+    options?: { attribute_name: string; value: string }[];
+  }[];
 }
 
 function toProduct(r: ProductRow): Product {
+  const images =
+    r.images && r.images.length
+      ? [...r.images]
+          .sort((a, b) => a.order_index - b.order_index)
+          .map((i) => ({
+            url: i.url,
+            alt_text: i.alt_text,
+            width: i.width,
+            height: i.height,
+          }))
+      : [];
+
+  const variantList = (r.variants ?? [])
+    .filter((v) => v.is_active)
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((v) => ({
+      id: v.id,
+      label: v.label,
+      sku: v.sku,
+      price: v.price,
+      stock: v.stock,
+      stock_reserved: v.stock_reserved,
+      po_quota: v.po_quota,
+      po_filled: v.po_filled,
+      po_reserved: v.po_reserved,
+      image: v.image,
+      is_active: v.is_active,
+      order_index: v.order_index,
+      options: Object.fromEntries(
+        (v.options ?? []).map((o) => [o.attribute_name, o.value])
+      ),
+    }));
+
   return {
     id: r.id,
     name: r.name,
     slug: r.slug,
     description: r.description,
     price: r.price,
-    images: [{ url: "", alt_text: r.name }],
+    images: images.length ? images : [{ url: "", alt_text: r.name }],
     stock_type: r.stock_type,
     stock: r.stock,
     stock_reserved: r.stock_reserved,
@@ -53,6 +109,8 @@ function toProduct(r: ProductRow): Product {
       r.variant_name && r.variant_options?.length
         ? { name: r.variant_name, options: r.variant_options }
         : null,
+    attributes: [...(r.attributes ?? [])].sort((a, b) => a.order_index - b.order_index),
+    variantList,
     po_quota: r.po_quota,
     po_filled: r.po_filled,
     po_reserved: r.po_reserved,
@@ -61,13 +119,16 @@ function toProduct(r: ProductRow): Product {
   };
 }
 
+const PRODUCT_SELECT =
+  "*, images:product_images(url, alt_text, width, height, order_index), attributes:product_attributes(name, order_index), variants:product_variants(*, options:product_variant_options(attribute_name, value))";
+
 export async function getProducts(): Promise<Product[]> {
   const supabase = getServerSupabase();
   if (!supabase) return seedProducts;
 
   const { data, error } = await supabase
     .from("products")
-    .select("*")
+    .select(PRODUCT_SELECT)
     .eq("is_active", true)
     .order("created_at", { ascending: true });
 
@@ -75,7 +136,7 @@ export async function getProducts(): Promise<Product[]> {
   // last product got unpublished or deleted) must render as an empty
   // catalogue, not resurrect the old demo seed content.
   if (error) return seedProducts;
-  return (data as ProductRow[]).map(toProduct);
+  return (data as unknown as ProductRow[]).map(toProduct);
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -84,13 +145,13 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 
   const { data, error } = await supabase
     .from("products")
-    .select("*")
+    .select(PRODUCT_SELECT)
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();
 
   if (error) return seedProducts.find((p) => p.slug === slug) ?? null;
-  return data ? toProduct(data as ProductRow) : null;
+  return data ? toProduct(data as unknown as ProductRow) : null;
 }
 
 // ---------------------------------------------------------------- articles
@@ -105,6 +166,10 @@ interface ArticleRow {
   author: string;
   image: string | null;
   image_alt: string | null;
+  image_width: number | null;
+  image_height: number | null;
+  tags: string[] | null;
+  is_pinned: boolean;
   published_at: string;
   cta_label: string | null;
   cta_url: string | null;
@@ -122,6 +187,10 @@ function toArticle(r: ArticleRow): Article {
     author: r.author,
     image: r.image ?? "",
     image_alt: r.image_alt ?? "",
+    image_width: r.image_width,
+    image_height: r.image_height,
+    tags: r.tags ?? [],
+    is_pinned: r.is_pinned ?? false,
     published_at: r.published_at,
     cta_label: r.cta_label ?? undefined,
     cta_url: r.cta_url ?? undefined,
@@ -137,6 +206,7 @@ export async function getArticles(): Promise<Article[]> {
     .from("articles")
     .select("*")
     .eq("is_published", true)
+    .order("is_pinned", { ascending: false })
     .order("published_at", { ascending: false });
 
   if (error) return seedArticles;

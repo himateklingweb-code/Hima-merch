@@ -1,16 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getProductBadge, formatPrice, type Product } from "@/data/products";
-import { ArrowLeft, ShoppingBag, Check, Clock } from "lucide-react";
+import {
+  getProductBadge,
+  formatPrice,
+  availableStock,
+  variantPrice,
+  hasVariants,
+  type Product,
+  type ProductVariant,
+} from "@/data/products";
+import { ArrowLeft, ShoppingBag, Check, Clock, ImageOff } from "lucide-react";
 import { useCart } from "@/components/CartContext";
 
 /**
  * Interactive half of the product page. The surrounding server component
  * resolves the product and its meta tags, so this only owns the bits that
- * need state: quantity, variant, and adding to the basket.
+ * need state: gallery image, variant pick, quantity, and adding to the
+ * basket.
  *
  * Ordering goes through the cart now rather than straight to WhatsApp, so
  * several products can be bought in one message.
@@ -19,21 +28,58 @@ export default function ProductDetail({ product }: { product: Product }) {
   const { add } = useCart();
   const router = useRouter();
   const [qty, setQty] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<string | null>(
+
+  const usesAttrs = hasVariants(product);
+  // Legacy single-axis variant (free text), only relevant when the product
+  // has no real variant rows.
+  const [legacyVariant, setLegacyVariant] = useState<string | null>(
     product.variants?.options[0] ?? null
   );
+  // New multi-attribute system: one picked value per attribute axis, e.g.
+  // { Warna: "Hitam", Ukuran: "L" }. The matching variant is derived below.
+  const [picked, setPicked] = useState<Record<string, string>>(() => {
+    if (!usesAttrs) return {};
+    const first = product.variantList[0];
+    return first ? { ...first.options } : {};
+  });
+  const [activeImage, setActiveImage] = useState(0);
   const [added, setAdded] = useState(false);
+
+  const selectedVariant: ProductVariant | null = useMemo(() => {
+    if (!usesAttrs) return null;
+    return (
+      product.variantList.find((v) =>
+        product.attributes.every((a) => v.options[a.name] === picked[a.name])
+      ) ?? null
+    );
+  }, [usesAttrs, product, picked]);
 
   const badge = getProductBadge(product);
   const BadgeIcon = badge.icon;
   const isPreOrder = product.stock_type === "pre_order";
-  const available = isPreOrder
-    ? (product.po_quota ?? 0) - (product.po_filled ?? 0) - (product.po_reserved ?? 0)
-    : product.stock - product.stock_reserved;
-  const canOrder = available > 0 && (!isPreOrder || (product.po_deadline && new Date(product.po_deadline) > new Date()));
+  const poOpen = !!product.po_deadline && new Date(product.po_deadline) > new Date();
+  const available = usesAttrs
+    ? selectedVariant
+      ? availableStock(product, selectedVariant)
+      : 0
+    : availableStock(product);
+  const price = usesAttrs ? variantPrice(product, selectedVariant) : product.price;
+  const canOrder =
+    available > 0 &&
+    (usesAttrs ? !!selectedVariant : true) &&
+    (!isPreOrder || poOpen);
+
+  const images = product.images.filter((i) => i.url);
+  const shownImage =
+    (usesAttrs && selectedVariant?.image) || images[activeImage]?.url || null;
 
   const handleAdd = (goToCart: boolean) => {
-    add(product, selectedVariant, qty);
+    add(
+      product,
+      usesAttrs ? selectedVariant : null,
+      usesAttrs ? null : legacyVariant,
+      qty
+    );
     if (goToCart) {
       router.push("/keranjang");
       return;
@@ -54,30 +100,71 @@ export default function ProductDetail({ product }: { product: Product }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-10">
         {/* Product Image */}
-        <div className="aspect-[4/3] sm:aspect-square bg-gray-100 rounded-xl sm:rounded-2xl flex items-center justify-center relative">
-          <ShoppingBag className="w-16 sm:w-24 h-16 sm:h-24 text-gray-300" />
-          <div className="absolute top-3 left-3 sm:top-4 sm:left-4">
-            <span
-              className={`inline-flex items-center gap-1 text-[10px] sm:text-sm font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ${
-                badge.color === "green"
-                  ? "bg-green-100 text-green-800"
-                  : badge.color === "yellow"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : badge.color === "red"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-gray-100 text-gray-600"
-              }`}
-            >
-              <BadgeIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" strokeWidth={2} />
-              {badge.label}
-            </span>
+        <div>
+          <div
+            className="bg-gray-100 rounded-xl sm:rounded-2xl flex items-center justify-center relative overflow-hidden"
+            style={{
+              aspectRatio:
+                images[activeImage]?.width && images[activeImage]?.height
+                  ? `${images[activeImage]!.width}/${images[activeImage]!.height}`
+                  : "4/3",
+            }}
+          >
+            {shownImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={shownImage}
+                alt={images[activeImage]?.alt_text || product.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <ShoppingBag className="w-16 sm:w-24 h-16 sm:h-24 text-gray-300" />
+            )}
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4">
+              <span
+                className={`inline-flex items-center gap-1 text-[10px] sm:text-sm font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ${
+                  badge.color === "green"
+                    ? "bg-green-100 text-green-800"
+                    : badge.color === "yellow"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : badge.color === "red"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                <BadgeIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" strokeWidth={2} />
+                {badge.label}
+              </span>
+            </div>
           </div>
+
+          {images.length > 1 && (
+            <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
+              {images.map((img, i) => (
+                <button
+                  key={img.url}
+                  type="button"
+                  onClick={() => setActiveImage(i)}
+                  className={`shrink-0 h-14 w-14 sm:h-16 sm:w-16 rounded-lg overflow-hidden border-2 ${
+                    i === activeImage ? "border-emerald-600" : "border-transparent"
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt={img.alt_text || `${product.name} ${i + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Product Info */}
         <div>
           <h1 className="text-xl sm:text-3xl font-bold text-gray-900">{product.name}</h1>
-          <div className="text-xl sm:text-2xl font-bold text-emerald-700 mt-1.5 sm:mt-3">{formatPrice(product.price)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-emerald-700 mt-1.5 sm:mt-3">{formatPrice(price)}</div>
 
           <p className="text-gray-600 mt-3 sm:mt-4 text-sm sm:text-base leading-relaxed">{product.description}</p>
 
@@ -87,25 +174,13 @@ export default function ProductDetail({ product }: { product: Product }) {
               <>
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-gray-500">Kuota PO</span>
-                  <span className="font-medium">{product.po_quota} pcs</span>
-                </div>
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-500">Terisi</span>
-                  <span className="font-medium">{(product.po_filled ?? 0) + (product.po_reserved ?? 0)} pcs</span>
+                  <span className="font-medium">
+                    {usesAttrs ? selectedVariant?.po_quota ?? 0 : product.po_quota} pcs
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-gray-500">Sisa slot</span>
                   <span className="font-medium text-emerald-700">{available} pcs</span>
-                </div>
-                <div className="pt-1">
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, (((product.po_filled ?? 0) + (product.po_reserved ?? 0)) / (product.po_quota ?? 1)) * 100)}%`,
-                      }}
-                    />
-                  </div>
                 </div>
                 {product.po_deadline && (
                   <div className="flex items-center gap-1.5 text-xs sm:text-sm text-amber-600 pt-1">
@@ -127,8 +202,55 @@ export default function ProductDetail({ product }: { product: Product }) {
             )}
           </div>
 
-          {/* Variants */}
-          {product.variants && (
+          {/* Variants: new multi-attribute system */}
+          {usesAttrs &&
+            product.attributes.map((attr) => (
+              <div key={attr.name} className="mt-4 sm:mt-6">
+                <label className="text-xs sm:text-sm font-medium text-gray-700 block mb-2">
+                  {attr.name}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    ...new Set(
+                      product.variantList.map((v) => v.options[attr.name])
+                    ),
+                  ].map((opt) => {
+                    const candidate = { ...picked, [attr.name]: opt };
+                    const stillExists = product.variantList.some((v) =>
+                      product.attributes.every(
+                        (a) => v.options[a.name] === candidate[a.name]
+                      )
+                    );
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        disabled={!stillExists}
+                        onClick={() => setPicked(candidate)}
+                        className={`px-3.5 sm:px-4 py-2 rounded-lg border text-xs sm:text-sm font-medium transition-colors active:scale-95 ${
+                          picked[attr.name] === opt
+                            ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                            : stillExists
+                              ? "border-gray-200 text-gray-600"
+                              : "border-gray-100 text-gray-300 cursor-not-allowed"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          {usesAttrs && !selectedVariant && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700">
+              <ImageOff className="w-3.5 h-3.5" />
+              Kombinasi ini tidak tersedia.
+            </p>
+          )}
+
+          {/* Variants: legacy single-axis system */}
+          {!usesAttrs && product.variants && (
             <div className="mt-4 sm:mt-6">
               <label className="text-xs sm:text-sm font-medium text-gray-700 block mb-2">
                 {product.variants.name}
@@ -137,9 +259,9 @@ export default function ProductDetail({ product }: { product: Product }) {
                 {product.variants.options.map((opt) => (
                   <button
                     key={opt}
-                    onClick={() => setSelectedVariant(opt)}
+                    onClick={() => setLegacyVariant(opt)}
                     className={`px-3.5 sm:px-4 py-2 rounded-lg border text-xs sm:text-sm font-medium transition-colors active:scale-95 ${
-                      selectedVariant === opt
+                      legacyVariant === opt
                         ? "border-emerald-600 bg-emerald-50 text-emerald-700"
                         : "border-gray-200 text-gray-600"
                     }`}
@@ -163,7 +285,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               </button>
               <span className="w-10 text-center font-medium text-base sm:text-lg">{qty}</span>
               <button
-                onClick={() => setQty(Math.min(available, qty + 1))}
+                onClick={() => setQty(Math.min(Math.max(1, available), qty + 1))}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 active:bg-gray-100"
               >
                 +
@@ -178,13 +300,13 @@ export default function ProductDetail({ product }: { product: Product }) {
         <div className="max-w-5xl mx-auto flex items-center gap-3 sm:block">
           <div className="flex-1 sm:hidden">
             <div className="text-[10px] text-gray-400">Total</div>
-            <div className="text-lg font-bold text-emerald-700">{formatPrice(product.price * qty)}</div>
+            <div className="text-lg font-bold text-emerald-700">{formatPrice(price * qty)}</div>
           </div>
 
           {/* Desktop total */}
           <div className="hidden sm:flex items-center justify-between p-4 bg-emerald-50 rounded-xl mb-4">
             <span className="text-sm text-gray-600">Total</span>
-            <span className="text-xl font-bold text-emerald-700">{formatPrice(product.price * qty)}</span>
+            <span className="text-xl font-bold text-emerald-700">{formatPrice(price * qty)}</span>
           </div>
 
           {canOrder ? (
@@ -218,7 +340,11 @@ export default function ProductDetail({ product }: { product: Product }) {
               disabled
               className="inline-flex items-center justify-center gap-2 bg-gray-200 text-gray-500 font-semibold px-5 py-3 sm:py-3.5 rounded-xl text-sm sm:w-full cursor-not-allowed"
             >
-              {isPreOrder ? "PO Ditutup" : "Stok Habis"}
+              {usesAttrs && !selectedVariant
+                ? "Pilih kombinasi"
+                : isPreOrder
+                  ? "PO Ditutup"
+                  : "Stok Habis"}
             </button>
           )}
         </div>

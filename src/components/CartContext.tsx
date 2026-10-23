@@ -8,15 +8,21 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { Product } from "@/data/products";
+import type { Product, ProductVariant } from "@/data/products";
+import { availableStock, variantPrice } from "@/data/products";
 
 export interface CartLine {
-  /** product id + variant — the same shirt in two sizes is two lines. */
+  /** product id + variant id/label — the same shirt in two sizes is two lines. */
   key: string;
   product_id: string;
   product_name: string;
   product_slug: string;
+  /** Null when the product has no variant at all. */
   variant: string | null;
+  /** Set only for the new multi-attribute variant system; null for the
+   *  legacy single-axis one (or no variant), where `variant` is free text. */
+  variant_id: string | null;
+  image: string | null;
   stock_type: "ready_stock" | "pre_order";
   unit_price: number;
   qty: number;
@@ -30,7 +36,12 @@ interface CartValue {
   total: number;
   /** False until the stored cart has been read, so SSR and first paint agree. */
   ready: boolean;
-  add: (product: Product, variant: string | null, qty: number) => void;
+  add: (
+    product: Product,
+    variant: ProductVariant | null,
+    legacyVariant: string | null,
+    qty: number
+  ) => void;
   setQty: (key: string, qty: number) => void;
   remove: (key: string) => void;
   clear: () => void;
@@ -39,19 +50,21 @@ interface CartValue {
 const CartContext = createContext<CartValue | null>(null);
 const STORAGE_KEY = "hima_cart_v1";
 
-export function lineKey(productId: string, variant: string | null) {
-  return `${productId}::${variant ?? ""}`;
+export function lineKey(productId: string, variantIdOrLabel: string | null) {
+  return `${productId}::${variantIdOrLabel ?? ""}`;
 }
 
-/** How many of this product can still be ordered right now. */
-export function availableFor(product: Product): number {
-  if (product.stock_type === "ready_stock") {
-    return Math.max(0, product.stock - product.stock_reserved);
+/** How many of this product (or one of its variants) can still be ordered right now. */
+export function availableFor(
+  product: Product,
+  variant?: ProductVariant | null
+): number {
+  if (product.stock_type === "pre_order") {
+    const open =
+      product.po_deadline && new Date(product.po_deadline) > new Date();
+    if (!open) return 0;
   }
-  const taken = (product.po_filled ?? 0) + (product.po_reserved ?? 0);
-  const open =
-    product.po_deadline && new Date(product.po_deadline) > new Date();
-  return open ? Math.max(0, (product.po_quota ?? 0) - taken) : 0;
+  return Math.max(0, availableStock(product, variant));
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -84,9 +97,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [lines, ready]);
 
   const add = useCallback(
-    (product: Product, variant: string | null, qty: number) => {
-      const key = lineKey(product.id, variant);
-      const max = availableFor(product);
+    (
+      product: Product,
+      variant: ProductVariant | null,
+      legacyVariant: string | null,
+      qty: number
+    ) => {
+      const key = lineKey(product.id, variant?.id ?? legacyVariant);
+      const max = availableFor(product, variant);
+      const label = variant?.label ?? legacyVariant;
+      const price = variantPrice(product, variant);
+      const image = variant?.image || product.images.find((i) => i.url)?.url || null;
+
       setLines((prev) => {
         const existing = prev.find((l) => l.key === key);
         if (existing) {
@@ -103,9 +125,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             product_id: product.id,
             product_name: product.name,
             product_slug: product.slug,
-            variant,
+            variant: label,
+            variant_id: variant?.id ?? null,
+            image,
             stock_type: product.stock_type,
-            unit_price: product.price,
+            unit_price: price,
             qty: Math.min(max, qty),
             max_qty: max,
           },

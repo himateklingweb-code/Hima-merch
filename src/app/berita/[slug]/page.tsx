@@ -163,7 +163,10 @@ export default async function ArticleDetailPage({
             style={{
               margin: "32px 0",
               position: "relative",
-              aspectRatio: "16/9",
+              aspectRatio:
+                article.image_width && article.image_height
+                  ? `${article.image_width}/${article.image_height}`
+                  : "16/9",
               overflow: "hidden",
               background: "#e0dede",
               border: "1px solid rgba(32,30,29,.14)",

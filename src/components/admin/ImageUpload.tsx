@@ -19,7 +19,9 @@ export default function ImageUpload({
   label: string;
   /** Current stored image URL (empty when none). */
   value: string;
-  onChange: (url: string) => void;
+  /** Natural pixel size of the stored image is passed through alongside the
+   *  URL, so callers can keep the image's real aspect ratio downstream. */
+  onChange: (url: string, size?: { width: number; height: number }) => void;
   hint?: string;
   aspect?: "video" | "square";
 }) {
@@ -36,7 +38,10 @@ export default function ImageUpload({
       setError(res.error);
       return;
     }
-    onChange(res.url!);
+    onChange(
+      res.url!,
+      res.width && res.height ? { width: res.width, height: res.height } : undefined
+    );
   };
 
   const aspectClass = aspect === "square" ? "aspect-square" : "aspect-video";
@@ -118,7 +123,8 @@ export default function ImageUpload({
       )}
 
       <p className="mt-1.5 text-xs text-gray-400">
-        JPG, PNG, atau WEBP · Maksimal 2 MB.{hint ? ` ${hint}` : ""}
+        JPG, PNG, WEBP, atau SVG · otomatis dikonversi ke WEBP & dikompres
+        hingga 500 KB.{hint ? ` ${hint}` : ""}
       </p>
 
       {error && (

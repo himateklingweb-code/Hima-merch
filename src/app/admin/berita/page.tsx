@@ -2,14 +2,37 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useMemo, useState } from "react";
-import { articles as seedArticles, Article, gdriveThumbnail, slugify } from "@/data/news";
+import { articles as seedArticles, Article, slugify } from "@/data/news";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { useCollection } from "@/lib/use-collection";
 import DbStatus from "@/components/admin/DbStatus";
 import AdminSearch from "@/components/admin/AdminSearch";
 import { matchesQuery } from "@/lib/search";
-import { Plus, Pencil, Eye, Trash2, X, Image as ImageIcon } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Eye,
+  Trash2,
+  X,
+  Image as ImageIcon,
+  Pin,
+  Tag,
+} from "lucide-react";
 import Link from "next/link";
+
+interface Category {
+  id: string;
+  name: string;
+  order_index: number;
+}
+
+const SEED_CATEGORIES: Category[] = [
+  { id: "cat-kegiatan", name: "Kegiatan", order_index: 0 },
+  { id: "cat-seminar", name: "Seminar", order_index: 1 },
+  { id: "cat-merchandise", name: "Merchandise", order_index: 2 },
+  { id: "cat-prestasi", name: "Prestasi", order_index: 3 },
+  { id: "cat-pengumuman", name: "Pengumuman", order_index: 4 },
+];
 
 export default function AdminBeritaPage() {
   const {
@@ -29,23 +52,46 @@ export default function AdminBeritaPage() {
       ...(row?.slug ? [`/berita/${row.slug}`] : []),
     ],
   });
+
+  // Kategori sekarang tabel sendiri (content_categories) yang bisa ditambah
+  // pengurus dari sini, bukan daftar tetap di kode. Nama kategori tetap
+  // disimpan sebagai teks di articles.category — tabel ini hanya menjadi
+  // sumber pilihan di dropdown, jadi artikel lama tidak perlu dimigrasikan.
+  const { items: categories, save: saveCategory } = useCollection<Category>(
+    "content_categories",
+    SEED_CATEGORIES,
+    { orderBy: "order_index", ascending: true }
+  );
+
   const [editing, setEditing] = useState<Article | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [category, setCategory] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [pinnedFilter, setPinnedFilter] = useState(false);
 
-  const categories = useMemo(
-    () => [...new Set(items.map((a) => a.category).filter(Boolean))].sort(),
-    [items]
+  const filterOptions = useMemo(
+    () => [...new Set([...categories.map((c) => c.name), ...items.map((a) => a.category)])]
+      .filter(Boolean)
+      .sort(),
+    [categories, items]
   );
   const shown = useMemo(
     () =>
       items.filter(
         (a) =>
-          (!category || a.category === category) &&
-          matchesQuery(q, a.title, a.slug, a.author, a.excerpt, a.published_at)
+          (!categoryFilter || a.category === categoryFilter) &&
+          (!pinnedFilter || a.is_pinned) &&
+          matchesQuery(
+            q,
+            a.title,
+            a.slug,
+            a.author,
+            a.excerpt,
+            a.published_at,
+            ...(a.tags ?? [])
+          )
       ),
-    [items, q, category]
+    [items, q, categoryFilter, pinnedFilter]
   );
 
   const handleSave = async (article: Article) => {
@@ -64,10 +110,14 @@ export default function AdminBeritaPage() {
       slug: "",
       excerpt: "",
       content: "",
-      category: "Kegiatan",
+      category: categories[0]?.name ?? "Kegiatan",
       author: "Tim Kominfo",
       image: "",
       image_alt: "",
+      image_width: null,
+      image_height: null,
+      tags: [],
+      is_pinned: false,
       published_at: new Date().toISOString().slice(0, 10),
     });
   };
@@ -96,25 +146,38 @@ export default function AdminBeritaPage() {
       <AdminSearch
         value={q}
         onChange={setQ}
-        placeholder="Cari judul, penulis, tanggal…"
+        placeholder="Cari judul, penulis, tag, tanggal…"
         total={items.length}
         shown={shown.length}
       >
-        {categories.length > 1 && (
+        {filterOptions.length > 1 && (
           <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
             aria-label="Filter kategori"
             className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-emerald-500"
           >
             <option value="">Semua kategori</option>
-            {categories.map((c) => (
+            {filterOptions.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
             ))}
           </select>
         )}
+        <button
+          type="button"
+          onClick={() => setPinnedFilter((v) => !v)}
+          aria-pressed={pinnedFilter}
+          className={`inline-flex h-10 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors ${
+            pinnedFilter
+              ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          <Pin className="h-3.5 w-3.5" />
+          Disorot
+        </button>
       </AdminSearch>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -156,10 +219,9 @@ export default function AdminBeritaPage() {
                   className="hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-5 py-3">
-                    {article.image &&
-                    article.image !== "/placeholder-news.png" ? (
+                    {article.image ? (
                       <img
-                        src={gdriveThumbnail(article.image, 120)}
+                        src={article.image}
                         alt=""
                         className="w-14 h-10 rounded object-cover border border-gray-200"
                       />
@@ -170,8 +232,13 @@ export default function AdminBeritaPage() {
                     )}
                   </td>
                   <td className="px-5 py-3">
-                    <div className="font-medium text-gray-900 max-w-md truncate">
-                      {article.title}
+                    <div className="flex items-center gap-1.5">
+                      {article.is_pinned && (
+                        <Pin className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                      )}
+                      <div className="font-medium text-gray-900 max-w-md truncate">
+                        {article.title}
+                      </div>
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5">
                       /{article.slug}
@@ -226,6 +293,12 @@ export default function AdminBeritaPage() {
       {editing && (
         <ArticleModal
           article={editing}
+          categories={categories}
+          onAddCategory={async (name) => {
+            const id = `cat-${Date.now()}`;
+            await saveCategory({ id, name, order_index: categories.length });
+            return name;
+          }}
           onSave={handleSave}
           onClose={() => {
             setEditing(null);
@@ -265,21 +338,52 @@ export default function AdminBeritaPage() {
 
 function ArticleModal({
   article,
+  categories,
+  onAddCategory,
   onSave,
   onClose,
 }: {
   article: Article;
+  categories: Category[];
+  onAddCategory: (name: string) => Promise<string>;
   onSave: (a: Article) => void | Promise<void>;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({ ...article });
+  const [tagInput, setTagInput] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
 
-  const set = (key: keyof Article, val: string) =>
+  const set = <K extends keyof Article>(key: K, val: Article[K]) =>
     setForm((prev) => ({
       ...prev,
       [key]: val,
-      ...(key === "title" && !article.title ? { slug: slugify(val) } : {}),
+      ...(key === "title" && !article.title
+        ? { slug: slugify(val as string) }
+        : {}),
     }));
+
+  const addTag = () => {
+    const t = tagInput.trim();
+    if (!t || form.tags.includes(t)) {
+      setTagInput("");
+      return;
+    }
+    set("tags", [...form.tags, t]);
+    setTagInput("");
+  };
+
+  const removeTag = (t: string) => set("tags", form.tags.filter((x) => x !== t));
+
+  const addCategory = async () => {
+    const name = newCategory.trim();
+    if (!name) return;
+    setAddingCategory(true);
+    await onAddCategory(name);
+    setAddingCategory(false);
+    set("category", name);
+    setNewCategory("");
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 overflow-y-auto">
@@ -337,12 +441,37 @@ function ArticleModal({
                 onChange={(e) => set("category", e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
               >
-                {["Kegiatan", "Seminar", "Merchandise", "Prestasi", "Pengumuman"].map(
-                  (c) => (
-                    <option key={c}>{c}</option>
-                  )
+                {!categories.some((c) => c.name === form.category) && form.category && (
+                  <option value={form.category}>{form.category}</option>
                 )}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
+              <div className="mt-1.5 flex gap-1.5">
+                <input
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void addCategory();
+                    }
+                  }}
+                  placeholder="Tambah kategori baru…"
+                  className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={addCategory}
+                  disabled={!newCategory.trim() || addingCategory}
+                  className="shrink-0 rounded-lg border border-emerald-600 px-2.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                >
+                  Tambah
+                </button>
+              </div>
             </div>
           </div>
 
@@ -370,11 +499,30 @@ function ArticleModal({
             </div>
           </div>
 
-          {/* Cover photo */}
+          <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.is_pinned}
+              onChange={(e) => set("is_pinned", e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <Pin className="h-4 w-4 text-gray-400" />
+            Sorot di halaman utama &amp; urutkan paling atas di Berita
+          </label>
+
+          {/* Cover photo — rasio asli file yang diunggah ikut disimpan, jadi
+              tampilan tidak memaksa gambar ke kotak tetap. */}
           <ImageUpload
             label="Foto Sampul"
-            value={form.image === "/placeholder-news.png" ? "" : form.image}
-            onChange={(url) => setForm((prev) => ({ ...prev, image: url }))}
+            value={form.image}
+            onChange={(url, size) =>
+              setForm((prev) => ({
+                ...prev,
+                image: url,
+                image_width: size?.width ?? null,
+                image_height: size?.height ?? null,
+              }))
+            }
           />
 
           <div>
@@ -387,6 +535,44 @@ function ArticleModal({
               placeholder="Deskripsi singkat foto"
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tag
+            </label>
+            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-2 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-200">
+              {form.tags.map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
+                >
+                  <Tag className="h-3 w-3" />
+                  {t}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(t)}
+                    aria-label={`Hapus tag ${t}`}
+                    className="text-emerald-500 hover:text-emerald-800"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addTag();
+                  }
+                }}
+                onBlur={addTag}
+                placeholder={form.tags.length ? "" : "Ketik lalu Enter…"}
+                className="min-w-[8ch] flex-1 border-none p-1 text-sm outline-none"
+              />
+            </div>
           </div>
 
           <div>

@@ -33,35 +33,50 @@ export default async function KemitraanPage() {
         </p>
       </div>
 
-      <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 mb-8 sm:mb-16">
-        {partners.map((partner) => (
-          <div
-            key={partner.id}
-            className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start gap-3 sm:gap-4">
-              <div className="w-11 h-11 sm:w-16 sm:h-16 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-5 h-5 sm:w-8 sm:h-8 text-gray-400" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{partner.name}</h3>
-                  <span
-                    className={`text-[9px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 rounded flex-shrink-0 ${
-                      partner.type === "sponsor"
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {partner.type === "sponsor" ? "Sponsor" : "Mitra"}
-                  </span>
+      {partners.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-200 p-8 sm:p-12 text-center text-gray-400 mb-8 sm:mb-16">
+          Belum ada mitra atau sponsor yang ditambahkan.
+        </div>
+      ) : (
+        <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 mb-8 sm:mb-16">
+          {partners.map((partner) => (
+            <div
+              key={partner.id}
+              className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start gap-3 sm:gap-4">
+                {partner.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- logo diunggah dengan rasio & ukuran apa pun dari admin panel.
+                  <img
+                    src={partner.logo}
+                    alt={partner.name}
+                    className="w-11 h-11 sm:w-16 sm:h-16 rounded-xl bg-gray-50 object-contain flex-shrink-0 border border-gray-100"
+                  />
+                ) : (
+                  <div className="w-11 h-11 sm:w-16 sm:h-16 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <Building2 className="w-5 h-5 sm:w-8 sm:h-8 text-gray-400" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{partner.name}</h3>
+                    <span
+                      className={`text-[9px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 rounded flex-shrink-0 ${
+                        partner.type === "sponsor"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
+                      {partner.type === "sponsor" ? "Sponsor" : "Mitra"}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 line-clamp-2">{partner.description}</p>
                 </div>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 line-clamp-2">{partner.description}</p>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="bg-emerald-50 rounded-xl sm:rounded-2xl p-5 sm:p-8 lg:p-12">
         <div className="max-w-2xl mx-auto text-center">

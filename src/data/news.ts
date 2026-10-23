@@ -10,6 +10,13 @@ export interface Article {
   author: string;
   image: string;
   image_alt: string;
+  /** Natural pixel size of the cover image — layout keeps this ratio instead
+   *  of forcing a fixed crop. */
+  image_width?: number | null;
+  image_height?: number | null;
+  tags: string[];
+  /** Sorted first in the homepage highlight and the berita listing. */
+  is_pinned: boolean;
   published_at: string;
   /** Optional CTA button at the end of the article. Renders only when both
    *  are non-empty. */
@@ -36,12 +43,10 @@ export function gdriveThumbnail(url: string, width = 800): string {
  * headline, excerpt, and cover image.
  */
 export function articleSeo(article: Article): ResolvedSeo {
-  const hasCover =
-    article.image && article.image !== "/placeholder-news.png";
   return resolveSeo(article.seo, {
     title: `${article.title} — Berita HMTL UNTAN`,
     description: article.excerpt.slice(0, 160),
-    ogImage: hasCover ? article.image : "",
+    ogImage: article.image || "",
   });
 }
 
@@ -66,8 +71,10 @@ export const articles: Article[] = [
 <p>"Sebagai mahasiswa Teknik Lingkungan, sudah menjadi tanggung jawab kami untuk terlibat langsung dalam upaya pelestarian lingkungan," ujar Ketua Pelaksana.</p>`,
     category: "Kegiatan",
     author: "Tim Kominfo",
-    image: "/placeholder-news.png",
+    image: "",
     image_alt: "Mahasiswa HMTL menanam mangrove",
+    tags: ["mangrove", "lingkungan", "pengabdian"],
+    is_pinned: true,
     published_at: "2025-06-16",
   },
   {
@@ -80,8 +87,10 @@ export const articles: Article[] = [
 <p>Acara ini menghadirkan pembicara dari Kementerian Lingkungan Hidup dan Kehutanan serta professor dari ITB dan UI. Lebih dari 300 peserta dari berbagai universitas di Indonesia turut berpartisipasi secara hybrid.</p>`,
     category: "Seminar",
     author: "Tim Kominfo",
-    image: "/placeholder-news.png",
+    image: "",
     image_alt: "Seminar Nasional HMTL UNTAN",
+    tags: ["seminar", "air limbah"],
+    is_pinned: false,
     published_at: "2025-05-20",
   },
   {
@@ -95,8 +104,10 @@ export const articles: Article[] = [
 <p>Pre-order dibuka hingga 10 Agustus 2026 atau sampai kuota 40 pcs terpenuhi.</p>`,
     category: "Merchandise",
     author: "Dept. KWU",
-    image: "/placeholder-news.png",
+    image: "",
     image_alt: "Hoodie Green Engineering Batch 2",
+    tags: ["pre-order", "merchandise", "hoodie"],
+    is_pinned: false,
     published_at: "2025-07-01",
   },
   {
@@ -109,8 +120,10 @@ export const articles: Article[] = [
 <p>Paper berjudul "Optimasi Fitoremediasi Menggunakan Tanaman Lokal untuk Pengolahan Grey Water Permukiman" berhasil meyakinkan dewan juri.</p>`,
     category: "Prestasi",
     author: "Tim Kominfo",
-    image: "/placeholder-news.png",
+    image: "",
     image_alt: "Tim HMTL dengan trophy juara",
+    tags: ["prestasi", "kompetisi"],
+    is_pinned: false,
     published_at: "2025-04-10",
   },
 ];

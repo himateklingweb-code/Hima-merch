@@ -23,6 +23,9 @@ export interface ProductCard {
   name: string;
   description: string;
   price: number;
+  image: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
   variants: string[];
   badgeLabel: string;
   badgeColor: BadgeColor;
@@ -163,10 +166,19 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
                 href={`/merchandise/${product.slug}`}
                 className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg active:scale-[0.98] transition-all"
               >
-                <div className="aspect-square sm:aspect-[4/3] bg-gray-100 relative">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-                    <ShoppingBag className="w-10 sm:w-16 h-10 sm:h-16" />
-                  </div>
+                <div className="aspect-square sm:aspect-[4/3] bg-gray-100 relative overflow-hidden">
+                  {product.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                      <ShoppingBag className="w-10 sm:w-16 h-10 sm:h-16" />
+                    </div>
+                  )}
                   <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
                     <span
                       className={`inline-flex items-center gap-1 text-[9px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full ${badge.cls}`}

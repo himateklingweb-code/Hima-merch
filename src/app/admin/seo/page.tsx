@@ -56,10 +56,6 @@ export default function AdminSeoPage() {
   const [prodPages, setProdPages] = useState<PageSeo[]>(productPages);
   const [artPages, setArtPages] = useState<PageSeo[]>(articlePages);
   const [editKey, setEditKey] = useState<string | null>(null);
-  const [globalKeywords, setGlobalKeywords] = useState(
-    "himatl untan, teknik lingkungan untan, hima teknik lingkungan pontianak"
-  );
-  const [sitemapGen, setSitemapGen] = useState(false);
 
   // All three groups come from the database. Products and articles are
   // listed from their own tables rather than the bundled seed, so a product
@@ -164,40 +160,22 @@ export default function AdminSeoPage() {
         <div className="flex items-center gap-2 mb-4">
           <Globe className="w-4 h-4 text-gray-500" />
           <h2 className="font-semibold text-gray-900 text-sm">
-            Pengaturan Global
+            Sitemap
           </h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Keywords Global
-            </label>
-            <input
-              value={globalKeywords}
-              onChange={(e) => setGlobalKeywords(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
-            />
-            <p className="text-xs text-gray-400 mt-1">Pisahkan dengan koma</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Sitemap
-            </label>
-            <button
-              onClick={() => setSitemapGen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-            >
-              <Search className="w-4 h-4" />
-              {sitemapGen ? "Sitemap di-generate" : "Generate sitemap.xml"}
-            </button>
-            {sitemapGen && (
-              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" />
-                sitemap.xml berhasil di-generate (demo)
-              </p>
-            )}
-          </div>
-        </div>
+        <a
+          href="/sitemap.xml"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+        >
+          <Search className="w-4 h-4" />
+          Lihat sitemap.xml
+        </a>
+        <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+          <CheckCircle className="w-3 h-3 text-green-600" />
+          Dibuat otomatis dari berita &amp; produk yang tayang — tidak perlu digenerate manual.
+        </p>
       </div>
 
       <SeoSection

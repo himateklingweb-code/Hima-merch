@@ -71,8 +71,13 @@ export default function CartPage() {
                 key={line.key}
                 className="flex flex-wrap items-start gap-x-4 gap-y-3 border-b border-gray-100 p-4 last:border-b-0 sm:p-5"
               >
-                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-300">
-                  <ShoppingBag className="h-6 w-6" />
+                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-300 overflow-hidden">
+                  {line.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={line.image} alt={line.product_name} className="h-full w-full object-cover" />
+                  ) : (
+                    <ShoppingBag className="h-6 w-6" />
+                  )}
                 </div>
 
                 <div className="min-w-0 flex-1">

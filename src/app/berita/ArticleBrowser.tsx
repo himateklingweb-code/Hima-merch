@@ -16,9 +16,18 @@ export interface ArticleCard {
   category: string;
   image: string;
   image_alt: string;
+  image_width?: number | null;
+  image_height?: number | null;
   dateLong: string;
   dateShort: string;
   year: string;
+}
+
+/** Rasio alami foto (lebar/tinggi) kalau tersedia, jadi gambar tidak
+ *  dipaksa ke kotak 16:9/16:10 — kalau belum ada ukurannya (foto lama),
+ *  jatuh ke rasio widescreen standar. */
+function coverRatio(w?: number | null, h?: number | null, fallback = "16/10") {
+  return w && h ? `${w}/${h}` : fallback;
 }
 
 export default function ArticleBrowser({ articles }: { articles: ArticleCard[] }) {
@@ -145,7 +154,7 @@ export default function ArticleBrowser({ articles }: { articles: ArticleCard[] }
         >
           <div
             style={{
-              aspectRatio: "16/10",
+              aspectRatio: coverRatio(first.image_width, first.image_height),
               background: "#e0dede",
               position: "relative",
               overflow: "hidden",
@@ -271,7 +280,7 @@ export default function ArticleBrowser({ articles }: { articles: ArticleCard[] }
           >
             <div
               style={{
-                aspectRatio: "16/10",
+                aspectRatio: coverRatio(article.image_width, article.image_height),
                 background: "#e0dede",
                 position: "relative",
                 overflow: "hidden",

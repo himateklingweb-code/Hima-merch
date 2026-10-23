@@ -167,6 +167,7 @@ export default function CheckoutForm({
       items: lines.map((l) => ({
         product_id: l.product_id,
         variant: l.variant,
+        variant_id: l.variant_id,
         qty: l.qty,
       })),
     });

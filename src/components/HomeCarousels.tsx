@@ -137,26 +137,43 @@ export default function HomeCarousels({
                   overflow: "hidden",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 60,
-                    fontWeight: 700,
-                    color: "rgba(32,30,29,.14)",
-                    letterSpacing: "-.04em",
-                  }}
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    backgroundImage:
-                      "radial-gradient(circle,rgba(0,0,0,.22) 30%,transparent 32%)",
-                    backgroundSize: "3px 3px",
-                    mixBlendMode: "multiply",
-                  }}
-                />
+                {product.images.find((im) => im.url) ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- rasio asli bervariasi per produk.
+                  <img
+                    src={product.images.find((im) => im.url)!.url}
+                    alt={product.name}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <>
+                    <span
+                      style={{
+                        fontSize: 60,
+                        fontWeight: 700,
+                        color: "rgba(32,30,29,.14)",
+                        letterSpacing: "-.04em",
+                      }}
+                    >
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        backgroundImage:
+                          "radial-gradient(circle,rgba(0,0,0,.22) 30%,transparent 32%)",
+                        backgroundSize: "3px 3px",
+                        mixBlendMode: "multiply",
+                      }}
+                    />
+                  </>
+                )}
                 <span
                   style={{
                     position: "absolute",
@@ -227,50 +244,112 @@ export default function HomeCarousels({
               border: LINE,
               borderRadius: 2,
               background: "#ffffff",
-              padding: "18px 18px 20px",
+              overflow: "hidden",
             }}
           >
-            <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <span
-                style={{
-                  fontSize: "9.5px",
-                  letterSpacing: ".14em",
-                  textTransform: "uppercase",
-                  border: "1px solid rgba(32,30,29,.3)",
-                  padding: "4px 8px",
-                  borderRadius: 2,
-                  color: "#201e1d",
-                }}
-              >
-                {article.category}
-              </span>
-              <span
-                style={{
-                  fontSize: "10.5px",
-                  letterSpacing: ".1em",
-                  textTransform: "uppercase",
-                  color: "#605d5d",
-                }}
-              >
-                {new Date(article.published_at).toLocaleDateString("id-ID", {
-                  day: "numeric",
-                  month: "short",
-                })}
-              </span>
-            </span>
             <span
               style={{
-                display: "-webkit-box",
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: "vertical",
+                position: "relative",
+                display: "block",
+                aspectRatio:
+                  article.image_width && article.image_height
+                    ? `${article.image_width}/${article.image_height}`
+                    : "16/10",
+                background: "#e0dede",
                 overflow: "hidden",
-                fontSize: 17,
-                fontWeight: 600,
-                lineHeight: 1.3,
-                letterSpacing: "-.01em",
+                borderBottom: LINE,
               }}
             >
-              {article.title}
+              {article.image ? (
+                // eslint-disable-next-line @next/next/no-img-element -- rasio asli bervariasi per unggahan.
+                <img
+                  src={article.image}
+                  alt={article.image_alt || article.title}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <span
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 32,
+                    fontWeight: 700,
+                    color: "rgba(32,30,29,.14)",
+                  }}
+                >
+                  TL
+                </span>
+              )}
+              {article.is_pinned && (
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 10,
+                    top: 10,
+                    fontSize: "9px",
+                    letterSpacing: ".14em",
+                    textTransform: "uppercase",
+                    background: "#7a8450",
+                    color: "#ffffff",
+                    padding: "4px 8px",
+                    borderRadius: 2,
+                  }}
+                >
+                  Disorot
+                </span>
+              )}
+            </span>
+            <span style={{ display: "block", padding: "16px 18px 20px" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <span
+                  style={{
+                    fontSize: "9.5px",
+                    letterSpacing: ".14em",
+                    textTransform: "uppercase",
+                    border: "1px solid rgba(32,30,29,.3)",
+                    padding: "4px 8px",
+                    borderRadius: 2,
+                    color: "#201e1d",
+                  }}
+                >
+                  {article.category}
+                </span>
+                <span
+                  style={{
+                    fontSize: "10.5px",
+                    letterSpacing: ".1em",
+                    textTransform: "uppercase",
+                    color: "#605d5d",
+                  }}
+                >
+                  {new Date(article.published_at).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              </span>
+              <span
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  fontSize: 17,
+                  fontWeight: 600,
+                  lineHeight: 1.3,
+                  letterSpacing: "-.01em",
+                }}
+              >
+                {article.title}
+              </span>
             </span>
           </Link>
         ))}

@@ -3,23 +3,88 @@ import { resolveSeo, type ResolvedSeo, type SeoOverride } from "./seo";
 
 export type StockType = "ready_stock" | "pre_order";
 
+export interface ProductImage {
+  url: string;
+  alt_text: string;
+  /** Natural pixel size of the uploaded file — lets the layout keep the
+   *  image's real aspect ratio instead of forcing a fixed crop. */
+  width?: number | null;
+  height?: number | null;
+}
+
+/** One sellable combination of attribute values, e.g. Warna=Hitam + Ukuran=L. */
+export interface ProductVariant {
+  id: string;
+  label: string;
+  sku: string | null;
+  /** Overrides the product price when set; falls back to it otherwise. */
+  price: number | null;
+  stock: number;
+  stock_reserved: number;
+  po_quota: number | null;
+  po_filled: number | null;
+  po_reserved: number | null;
+  image: string | null;
+  is_active: boolean;
+  order_index: number;
+  /** Attribute name → value, e.g. { Warna: "Hitam", Ukuran: "L" }. */
+  options: Record<string, string>;
+}
+
+/** One variant axis for a product, e.g. "Warna", "Ukuran", "Jenis Lengan". */
+export interface ProductAttribute {
+  name: string;
+  order_index: number;
+}
+
 export interface Product {
   id: string;
   name: string;
   slug: string;
   description: string;
   price: number;
-  images: { url: string; alt_text: string }[];
+  images: ProductImage[];
   stock_type: StockType;
   stock: number;
   stock_reserved: number;
+  /** @deprecated kept for old single-axis products; new products use
+   *  `attributes`/`variants` instead, which support any number of axes. */
   variants: { name: string; options: string[] } | null;
+  attributes: ProductAttribute[];
+  variantList: ProductVariant[];
   po_quota: number | null;
   po_filled: number | null;
   po_reserved: number | null;
   po_deadline: string | null;
   /** Search-result overrides, editable in /admin/seo. */
   seo?: SeoOverride;
+}
+
+/** True once a product has at least one real variant row — the add-to-cart
+ *  flow then requires picking one instead of accepting a free-text variant. */
+export function hasVariants(product: Product): boolean {
+  return product.variantList.length > 0;
+}
+
+/** Stock remaining for one variant (or the product itself when it has no
+ *  variants), accounting for whatever is currently reserved by open orders. */
+export function availableStock(
+  product: Product,
+  variant?: ProductVariant | null
+): number {
+  if (variant) {
+    return product.stock_type === "ready_stock"
+      ? variant.stock - variant.stock_reserved
+      : (variant.po_quota ?? 0) - (variant.po_filled ?? 0) - (variant.po_reserved ?? 0);
+  }
+  return product.stock_type === "ready_stock"
+    ? product.stock - product.stock_reserved
+    : (product.po_quota ?? 0) - (product.po_filled ?? 0) - (product.po_reserved ?? 0);
+}
+
+/** Effective price for a given variant, falling back to the product price. */
+export function variantPrice(product: Product, variant?: ProductVariant | null): number {
+  return variant?.price ?? product.price;
 }
 
 export const products: Product[] = [
@@ -30,11 +95,13 @@ export const products: Product[] = [
     description:
       "Kaos resmi HIMA Teknik Lingkungan UNTAN edisi 2025. Bahan cotton combed 30s, sablon DTF premium. Tersedia dalam warna hitam dan putih.",
     price: 85000,
-    images: [{ url: "/placeholder-product.png", alt_text: "Kaos HMTL UNTAN 2025 tampak depan" }],
+    images: [],
     stock_type: "ready_stock",
     stock: 45,
     stock_reserved: 3,
     variants: { name: "Ukuran", options: ["S", "M", "L", "XL", "XXL"] },
+    attributes: [],
+    variantList: [],
     po_quota: null,
     po_filled: null,
     po_reserved: null,
@@ -47,11 +114,13 @@ export const products: Product[] = [
     description:
       "Jaket almamater eksklusif Teknik Lingkungan UNTAN. Bahan parasut waterproof, bordir logo, cocok untuk kegiatan lapangan maupun sehari-hari.",
     price: 250000,
-    images: [{ url: "/placeholder-product.png", alt_text: "Jaket Almamater TL tampak depan" }],
+    images: [],
     stock_type: "pre_order",
     stock: 0,
     stock_reserved: 0,
     variants: { name: "Ukuran", options: ["S", "M", "L", "XL"] },
+    attributes: [],
+    variantList: [],
     po_quota: 50,
     po_filled: 24,
     po_reserved: 5,
@@ -64,11 +133,13 @@ export const products: Product[] = [
     description:
       "Tote bag kanvas tebal dengan desain eksklusif HMTL UNTAN. Ramah lingkungan, cocok untuk mahasiswa yang peduli bumi.",
     price: 45000,
-    images: [{ url: "/placeholder-product.png", alt_text: "Tote Bag HMTL" }],
+    images: [],
     stock_type: "ready_stock",
     stock: 0,
     stock_reserved: 0,
     variants: null,
+    attributes: [],
+    variantList: [],
     po_quota: null,
     po_filled: null,
     po_reserved: null,
@@ -81,11 +152,13 @@ export const products: Product[] = [
     description:
       "Paket stiker bertema lingkungan hidup, berisi 10 lembar stiker vinyl tahan air dengan desain original HMTL.",
     price: 15000,
-    images: [{ url: "/placeholder-product.png", alt_text: "Sticker Pack Enviro" }],
+    images: [],
     stock_type: "ready_stock",
     stock: 120,
     stock_reserved: 0,
     variants: null,
+    attributes: [],
+    variantList: [],
     po_quota: null,
     po_filled: null,
     po_reserved: null,
@@ -98,11 +171,13 @@ export const products: Product[] = [
     description:
       "Hoodie premium bertema Green Engineering. Bahan fleece tebal, nyaman dipakai sehari-hari. Pre-order batch kedua dibuka!",
     price: 195000,
-    images: [{ url: "/placeholder-product.png", alt_text: "Hoodie Green Engineering" }],
+    images: [],
     stock_type: "pre_order",
     stock: 0,
     stock_reserved: 0,
     variants: { name: "Ukuran", options: ["M", "L", "XL", "XXL"] },
+    attributes: [],
+    variantList: [],
     po_quota: 40,
     po_filled: 38,
     po_reserved: 2,
@@ -141,9 +216,7 @@ export function productSeo(product: Product): ResolvedSeo {
   return resolveSeo(product.seo, {
     title: `${product.name} — Merchandise HMTL UNTAN`,
     description: product.description.slice(0, 160),
-    ogImage:
-      product.images.find((i) => i.url && !i.url.startsWith("/placeholder"))
-        ?.url ?? "",
+    ogImage: product.images.find((i) => i.url)?.url ?? "",
   });
 }
 

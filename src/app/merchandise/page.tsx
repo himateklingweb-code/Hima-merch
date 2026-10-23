@@ -30,13 +30,20 @@ export default async function MerchandisePage() {
   // dikirim sebagai data polos ke komponen pencarian di browser.
   const cards: ProductCard[] = products.map((product) => {
     const badge = getProductBadge(product);
+    const cover = product.images.find((i) => i.url) ?? null;
     return {
       id: product.id,
       slug: product.slug,
       name: product.name,
       description: product.description,
       price: product.price,
-      variants: product.variants?.options ?? [],
+      image: cover?.url ?? null,
+      imageWidth: cover?.width ?? null,
+      imageHeight: cover?.height ?? null,
+      variants:
+        product.attributes.length > 0
+          ? product.attributes.map((a) => a.name)
+          : product.variants?.options ?? [],
       badgeLabel: badge.label,
       badgeColor: badge.color as BadgeColor,
       readyLeft:

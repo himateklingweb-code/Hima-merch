@@ -32,6 +32,9 @@ export function useCollection<T extends { id: string }>(
   table: string,
   seed: T[],
   options: {
+    /** Overrides the default `select("*")` — needed for tables with nested
+     *  joins (e.g. a product's gallery/variant rows). */
+    select?: string;
     orderBy?: string;
     ascending?: boolean;
     /** Public pages to refresh after a write/delete lands, e.g. `["/", "/berita"]`
@@ -39,7 +42,7 @@ export function useCollection<T extends { id: string }>(
     revalidate?: (row?: T) => string[];
   } = {}
 ): CollectionState<T> {
-  const { orderBy = "created_at", ascending = false, revalidate } = options;
+  const { select = "*", orderBy = "created_at", ascending = false, revalidate } = options;
 
   // Starts empty rather than pre-filled with `seed` — painting the demo
   // rows first and swapping them out after the real fetch lands is what
@@ -62,21 +65,21 @@ export function useCollection<T extends { id: string }>(
 
     const { data, error: readError } = await supabase
       .from(table)
-      .select("*")
+      .select(select)
       .order(orderBy, { ascending });
 
     if (readError) {
       setItems(seed);
       setLive(false);
     } else {
-      setItems((data ?? []) as T[]);
+      setItems((data ?? []) as unknown as T[]);
       setLive(true);
     }
     setLoading(false);
     // `seed` is a module-level constant array; including it would re-run
     // this on every render without ever changing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, orderBy, ascending]);
+  }, [table, select, orderBy, ascending]);
 
   // Fetching after mount is the point: the row set lives in Postgres, not
   // in React, and reading it during render is impossible. The loading

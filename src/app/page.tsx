@@ -119,6 +119,7 @@ export default async function HomePage() {
       no: String(i + 1).padStart(2, "0"),
       name: p.name,
       plate: PLATES[i] || "#c2c4ad",
+      image: p.images.find((im) => im.url)?.url ?? null,
       price: formatPrice(p.price),
       badge,
       meta,
@@ -127,17 +128,24 @@ export default async function HomePage() {
   });
 
   const latest = [...articles]
-    .sort(
-      (a, b) =>
+    .sort((a, b) => {
+      if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+      return (
         new Date(b.published_at).getTime() -
         new Date(a.published_at).getTime()
-    )
+      );
+    })
     .slice(0, 2)
     .map((a) => ({
       slug: a.slug,
       title: a.title,
       excerpt: a.excerpt,
       category: a.category,
+      image: a.image,
+      image_alt: a.image_alt,
+      image_width: a.image_width,
+      image_height: a.image_height,
+      is_pinned: a.is_pinned,
       date: new Date(a.published_at).toLocaleDateString("id-ID", {
         day: "2-digit",
         month: "short",
@@ -642,7 +650,7 @@ export default async function HomePage() {
               Semua berita &rarr;
             </Link>
           </div>
-          <div className="home-desktop-cards">
+          <div className="home-desktop-cards" style={{ display: "grid", gap: 20 }}>
           {latest.map((a) => (
             <Link
               key={a.slug}
@@ -650,24 +658,81 @@ export default async function HomePage() {
               className="beranda-news-row scroll-reveal-x"
               style={{
                 display: "grid",
-                gridTemplateColumns: "120px minmax(0,1fr) 150px",
+                gridTemplateColumns: "clamp(140px,18vw,220px) minmax(0,1fr)",
                 gap: 28,
                 alignItems: "center",
-                padding: "26px 0",
+                padding: "20px 0",
               }}
             >
               <span
-                className="news-row-grid"
                 style={{
-                  fontSize: "10.5px",
-                  letterSpacing: ".16em",
-                  textTransform: "uppercase" as const,
-                  color: "#605d5d",
+                  position: "relative",
+                  display: "block",
+                  aspectRatio:
+                    a.image_width && a.image_height
+                      ? `${a.image_width}/${a.image_height}`
+                      : "4/3",
+                  background: "#e0dede",
+                  overflow: "hidden",
+                  borderRadius: 2,
+                  border: "1px solid rgba(32,30,29,.14)",
                 }}
               >
-                {a.date}
+                {a.image ? (
+                  <img
+                    src={a.image}
+                    alt={a.image_alt || a.title}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 28,
+                      fontWeight: 700,
+                      color: "rgba(32,30,29,.14)",
+                    }}
+                  >
+                    TL
+                  </span>
+                )}
               </span>
               <span style={{ display: "grid", gap: 7 }}>
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    fontSize: "10.5px",
+                    letterSpacing: ".16em",
+                    textTransform: "uppercase" as const,
+                    color: "#605d5d",
+                  }}
+                >
+                  {a.is_pinned && (
+                    <span
+                      style={{
+                        color: "#ffffff",
+                        background: "#7a8450",
+                        padding: "2px 8px",
+                        borderRadius: 2,
+                        letterSpacing: ".14em",
+                      }}
+                    >
+                      Disorot
+                    </span>
+                  )}
+                  {a.date}
+                </span>
                 <span
                   style={{
                     fontSize: "clamp(17px,4.4vw,23px)",
@@ -688,26 +753,36 @@ export default async function HomePage() {
                 >
                   {a.excerpt}
                 </span>
-              </span>
-              <span
-                className="news-row-cat"
-                style={{
-                  fontSize: "10.5px",
-                  letterSpacing: ".14em",
-                  textTransform: "uppercase" as const,
-                  justifySelf: "end",
-                  border: "1px solid rgba(32,30,29,.3)",
-                  padding: "5px 11px",
-                  borderRadius: 2,
-                }}
-              >
-                {a.category}
+                <span
+                  className="news-row-cat"
+                  style={{
+                    fontSize: "10.5px",
+                    letterSpacing: ".14em",
+                    textTransform: "uppercase" as const,
+                    justifySelf: "start",
+                    border: "1px solid rgba(32,30,29,.3)",
+                    padding: "4px 10px",
+                    borderRadius: 2,
+                    marginTop: 2,
+                  }}
+                >
+                  {a.category}
+                </span>
               </span>
             </Link>
           ))}
           </div>
           <div className="home-mobile-carousel">
-            <HomeCarousels type="news" articles={articles} />
+            <HomeCarousels
+              type="news"
+              articles={[...articles].sort((a, b) => {
+                if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+                return (
+                  new Date(b.published_at).getTime() -
+                  new Date(a.published_at).getTime()
+                );
+              })}
+            />
           </div>
         </div>
       </section>
@@ -975,61 +1050,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ═══ MITRA ADS ═══ */}
-      <section
-        style={{
-          borderBottom: "1px solid rgba(32,30,29,.14)",
-          background: "#f4f4f4",
-        }}
-      >
-        <div className="section-pad">
-          <div
-            className="scroll-reveal-x"
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 20,
-              flexWrap: "wrap" as const,
-              marginBottom: "clamp(22px,5vw,40px)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: ".22em",
-                textTransform: "uppercase" as const,
-                color: "#7a8450",
-                flex: "none",
-              }}
-            >
-              Mitra &amp; kerja sama
-            </span>
-            <span
-              style={{
-                flex: 1,
-                height: 1,
-                background: "rgba(32,30,29,.14)",
-              }}
-            />
-            <Link
-              href="/kemitraan"
-              className="link-underline"
-              style={{
-                fontSize: 11,
-                letterSpacing: ".16em",
-                textTransform: "uppercase" as const,
-                flex: "none",
-                marginLeft: "auto",
-                color: "#201e1d",
-              }}
-            >
-              Jadi mitra &rarr;
-            </Link>
-          </div>
-          <AdsCarousel items={ads} />
-        </div>
-      </section>
-
       {/* ═══ MERCHANDISE ═══ */}
       <section
         style={{
@@ -1112,26 +1132,43 @@ export default async function HomePage() {
                     overflow: "hidden",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 72,
-                      fontWeight: 700,
-                      color: "rgba(32,30,29,.14)",
-                      letterSpacing: "-.04em",
-                    }}
-                  >
-                    {p.no}
-                  </span>
-                  <span
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      backgroundImage:
-                        "radial-gradient(circle,rgba(0,0,0,.22) 30%,transparent 32%)",
-                      backgroundSize: "3px 3px",
-                      mixBlendMode: "multiply",
-                    }}
-                  />
+                  {p.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- rasio asli bervariasi per produk.
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <span
+                        style={{
+                          fontSize: 72,
+                          fontWeight: 700,
+                          color: "rgba(32,30,29,.14)",
+                          letterSpacing: "-.04em",
+                        }}
+                      >
+                        {p.no}
+                      </span>
+                      <span
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          backgroundImage:
+                            "radial-gradient(circle,rgba(0,0,0,.22) 30%,transparent 32%)",
+                          backgroundSize: "3px 3px",
+                          mixBlendMode: "multiply",
+                        }}
+                      />
+                    </>
+                  )}
                   <span
                     style={{
                       position: "absolute",
@@ -1198,6 +1235,61 @@ export default async function HomePage() {
           <div className="home-mobile-carousel">
             <HomeCarousels type="products" products={products} />
           </div>
+        </div>
+      </section>
+
+      {/* ═══ MITRA & KERJA SAMA ═══ */}
+      <section
+        style={{
+          borderBottom: "1px solid rgba(32,30,29,.14)",
+          background: "#f4f4f4",
+        }}
+      >
+        <div className="section-pad">
+          <div
+            className="scroll-reveal-x"
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 20,
+              flexWrap: "wrap" as const,
+              marginBottom: "clamp(22px,5vw,40px)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                letterSpacing: ".22em",
+                textTransform: "uppercase" as const,
+                color: "#7a8450",
+                flex: "none",
+              }}
+            >
+              Mitra &amp; kerja sama
+            </span>
+            <span
+              style={{
+                flex: 1,
+                height: 1,
+                background: "rgba(32,30,29,.14)",
+              }}
+            />
+            <Link
+              href="/kemitraan"
+              className="link-underline"
+              style={{
+                fontSize: 11,
+                letterSpacing: ".16em",
+                textTransform: "uppercase" as const,
+                flex: "none",
+                marginLeft: "auto",
+                color: "#201e1d",
+              }}
+            >
+              Jadi mitra &rarr;
+            </Link>
+          </div>
+          <AdsCarousel items={ads} />
         </div>
       </section>
 
