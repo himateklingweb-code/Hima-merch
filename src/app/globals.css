@@ -888,6 +888,22 @@ body::before {
   transition: border-color .25s, transform .25s;
 }
 /* Ukuran <img> diatur PartnerLogoImg (cover untuk logo persegi, contain untuk logo lebar). */
+
+/* Kolom pencarian: sembunyikan tombol X bawaan browser (Chrome/Edge/Safari)
+   karena setiap kolom sudah punya tombol "Hapus pencarian" sendiri. Tanpa
+   ini muncul dua X berdampingan. */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
 .sponsor-logo:hover .sponsor-circle { border-color: var(--olive); transform: translateY(-2px); }
 .sponsor-name {
   font-size: 12px;

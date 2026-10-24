@@ -626,8 +626,18 @@ function SessionDetail({
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Cari peserta…"
                 aria-label="Cari peserta"
-                className="w-full rounded-lg border border-gray-200 py-1.5 pl-9 pr-3 text-sm outline-none focus:border-emerald-500"
+                className="w-full rounded-lg border border-gray-200 py-1.5 pl-9 pr-9 text-sm outline-none focus:border-emerald-500"
               />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Hapus pencarian"
+                  className="absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </label>
             <button
               onClick={exportExcel}
@@ -851,8 +861,18 @@ export default function AdminAbsensiPage() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Cari sesi…"
             aria-label="Cari sesi absensi"
-            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="Hapus pencarian"
+              className="absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </label>
         <div className="flex flex-wrap gap-2">
           {STATUS_FILTERS.map((f) => (
