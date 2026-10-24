@@ -1,5 +1,15 @@
 import { Metadata } from "next";
 import { getSiteMeta } from "@/lib/content-repo";
+import { SITE } from "@/lib/site";
+
+/** Unsur yang tampak pada logo resmi HMTL UNTAN (public/logo-hmtl.png). */
+const LOGO_PARTS: [string, string][] = [
+  ["Capung", "hewan yang hanya hidup di perairan bersih, menjadi penanda lingkungan yang sehat."],
+  ["Huruf U hijau–merah", "identitas Universitas Tanjungpura sebagai rumah HMTL."],
+  ["Roda gigi", "ilmu keteknikan dan teknologi yang dipakai untuk mengelola lingkungan."],
+  ["Daun hijau", "alam, vegetasi, dan semangat keberlanjutan."],
+  ["Lengkung biru", "air, salah satu bidang utama Teknik Lingkungan."],
+];
 
 // Editable in /admin/seo — falls back to the previous hardcoded values.
 export async function generateMetadata(): Promise<Metadata> {
@@ -81,21 +91,32 @@ export default function TentangPage() {
 
         <section id="logo-atribut" className="mt-8 sm:mt-12 scroll-mt-24">
           <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 pb-2 border-b border-gray-200">Logo & Atribut</h2>
-          <div className="flex items-center gap-4 sm:gap-8">
-            <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-              <div className="text-center">
-                <div className="text-2xl sm:text-4xl font-bold text-emerald-700">TL</div>
-                <div className="text-[9px] sm:text-xs text-emerald-600 mt-0.5">UNTAN</div>
-              </div>
-            </div>
-            <div className="text-gray-600 text-xs sm:text-base">
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start sm:gap-8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={SITE.logo}
+              alt="Logo Himpunan Mahasiswa Teknik Lingkungan Universitas Tanjungpura"
+              width={512}
+              height={512}
+              loading="lazy"
+              className="h-44 w-44 shrink-0 object-contain sm:h-48 sm:w-48"
+            />
+            <div className="min-w-0 max-w-prose flex-1 text-gray-600 text-sm sm:text-base leading-relaxed">
               <p>
-                Logo HIMA Teknik Lingkungan menggambarkan semangat mahasiswa dalam berkontribusi
-                untuk lingkungan yang lebih baik. Warna hijau melambangkan alam dan keberlanjutan.
+                Logo HMTL berbentuk lingkaran dengan tulisan <strong>Himpunan Mahasiswa Teknik Lingkungan</strong> di
+                bagian atas dan <strong>Universitas Tanjungpura</strong> di bagian bawah. Di dalamnya tersusun unsur
+                yang mewakili bidang Teknik Lingkungan:
               </p>
-              <p className="mt-2 sm:mt-3 text-[10px] sm:text-sm text-gray-500">
-                (Pada implementasi produksi, logo resmi akan ditampilkan di sini)
-              </p>
+              <ul className="mt-3 space-y-2">
+                {LOGO_PARTS.map(([name, desc]) => (
+                  <li key={name} className="flex gap-2.5">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600" aria-hidden="true" />
+                    <span>
+                      <strong className="font-semibold text-gray-800">{name}</strong> — {desc}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
