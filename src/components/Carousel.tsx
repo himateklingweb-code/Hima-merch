@@ -100,16 +100,20 @@ export default function Carousel({
       {showArrows && (
         <>
           <button
+            type="button"
             onClick={scrollPrev}
             disabled={!canPrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 shadow-md flex items-center justify-center text-gray-700 disabled:opacity-0 transition-opacity"
+            aria-label="Sebelumnya"
+            className="carousel-arrow carousel-arrow-prev"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
+            type="button"
             onClick={scrollNext}
             disabled={!canNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 shadow-md flex items-center justify-center text-gray-700 disabled:opacity-0 transition-opacity"
+            aria-label="Berikutnya"
+            className="carousel-arrow carousel-arrow-next"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -121,6 +125,8 @@ export default function Carousel({
           {scrollSnaps.map((_, i) => (
             <button
               key={i}
+              type="button"
+              aria-label={`Slide ${i + 1}`}
               onClick={() => scrollTo(i)}
               className={`rounded-full transition-all ${
                 i === selectedIndex

@@ -8,13 +8,14 @@ import { useAuth } from "@/components/AuthContext";
 import { formatPrice } from "@/data/products";
 import { createOrder } from "@/lib/orders-repo";
 import type { PlacedOrder } from "./OrderConfirmation";
+import { SITE } from "@/lib/site";
 
 /**
- * Cashier's WhatsApp — set NEXT_PUBLIC_WA_KASIR in .env.local. Stripped to
- * digits here so a value written with +, spaces or dashes still yields a
- * valid wa.me link.
+ * Cashier's WhatsApp — set NEXT_PUBLIC_WA_KASIR in .env.local; falls back to
+ * the official HMTL number. Stripped to digits here so a value written with
+ * +, spaces or dashes still yields a valid wa.me link.
  */
-const WA_NUMBER = (process.env.NEXT_PUBLIC_WA_KASIR || "6281234567890").replace(
+const WA_NUMBER = (process.env.NEXT_PUBLIC_WA_KASIR || SITE.whatsapp).replace(
   /\D/g,
   ""
 );

@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import type { Product, ProductVariant } from "@/data/products";
-import { availableStock, variantPrice } from "@/data/products";
+import { availableStock, maxOrderQty, variantPrice } from "@/data/products";
 
 export interface CartLine {
   /** product id + variant id/label — the same shirt in two sizes is two lines. */
@@ -64,7 +64,7 @@ export function availableFor(
       product.po_deadline && new Date(product.po_deadline) > new Date();
     if (!open) return 0;
   }
-  return Math.max(0, availableStock(product, variant));
+  return maxOrderQty(product, availableStock(product, variant));
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {

@@ -22,8 +22,22 @@ export interface Article {
    *  are non-empty. */
   cta_label?: string;
   cta_url?: string;
+  /** Perkiraan menit baca, dihitung dari konten bila tidak tersimpan. */
+  read_minutes?: number | null;
+  /** False = draft, hanya terlihat di panel admin. Default true. */
+  is_published?: boolean;
   /** Search-result overrides, editable in /admin/seo. */
   seo?: SeoOverride;
+}
+
+/** Perkiraan waktu baca (200 kata/menit) dari konten HTML. */
+export function readMinutes(html: string): number {
+  const words = html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z#0-9]+;/gi, " ")
+    .split(/\s+/)
+    .filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
 }
 
 /**

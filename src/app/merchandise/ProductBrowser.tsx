@@ -22,7 +22,15 @@ export interface ProductCard {
   slug: string;
   name: string;
   description: string;
+  category: string;
+  /** Harga termurah (varian termurah bila bervarian). */
   price: number;
+  /** Harga termahal; sama dengan price bila tidak ada rentang. */
+  priceMax: number;
+  /** Harga coret, hanya terisi bila memang lebih mahal dari price. */
+  compareAt: number | null;
+  discount: number | null;
+  featured: boolean;
   image: string | null;
   imageWidth: number | null;
   imageHeight: number | null;
@@ -53,6 +61,15 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
   const [sort, setSort] = useState<SortKey>("default");
+  const [cat, setCat] = useState("");
+
+  const categories = useMemo(
+    () =>
+      Array.from(new Set(products.map((p) => p.category.trim()).filter(Boolean))).sort((a, b) =>
+        a.localeCompare(b, "id")
+      ),
+    [products]
+  );
 
   const shown = useMemo(() => {
     const list = products.filter((p) => {
@@ -60,15 +77,16 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
         return false;
       if ((filter === "green" || filter === "yellow") && p.badgeColor !== filter)
         return false;
-      return matchesQuery(q, p.name, p.description, ...p.variants);
+      if (cat && p.category !== cat) return false;
+      return matchesQuery(q, p.name, p.description, p.category, ...p.variants);
     });
     if (sort === "price-asc") list.sort((a, b) => a.price - b.price);
     else if (sort === "price-desc") list.sort((a, b) => b.price - a.price);
     else if (sort === "name") list.sort((a, b) => a.name.localeCompare(b.name, "id"));
     return list;
-  }, [products, q, filter, sort]);
+  }, [products, q, filter, sort, cat]);
 
-  const filtered = q.trim() !== "" || filter !== "all";
+  const filtered = q.trim() !== "" || filter !== "all" || cat !== "";
 
   return (
     <>
@@ -98,6 +116,21 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
           </label>
 
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {categories.length > 1 && (
+              <select
+                value={cat}
+                onChange={(e) => setCat(e.target.value)}
+                aria-label="Kategori"
+                className="h-9 shrink-0 rounded-full border border-gray-200 bg-white px-3 text-xs text-gray-700 outline-none focus:border-emerald-500"
+              >
+                <option value="">Semua kategori</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            )}
             {FILTERS.map((f) => (
               <button
                 key={f.key}
@@ -147,6 +180,7 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
               onClick={() => {
                 setQ("");
                 setFilter("all");
+                setCat("");
               }}
               className="mt-3 text-sm font-medium text-emerald-700 hover:underline"
             >
@@ -179,6 +213,11 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
                       <ShoppingBag className="w-10 sm:w-16 h-10 sm:h-16" />
                     </div>
                   )}
+                  {product.discount && (
+                    <span className="absolute right-2 top-2 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white sm:right-3 sm:top-3 sm:px-2 sm:text-xs">
+                      −{product.discount}%
+                    </span>
+                  )}
                   <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
                     <span
                       className={`inline-flex items-center gap-1 text-[9px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full ${badge.cls}`}
@@ -190,16 +229,30 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
                   </div>
                 </div>
                 <div className="p-3 sm:p-5">
-                  <h3 className="font-semibold text-gray-900 text-xs sm:text-base group-hover:text-emerald-700 transition-colors line-clamp-2">
+                  {product.category && (
+                    <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 sm:text-xs">
+                      {product.category}
+                    </div>
+                  )}
+                  <h3 className="font-semibold leading-snug text-gray-900 text-[13px] sm:text-base group-hover:text-emerald-700 transition-colors line-clamp-2">
                     {product.name}
                   </h3>
                   <p className="text-[11px] sm:text-sm text-gray-500 mt-0.5 sm:mt-1 line-clamp-2 hidden sm:block">
                     {product.description}
                   </p>
 
-                  <div className="mt-1.5 sm:mt-3 flex items-center justify-between">
-                    <div className="text-sm sm:text-lg font-bold text-emerald-700">
-                      {formatPrice(product.price)}
+                  <div className="mt-1.5 sm:mt-3 flex flex-wrap items-baseline justify-between gap-x-2">
+                    <div className="flex flex-wrap items-baseline gap-x-1.5">
+                      <span className="text-sm sm:text-lg font-bold text-emerald-700 tabular-nums">
+                        {product.priceMax > product.price
+                          ? `${formatPrice(product.price)}+`
+                          : formatPrice(product.price)}
+                      </span>
+                      {product.compareAt && (
+                        <span className="text-[11px] text-gray-400 line-through tabular-nums sm:text-sm">
+                          {formatPrice(product.compareAt)}
+                        </span>
+                      )}
                     </div>
                     {product.readyLeft != null && product.readyLeft > 0 && (
                       <span className="text-[10px] sm:text-xs text-gray-400 hidden sm:inline">
@@ -210,7 +263,7 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
 
                   {product.variants.length > 0 && (
                     <div className="mt-1.5 sm:mt-2 flex gap-1 flex-wrap">
-                      {product.variants.map((opt) => (
+                      {product.variants.slice(0, 6).map((opt) => (
                         <span
                           key={opt}
                           className="text-[10px] sm:text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded"
@@ -218,6 +271,11 @@ export default function ProductBrowser({ products }: { products: ProductCard[] }
                           {opt}
                         </span>
                       ))}
+                      {product.variants.length > 6 && (
+                        <span className="text-[10px] sm:text-xs text-gray-500 px-1 py-0.5">
+                          +{product.variants.length - 6}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>

@@ -171,3 +171,33 @@ export async function uploadContentImage(
     return { error: e instanceof Error ? e.message : "Gagal mengunggah gambar." };
   }
 }
+
+/**
+ * Deletes an uploaded content image from Storage given its public URL.
+ * Silently no-ops for empty/external URLs (e.g. nothing was uploaded, or
+ * the field still holds a legacy external link) — callers don't need to
+ * guard against those themselves.
+ *
+ * Caller must make sure no other row still points at this exact URL before
+ * calling this: uploads are content-addressed by hash, so two unrelated
+ * rows that happened to upload byte-identical images share one object in
+ * Storage, and deleting it out from under a still-referencing row would
+ * break that row's image too.
+ */
+export async function removeContentImage(url: string | null | undefined): Promise<void> {
+  if (!url) return;
+  const marker = `/storage/v1/object/public/${BUCKET}/`;
+  const i = url.indexOf(marker);
+  if (i === -1) return; // not one of our uploads (external URL, legacy link, etc.)
+  const path = url.slice(i + marker.length);
+  if (!path) return;
+
+  const { getSupabase } = await import("./supabase");
+  const supabase = getSupabase();
+  if (!supabase) return;
+
+  // Best-effort: a failed cleanup must never block the row delete the user
+  // already confirmed. Leaving an orphaned file in Storage is a minor,
+  // recoverable cost; blocking the delete on a storage hiccup is not.
+  await supabase.storage.from(BUCKET).remove([path]);
+}

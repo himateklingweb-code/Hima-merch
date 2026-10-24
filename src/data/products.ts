@@ -56,8 +56,36 @@ export interface Product {
   po_filled: number | null;
   po_reserved: number | null;
   po_deadline: string | null;
+  /** Kategori etalase, mis. "Kaos" atau "Aksesoris". Kosong = tanpa kategori. */
+  category?: string;
+  /** Harga coret sebelum diskon. Hanya tampil bila lebih besar dari `price`. */
+  compare_at_price?: number | null;
+  /** Produk unggulan — tampil paling depan di beranda dan etalase. */
+  is_featured?: boolean;
+  /** Urutan manual di etalase (kecil = lebih dulu). */
+  order_index?: number;
+  weight_grams?: number | null;
+  /** Panduan ukuran, teks bebas (satu baris per ukuran). */
+  size_chart?: string;
+  /** Batas jumlah per pesanan. Kosong = mengikuti stok. */
+  max_per_order?: number | null;
   /** Search-result overrides, editable in /admin/seo. */
   seo?: SeoOverride;
+}
+
+/** Persen diskon dari harga coret, atau null bila tidak ada diskon. */
+export function discountPercent(product: Pick<Product, "price" | "compare_at_price">): number | null {
+  const c = product.compare_at_price;
+  if (!c || c <= product.price) return null;
+  return Math.round(((c - product.price) / c) * 100);
+}
+
+/** Urutan etalase: unggulan dulu, lalu urutan manual, lalu yang lebih lama. */
+export function sortCatalog<T extends Pick<Product, "is_featured" | "order_index">>(list: T[]): T[] {
+  return [...list].sort((a, b) => {
+    if (!!a.is_featured !== !!b.is_featured) return a.is_featured ? -1 : 1;
+    return (a.order_index ?? 0) - (b.order_index ?? 0);
+  });
 }
 
 /** True once a product has at least one real variant row — the add-to-cart
@@ -80,6 +108,35 @@ export function availableStock(
   return product.stock_type === "ready_stock"
     ? product.stock - product.stock_reserved
     : (product.po_quota ?? 0) - (product.po_filled ?? 0) - (product.po_reserved ?? 0);
+}
+
+/** Sisa total produk: jumlah sisa semua varian aktif, atau sisa produk itu
+ *  sendiri bila tidak bervarian. Dipakai badge etalase. */
+export function totalAvailable(product: Product): number {
+  if (product.variantList.length > 0) {
+    return product.variantList.reduce(
+      (n, v) => n + Math.max(0, availableStock(product, v)),
+      0
+    );
+  }
+  return Math.max(0, availableStock(product));
+}
+
+/** Jumlah maksimal yang boleh dipesan sekaligus: sisa stok/kuota, dibatasi
+ *  lagi oleh `max_per_order` bila diisi pengurus. */
+export function maxOrderQty(product: Pick<Product, "max_per_order">, available: number): number {
+  const left = Math.max(0, available);
+  return product.max_per_order && product.max_per_order > 0
+    ? Math.min(left, product.max_per_order)
+    : left;
+}
+
+/** Rentang harga varian, mis. untuk "Rp85.000 – Rp95.000". */
+export function priceRange(product: Product): { min: number; max: number } {
+  const prices = product.variantList.length
+    ? product.variantList.map((v) => v.price ?? product.price)
+    : [product.price];
+  return { min: Math.min(...prices), max: Math.max(...prices) };
 }
 
 /** Effective price for a given variant, falling back to the product price. */
@@ -191,19 +248,17 @@ export function getProductBadge(product: Product): {
   icon: LucideIcon;
 } {
   if (product.stock_type === "ready_stock") {
-    if (product.stock - product.stock_reserved > 0) {
-      return { label: "Tersedia — Bisa Pesan Langsung", color: "green", icon: CheckCircle2 };
+    if (totalAvailable(product) > 0) {
+      return { label: "Ready Stock", color: "green", icon: CheckCircle2 };
     }
     return { label: "Stok Habis", color: "gray", icon: Ban };
   }
 
   if (product.po_deadline && new Date(product.po_deadline) > new Date()) {
-    const filled = (product.po_filled ?? 0) + (product.po_reserved ?? 0);
-    return {
-      label: `Pre-Order Dibuka (${filled}/${product.po_quota} sudah pesan)`,
-      color: "yellow",
-      icon: Clock,
-    };
+    if (totalAvailable(product) <= 0) {
+      return { label: "Kuota Pre-Order Penuh", color: "gray", icon: Ban };
+    }
+    return { label: "Pre-Order Dibuka", color: "yellow", icon: Clock };
   }
   return { label: "Pre-Order Ditutup", color: "red", icon: XCircle };
 }

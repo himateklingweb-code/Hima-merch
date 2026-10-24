@@ -32,7 +32,6 @@ export type Section =
   | "berita"
   | "departemen"
   | "mitra"
-  | "iklan"
   | "seo";
 
 /** Menu khusus admin, tidak bisa diberikan ke departemen. */
@@ -43,8 +42,7 @@ export const SECTIONS: { key: Section; label: string; note: string }[] = [
   { key: "pesanan", label: "Pesanan", note: "Verifikasi pesanan & bukti bayar" },
   { key: "berita", label: "Berita", note: "Tulis & terbitkan artikel" },
   { key: "departemen", label: "Departemen", note: "Struktur & anggota kepengurusan" },
-  { key: "mitra", label: "Mitra & Sponsor", note: "Logo mitra di situs" },
-  { key: "iklan", label: "Iklan Mitra", note: "Banner iklan" },
+  { key: "mitra", label: "Mitra & Sponsor", note: "Logo mitra & sponsor di situs" },
   { key: "seo", label: "SEO", note: "Judul & deskripsi halaman" },
 ];
 
@@ -92,7 +90,6 @@ export const ADMIN_SECTIONS: {
   { href: "/admin/departemen", need: "departemen" },
   { href: "/admin/berita", need: "berita" },
   { href: "/admin/mitra", need: "mitra" },
-  { href: "/admin/iklan", need: "iklan" },
   { href: "/admin/seo", need: "seo" },
   { href: "/admin/absensi", need: "absensi" },
   { href: "/admin/pengguna", need: "pengguna" },

@@ -635,52 +635,280 @@ body::before {
 }
 
 /* ── Mitra ad cards + sponsor logo strip ── */
-.ad-card {
+
+/* ── Beranda: kepala seksi, kartu carousel, sorotan berita ── */
+.home-section-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: clamp(20px, 4vw, 32px);
+}
+.home-section-label {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--olive-deep);
+  line-height: 1.4;
+}
+.home-section-rule { flex: 1; min-width: 16px; height: 1px; background: var(--line); }
+.home-section-cta {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.home-empty-note {
+  margin: 0;
+  padding: 22px 20px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 2px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #605d5d;
+  max-width: 62ch;
+}
+
+/* Slide widths: mobile menampilkan ~1,2 kartu (ada isyarat geser),
+   desktop 4 kartu produk / 3 kartu berita per layar. */
+.home-slide-product { flex: 0 0 62%; padding-right: 12px; }
+.home-slide-news { flex: 0 0 80%; padding-right: 12px; }
+@media (min-width: 640px) {
+  .home-slide-product { flex-basis: 38%; }
+  .home-slide-news { flex-basis: 48%; }
+}
+@media (min-width: 1024px) {
+  .home-slide-product { flex-basis: 25%; padding-right: 20px; }
+  .home-slide-news { flex-basis: 33.3333%; padding-right: 20px; }
+}
+
+.home-card {
   display: flex;
   flex-direction: column;
   height: 100%;
   background: var(--surface);
+  color: var(--ink);
   border: 1px solid var(--line);
   border-radius: 2px;
   overflow: hidden;
-  transition: transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s, border-color .3s;
+  transition: border-color .25s, box-shadow .25s, transform .25s;
 }
-.ad-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 26px rgba(32,30,29,.12);
-  border-color: var(--olive);
-}
-.ad-card-logo {
+.home-card:hover { border-color: var(--olive); box-shadow: 0 8px 22px rgba(32,30,29,.1); transform: translateY(-2px); }
+.home-product-media,
+.home-news-media {
+  position: relative;
   display: grid;
   place-items: center;
-  aspect-ratio: 16 / 9;
   background: var(--paper-2);
   border-bottom: 1px solid var(--line);
   overflow: hidden;
 }
-.ad-card-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 22px;
+.home-product-media { aspect-ratio: 1 / 1; }
+.home-product-media img,
+.home-news-media img { width: 100%; height: 100%; object-fit: cover; }
+.home-product-media img.home-media-fallback,
+.home-news-media img.home-media-fallback,
+.home-news-feature-media img.home-news-fallback {
+  width: 34%; height: 34%; object-fit: contain; opacity: .35;
+}
+.home-badge {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  border-radius: 2px;
+}
+.home-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  padding: 14px 16px 16px;
+}
+.home-card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.home-card-title-3 { -webkit-line-clamp: 3; }
+.home-product-price {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  font-feature-settings: "tnum";
 }
 
-.sponsor-logo {
+.home-news-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #605d5d;
+  line-height: 1.3;
+}
+.home-news-cat {
+  border: 1px solid var(--line-strong);
+  padding: 3px 7px;
+  border-radius: 2px;
+  color: var(--ink);
+}
+.home-news-pin {
+  background: var(--olive);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 2px;
+}
+
+/* Sorotan berita: foto mengikuti rasio asli, teks di sampingnya. */
+.home-news-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: clamp(20px, 3.5vw, 44px);
+  align-items: center;
+  color: var(--ink);
+}
+.home-news-feature-media {
+  position: relative;
   display: grid;
   place-items: center;
-  height: 74px;
-  padding: 0 18px;
+  justify-self: start;
+  max-width: 100%;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 2px;
   overflow: hidden;
-  opacity: .85;
-  transition: opacity .3s;
 }
-.sponsor-logo:hover { opacity: 1; }
-/* `height`/`width` here (not `max-height`/`max-width`) — a percentage max
-   doesn't resolve reliably against a `place-items: center` grid item, which
-   let logos render taller than this 74px box and get clipped by the
-   carousel's overflow. Matches the same 100%/100%/contain pattern already
-   used for .ad-card-logo img. */
-.sponsor-logo img { height: 100%; width: 100%; object-fit: contain; }
+.home-news-feature-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.home-news-feature:hover .home-news-feature-media img { transform: scale(1.02); }
+.home-news-feature-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.home-news-title {
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.home-news-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #605d5d;
+  max-width: 60ch;
+}
+.home-news-more {
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--olive-deep);
+  font-weight: 600;
+}
+@media (max-width: 767px) {
+  .home-news-feature { grid-template-columns: 1fr; gap: 16px; }
+  .home-news-feature-media { width: 100% !important; max-height: 420px; }
+  .home-news-title { font-size: 20px; }
+  .home-news-excerpt { font-size: 14px; -webkit-line-clamp: 3; }
+  .home-section-label, .home-section-cta { font-size: 10.5px; letter-spacing: .16em; }
+  .home-card-title { font-size: 14.5px; }
+}
+
+/* Panah carousel: hanya di layar lebar; layar sentuh cukup digeser. */
+.carousel-arrow {
+  position: absolute;
+  top: 38%;
+  z-index: 10;
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 4px 14px rgba(32,30,29,.12);
+  transition: opacity .2s, background .2s;
+}
+.carousel-arrow:hover { background: var(--ink); color: #fff; }
+.carousel-arrow:disabled { opacity: 0; pointer-events: none; }
+.carousel-arrow-prev { left: -14px; }
+.carousel-arrow-next { right: -14px; }
+@media (min-width: 768px) and (hover: hover) {
+  .carousel-arrow { display: inline-flex; }
+}
+
+/* ── "Didukung oleh": logo selalu lingkaran, apa pun bentuk filenya. ── */
+.sponsor-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(18px, 4vw, 40px);
+  justify-content: flex-start;
+}
+.sponsor-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 96px;
+  margin: 0 auto;
+  color: var(--ink);
+  text-align: center;
+}
+.sponsor-row .sponsor-logo { margin: 0; }
+.sponsor-circle {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  transition: border-color .25s, transform .25s;
+}
+.sponsor-circle img {
+  width: 74%;
+  height: 74%;
+  object-fit: contain;
+}
+.sponsor-logo:hover .sponsor-circle { border-color: var(--olive); transform: translateY(-2px); }
+.sponsor-name {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #605d5d;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .sponsor-logo { width: 80px; }
+  .sponsor-circle { width: 64px; height: 64px; }
+  .sponsor-name { font-size: 11.5px; }
+}
 
 /* ── Article prose ── */
 .prose-article p { margin: 0 0 1.2em; }

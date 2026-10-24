@@ -1,43 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { iconFromName } from "@/lib/icons";
-import type { Product } from "@/data/products";
-import { formatPrice } from "@/data/products";
 import {
   getProducts,
   getArticles,
   getDepartments,
   getPartners,
-  getActiveAds,
 } from "@/lib/content-repo";
 import StatsCounter from "@/components/StatsCounter";
 import HomeCarousels from "@/components/HomeCarousels";
-import AdsCarousel from "@/components/AdsCarousel";
 import SponsorStrip from "@/components/SponsorStrip";
-
-function badgeOf(p: Product, now: number) {
-  if (p.stock_type === "ready_stock") {
-    const left = p.stock - p.stock_reserved;
-    return left > 0
-      ? { label: "Tersedia", bg: "#7a8450", fg: "#ffffff", state: "ready" }
-      : { label: "Stok habis", bg: "#605d5d", fg: "#ffffff", state: "habis" };
-  }
-  const taken = (p.po_filled ?? 0) + (p.po_reserved ?? 0);
-  const open =
-    p.po_deadline &&
-    new Date(p.po_deadline).getTime() > now &&
-    taken < (p.po_quota ?? 0);
-  return open
-    ? { label: "Pre-order dibuka", bg: "#ffd985", fg: "#201e1d", state: "po" }
-    : {
-        label: "Pre-order ditutup",
-        bg: "#626b3f",
-        fg: "#ffffff",
-        state: "po-tutup",
-      };
-}
-
-const PLATES = ["#c2c4ad", "#626b3f", "#dfe3d0", "#e0dede", "#eceaea"];
+import { SITE, imageRatio } from "@/lib/site";
 
 /** Waktu render server (dipakai untuk badge PO). Di luar komponen agar murni. */
 function renderTime(): number {
@@ -49,12 +22,11 @@ function renderTime(): number {
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [products, articles, departments, partners, ads] = await Promise.all([
+  const [products, articles, departments, partners] = await Promise.all([
     getProducts(),
     getArticles(),
     getDepartments(),
     getPartners(),
-    getActiveAds(),
   ]);
 
   const now = renderTime();
@@ -86,8 +58,8 @@ export default async function HomePage() {
     const taken = (p.po_filled ?? 0) + (p.po_reserved ?? 0);
     return new Date(p.po_deadline).getTime() > now && taken < (p.po_quota ?? 0);
   });
-  const poPrimary =
-    poOpen[0] || products.find((p) => p.stock_type === "pre_order");
+  // Badge "slot PO tersisa" hanya untuk pre-order yang benar-benar dibuka.
+  const poPrimary = poOpen[0] ?? null;
   const poSisa = poPrimary
     ? Math.max(
         0,
@@ -96,79 +68,46 @@ export default async function HomePage() {
       )
     : 0;
 
-  const featured = products.slice(0, 3).map((p, i) => {
-    const badge = badgeOf(p, now);
-    const taken = (p.po_filled ?? 0) + (p.po_reserved ?? 0);
-    const left = p.stock - p.stock_reserved;
-    const meta =
-      p.stock_type === "ready_stock"
-        ? left > 0
-          ? `${left} siap kirim`
-          : "Menunggu batch"
-        : badge.state === "po"
-          ? `${taken}/${p.po_quota} terisi`
-          : "Tenggat lewat";
-    const metaColor =
-      badge.state === "ready"
-        ? "#7a8450"
-        : badge.state === "po"
-          ? "#201e1d"
-          : "#605d5d";
-    return {
-      slug: p.slug,
-      no: String(i + 1).padStart(2, "0"),
-      name: p.name,
-      plate: PLATES[i] || "#c2c4ad",
-      image: p.images.find((im) => im.url)?.url ?? null,
-      price: formatPrice(p.price),
-      badge,
-      meta,
-      metaColor,
-    };
+  // Berita disorot dulu, lalu yang terbaru. Sorotan utama sebisa mungkin
+  // artikel yang punya foto supaya bagian berita di beranda tidak polos.
+  const sortedArticles = [...articles].sort((a, b) => {
+    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+    return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
   });
-
-  const latest = [...articles]
-    .sort((a, b) => {
-      if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-      return (
-        new Date(b.published_at).getTime() -
-        new Date(a.published_at).getTime()
-      );
-    })
-    .slice(0, 2)
-    .map((a) => ({
-      slug: a.slug,
-      title: a.title,
-      excerpt: a.excerpt,
-      category: a.category,
-      image: a.image,
-      image_alt: a.image_alt,
-      image_width: a.image_width,
-      image_height: a.image_height,
-      is_pinned: a.is_pinned,
-      date: new Date(a.published_at).toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-    }));
+  const lead = sortedArticles.find((a) => a.image) ?? sortedArticles[0];
+  const highlight = lead
+    ? {
+        ...lead,
+        ratio: imageRatio(lead.image_width, lead.image_height, "16/10", 0.8, 1.9),
+        ratioNum: lead.image_width && lead.image_height
+          ? Math.min(1.9, Math.max(0.8, lead.image_width / lead.image_height))
+          : 1.6,
+        date: new Date(lead.published_at).toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+      }
+    : null;
+  const moreArticles = sortedArticles.filter((a) => a.id !== lead?.id).slice(0, 6);
 
   const tickerItems: string[] = [];
   products.forEach((p) => {
     if (p.stock_type !== "pre_order") return;
     const taken = (p.po_filled ?? 0) + (p.po_reserved ?? 0);
     const total = p.po_quota ?? 0;
-    if (
-      p.po_deadline &&
-      new Date(p.po_deadline).getTime() > now &&
-      taken < total
-    ) {
-      tickerItems.push(`Pre-order ${p.name} · kuota ${taken}/${total}`);
-    } else {
-      tickerItems.push(`${p.name} — ${taken}/${total} terpenuhi`);
+    if (p.po_deadline && new Date(p.po_deadline).getTime() > now && taken < total) {
+      tickerItems.push(`Pre-order ${p.name} dibuka · sisa ${total - taken} slot`);
     }
   });
-  articles.slice(0, 3).forEach((a) => tickerItems.push(a.title));
+  sortedArticles.slice(0, 3).forEach((a) => tickerItems.push(a.title));
+  if (tickerItems.length < 3) {
+    tickerItems.push(
+      "Himpunan Mahasiswa Teknik Lingkungan UNTAN",
+      "Kajian · Aksi Lapangan · Pengabdian",
+      "Fakultas Teknik Universitas Tanjungpura"
+    );
+  }
 
   return (
     <div style={{ position: "relative", background: "#ffffff", minHeight: "100vh" }}>
@@ -332,9 +271,11 @@ export default async function HomePage() {
                 }}
               >
                 Wadah resmi mahasiswa Program Studi Teknik Lingkungan
-                Universitas Tanjungpura — enam departemen, satu periode
-                aktif, dan kerja lapangan yang benar-benar menyentuh
-                air, udara, dan tanah Kalimantan Barat.
+                Universitas Tanjungpura
+                {realDepartments.length > 0
+                  ? ` — ${realDepartments.length} departemen yang bergerak di kajian, aksi lapangan, dan pengabdian`
+                  : " — bergerak di kajian, aksi lapangan, dan pengabdian"}{" "}
+                untuk air, udara, dan tanah Kalimantan Barat.
               </p>
             </div>
             <div
@@ -445,9 +386,11 @@ export default async function HomePage() {
                 Dokumentasi kegiatan lapangan
               </figcaption>
             </figure>
-            {/* Floating PO badge */}
+            {/* Floating PO badge — hanya saat ada pre-order yang dibuka */}
+            {poPrimary && (
             <Link
-              href="/merchandise"
+              href={`/merchandise/${poPrimary.slug}`}
+              aria-label={`Pre-order ${poPrimary.name}: ${poSisa} slot tersisa`}
               className="po-badge"
               style={{
                 position: "absolute",
@@ -505,6 +448,7 @@ export default async function HomePage() {
                 </span>
               </span>
             </Link>
+            )}
           </div>
         </div>
 
@@ -604,186 +548,50 @@ export default async function HomePage() {
         <StatsCounter targets={stats} />
       </section>
 
-      {/* ═══ NEWS ═══ */}
+      {/* ═══ BERITA ═══ */}
       <section style={{ borderBottom: "1px solid rgba(32,30,29,.14)" }}>
         <div className="section-pad">
-          <div
-            className="scroll-reveal-x"
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 20,
-              flexWrap: "wrap" as const,
-              marginBottom: 12,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: ".22em",
-                textTransform: "uppercase" as const,
-                color: "#7a8450",
-                flex: "none",
-              }}
-            >
-              Berita terbaru
-            </span>
-            <span
-              style={{
-                flex: 1,
-                height: 1,
-                background: "rgba(32,30,29,.14)",
-              }}
-            />
-            <Link
-              href="/berita"
-              className="link-underline"
-              style={{
-                fontSize: 11,
-                letterSpacing: ".16em",
-                textTransform: "uppercase" as const,
-                flex: "none",
-                marginLeft: "auto",
-                color: "#201e1d",
-              }}
-            >
-              Semua berita &rarr;
-            </Link>
-          </div>
-          <div className="home-desktop-cards" style={{ display: "grid", gap: 20 }}>
-          {latest.map((a) => (
-            <Link
-              key={a.slug}
-              href={`/berita/${a.slug}`}
-              className="beranda-news-row scroll-reveal-x"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "clamp(140px,18vw,220px) minmax(0,1fr)",
-                gap: 28,
-                alignItems: "center",
-                padding: "20px 0",
-              }}
-            >
-              <span
-                style={{
-                  position: "relative",
-                  display: "block",
-                  aspectRatio:
-                    a.image_width && a.image_height
-                      ? `${a.image_width}/${a.image_height}`
-                      : "4/3",
-                  background: "#e0dede",
-                  overflow: "hidden",
-                  borderRadius: 2,
-                  border: "1px solid rgba(32,30,29,.14)",
-                }}
-              >
-                {a.image ? (
-                  <img
-                    src={a.image}
-                    alt={a.image_alt || a.title}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : (
-                  <span
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 28,
-                      fontWeight: 700,
-                      color: "rgba(32,30,29,.14)",
-                    }}
-                  >
-                    TL
-                  </span>
-                )}
-              </span>
-              <span style={{ display: "grid", gap: 7 }}>
+          <SectionHead label="Berita terbaru" href="/berita" cta="Semua berita" />
+          {highlight ? (
+            <>
+              <Link href={`/berita/${highlight.slug}`} className="home-news-feature scroll-reveal-x">
                 <span
+                  className="home-news-feature-media"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    fontSize: "10.5px",
-                    letterSpacing: ".16em",
-                    textTransform: "uppercase" as const,
-                    color: "#605d5d",
+                    aspectRatio: highlight.ratio,
+                    width: `min(100%, ${Math.round(460 * highlight.ratioNum)}px)`,
                   }}
                 >
-                  {a.is_pinned && (
-                    <span
-                      style={{
-                        color: "#ffffff",
-                        background: "#7a8450",
-                        padding: "2px 8px",
-                        borderRadius: 2,
-                        letterSpacing: ".14em",
-                      }}
-                    >
-                      Disorot
-                    </span>
+                  {highlight.image ? (
+                    <img src={highlight.image} alt={highlight.image_alt || highlight.title} />
+                  ) : (
+                    <img src={SITE.logo} alt="" className="home-news-fallback" />
                   )}
-                  {a.date}
                 </span>
-                <span
-                  style={{
-                    fontSize: "clamp(17px,4.4vw,23px)",
-                    fontWeight: 600,
-                    lineHeight: 1.28,
-                    letterSpacing: "-.015em",
-                  }}
-                >
-                  {a.title}
+                <span className="home-news-feature-body">
+                  <span className="home-news-meta">
+                    {highlight.is_pinned && <span className="home-news-pin">Disorot</span>}
+                    <span className="home-news-cat">{highlight.category}</span>
+                    <span>{highlight.date}</span>
+                  </span>
+                  <span className="home-news-title">{highlight.title}</span>
+                  {highlight.excerpt && (
+                    <span className="home-news-excerpt">{highlight.excerpt}</span>
+                  )}
+                  <span className="home-news-more">Baca selengkapnya &rarr;</span>
                 </span>
-                <span
-                  style={{
-                    fontSize: 14,
-                    lineHeight: 1.55,
-                    color: "#605d5d",
-                    maxWidth: "72ch",
-                  }}
-                >
-                  {a.excerpt}
-                </span>
-                <span
-                  className="news-row-cat"
-                  style={{
-                    fontSize: "10.5px",
-                    letterSpacing: ".14em",
-                    textTransform: "uppercase" as const,
-                    justifySelf: "start",
-                    border: "1px solid rgba(32,30,29,.3)",
-                    padding: "4px 10px",
-                    borderRadius: 2,
-                    marginTop: 2,
-                  }}
-                >
-                  {a.category}
-                </span>
-              </span>
-            </Link>
-          ))}
-          </div>
-          <div className="home-mobile-carousel">
-            <HomeCarousels
-              type="news"
-              articles={[...articles].sort((a, b) => {
-                if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-                return (
-                  new Date(b.published_at).getTime() -
-                  new Date(a.published_at).getTime()
-                );
-              })}
+              </Link>
+              {moreArticles.length > 0 && (
+                <div style={{ marginTop: "clamp(24px,4vw,36px)" }}>
+                  <HomeCarousels type="news" articles={moreArticles} />
+                </div>
+              )}
+            </>
+          ) : (
+            <EmptyNote
+              text="Belum ada berita yang terbit. Kabar kegiatan HMTL akan tampil di sini."
             />
-          </div>
+          )}
         </div>
       </section>
 
@@ -795,45 +603,7 @@ export default async function HomePage() {
         }}
       >
         <div className="section-pad">
-          <div
-            className="scroll-reveal-x"
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 20,
-              flexWrap: "wrap" as const,
-              marginBottom: "clamp(22px,5vw,40px)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: ".22em",
-                textTransform: "uppercase" as const,
-                color: "#7a8450",
-                flex: "none",
-              }}
-            >
-              Tentang kami
-            </span>
-            <span
-              style={{ flex: 1, height: 1, background: "rgba(32,30,29,.14)" }}
-            />
-            <Link
-              href="/tentang"
-              className="link-underline"
-              style={{
-                fontSize: 11,
-                letterSpacing: ".16em",
-                textTransform: "uppercase" as const,
-                flex: "none",
-                marginLeft: "auto",
-                color: "#201e1d",
-              }}
-            >
-              Profil lengkap &rarr;
-            </Link>
-          </div>
+          <SectionHead label="Tentang kami" href="/tentang" cta="Profil lengkap" />
 
           <div className="profil-grid">
             <div>
@@ -927,45 +697,7 @@ export default async function HomePage() {
       {/* ═══ DEPARTEMEN ═══ */}
       <section style={{ borderBottom: "1px solid rgba(32,30,29,.14)" }}>
         <div className="section-pad">
-          <div
-            className="scroll-reveal-x"
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 20,
-              flexWrap: "wrap" as const,
-              marginBottom: "clamp(22px,5vw,40px)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: ".22em",
-                textTransform: "uppercase" as const,
-                color: "#7a8450",
-                flex: "none",
-              }}
-            >
-              Struktur kepengurusan
-            </span>
-            <span
-              style={{ flex: 1, height: 1, background: "rgba(32,30,29,.14)" }}
-            />
-            <Link
-              href="/departemen"
-              className="link-underline"
-              style={{
-                fontSize: 11,
-                letterSpacing: ".16em",
-                textTransform: "uppercase" as const,
-                flex: "none",
-                marginLeft: "auto",
-                color: "#201e1d",
-              }}
-            >
-              Semua departemen &rarr;
-            </Link>
-          </div>
+          <SectionHead label="Struktur kepengurusan" href="/departemen" cta="Semua departemen" />
 
           <div
             className="home-desktop-cards"
@@ -1058,278 +790,55 @@ export default async function HomePage() {
         }}
       >
         <div className="section-pad">
-          <div
-            className="scroll-reveal-x"
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 20,
-              flexWrap: "wrap" as const,
-              marginBottom: "clamp(22px,5vw,40px)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: ".22em",
-                textTransform: "uppercase" as const,
-                color: "#7a8450",
-                flex: "none",
-              }}
-            >
-              Merchandise &middot; penunjang kegiatan
-            </span>
-            <span
-              style={{
-                flex: 1,
-                height: 1,
-                background: "rgba(32,30,29,.14)",
-              }}
-            />
-            <Link
-              href="/merchandise"
-              className="link-underline"
-              style={{
-                fontSize: 11,
-                letterSpacing: ".16em",
-                textTransform: "uppercase" as const,
-                flex: "none",
-                marginLeft: "auto",
-                color: "#201e1d",
-              }}
-            >
-              Lihat semua &rarr;
-            </Link>
-          </div>
-          <div
-            className="home-desktop-cards"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))",
-              gap: 24,
-            }}
-          >
-            {featured.map((p, i) => (
-              <Link
-                key={p.slug}
-                href={`/merchandise/${p.slug}`}
-                className="beranda-product-card scroll-rise"
-                style={{
-                  display: "block",
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  "--cover": `${32 + i * 3}%`,
-                } as React.CSSProperties}
-              >
-                <span
-                  style={{
-                    position: "relative",
-                    display: "grid",
-                    placeItems: "center",
-                    aspectRatio: "4/3",
-                    background: p.plate,
-                    borderBottom: "1px solid rgba(32,30,29,.14)",
-                    overflow: "hidden",
-                  }}
-                >
-                  {p.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- rasio asli bervariasi per produk.
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <span
-                        style={{
-                          fontSize: 72,
-                          fontWeight: 700,
-                          color: "rgba(32,30,29,.14)",
-                          letterSpacing: "-.04em",
-                        }}
-                      >
-                        {p.no}
-                      </span>
-                      <span
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          backgroundImage:
-                            "radial-gradient(circle,rgba(0,0,0,.22) 30%,transparent 32%)",
-                          backgroundSize: "3px 3px",
-                          mixBlendMode: "multiply",
-                        }}
-                      />
-                    </>
-                  )}
-                  <span
-                    style={{
-                      position: "absolute",
-                      left: 10,
-                      top: 10,
-                      fontSize: "9.5px",
-                      letterSpacing: ".16em",
-                      textTransform: "uppercase" as const,
-                      background: p.badge.bg,
-                      color: p.badge.fg,
-                      padding: "4px 9px",
-                      borderRadius: 2,
-                    }}
-                  >
-                    {p.badge.label}
-                  </span>
-                </span>
-                <span style={{ display: "block", padding: "clamp(15px,4vw,20px) clamp(15px,4vw,22px) clamp(16px,4vw,22px)" }}>
-                  <span
-                    style={{
-                      display: "block",
-                      fontSize: "clamp(16px,4vw,19px)",
-                      fontWeight: 600,
-                      lineHeight: 1.24,
-                    }}
-                  >
-                    {p.name}
-                  </span>
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "baseline",
-                      justifyContent: "space-between",
-                      marginTop: 16,
-                      borderTop: "1px solid rgba(32,30,29,.14)",
-                      paddingTop: 14,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "clamp(17px,4.2vw,21px)",
-                        fontWeight: 700,
-                        letterSpacing: "-.02em",
-                        fontFeatureSettings: "'tnum'",
-                      }}
-                    >
-                      {p.price}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        letterSpacing: ".1em",
-                        textTransform: "uppercase" as const,
-                        color: p.metaColor,
-                      }}
-                    >
-                      {p.meta}
-                    </span>
-                  </span>
-                </span>
-              </Link>
-            ))}
-          </div>
-          <div className="home-mobile-carousel">
+          <SectionHead label="Merchandise" href="/merchandise" cta="Lihat semua" />
+          {products.length > 0 ? (
             <HomeCarousels type="products" products={products} />
-          </div>
+          ) : (
+            <EmptyNote text="Koleksi merchandise berikutnya sedang disiapkan. Pantau halaman Merchandise untuk info pre-order." />
+          )}
         </div>
       </section>
 
-      {/* ═══ MITRA & KERJA SAMA ═══ */}
-      <section
-        style={{
-          borderBottom: "1px solid rgba(32,30,29,.14)",
-          background: "#f4f4f4",
-        }}
-      >
-        <div className="section-pad">
-          <div
-            className="scroll-reveal-x"
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 20,
-              flexWrap: "wrap" as const,
-              marginBottom: "clamp(22px,5vw,40px)",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: ".22em",
-                textTransform: "uppercase" as const,
-                color: "#7a8450",
-                flex: "none",
-              }}
-            >
-              Mitra &amp; kerja sama
-            </span>
-            <span
-              style={{
-                flex: 1,
-                height: 1,
-                background: "rgba(32,30,29,.14)",
-              }}
-            />
-            <Link
-              href="/kemitraan"
-              className="link-underline"
-              style={{
-                fontSize: 11,
-                letterSpacing: ".16em",
-                textTransform: "uppercase" as const,
-                flex: "none",
-                marginLeft: "auto",
-                color: "#201e1d",
-              }}
-            >
-              Jadi mitra &rarr;
-            </Link>
+      {/* ═══ DIDUKUNG OLEH ═══ */}
+      {partners.length > 0 && (
+        <section>
+          <div className="section-pad-tight">
+            <SectionHead label="Didukung oleh" href="/kemitraan" cta="Jadi mitra" muted />
+            <SponsorStrip items={partners} />
           </div>
-          <AdsCarousel items={ads} />
-        </div>
-      </section>
-
-      {/* ═══ SPONSOR LOGOS ═══ */}
-      <section>
-        <div className="section-pad-tight">
-          <div
-            className="scroll-reveal-x"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 20,
-              flexWrap: "wrap" as const,
-              marginBottom: 30,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                letterSpacing: ".22em",
-                textTransform: "uppercase" as const,
-                color: "#605d5d",
-                flex: "none",
-              }}
-            >
-              Didukung oleh
-            </span>
-            <span
-              className="scroll-hairline"
-              style={{
-                flex: 1,
-                minWidth: 20,
-                height: 1,
-                background: "rgba(32,30,29,.14)",
-              }}
-            />
-          </div>
-          <SponsorStrip items={partners} />
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }
+
+/** Judul seksi beranda: label kecil, garis, dan tautan ke halaman lengkap. */
+function SectionHead({
+  label,
+  href,
+  cta,
+  muted = false,
+}: {
+  label: string;
+  href: string;
+  cta: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="home-section-head scroll-reveal-x">
+      <span className="home-section-label" style={muted ? { color: "#605d5d" } : undefined}>
+        {label}
+      </span>
+      <span className="home-section-rule" aria-hidden />
+      <Link href={href} className="home-section-cta link-underline">
+        {cta} &rarr;
+      </Link>
+    </div>
+  );
+}
+
+/** Pengganti seksi kosong — kalimat nyata, bukan kartu contoh. */
+function EmptyNote({ text }: { text: string }) {
+  return <p className="home-empty-note">{text}</p>;
+}
+

@@ -1,22 +1,27 @@
 import { getServerSupabase } from "./supabase";
 
-import { products as seedProducts, type Product } from "@/data/products";
-import { articles as seedArticles, type Article } from "@/data/news";
-import { departments as seedDepartments, type Department } from "@/data/departments";
+import { products as seedProducts, sortCatalog, type Product } from "@/data/products";
+import { articles as seedArticles, readMinutes, type Article } from "@/data/news";
+import { departments as seedDepartments, dedupePeriods, type Department } from "@/data/departments";
 import { partners as seedPartners, type Partner } from "@/data/partners";
-import { ads as seedAds, type Ad } from "@/data/ads";
 
 /**
  * Content reads for server components.
  *
- * Every function returns database rows when Supabase is configured and the
- * query succeeds, and the seeded TypeScript collection otherwise. That
- * fallback is what lets the site run on a fresh clone with no `.env.local`,
- * and keeps a database blip from turning into a blank page.
+ * Seed collections are used ONLY when Supabase is not configured at all (a
+ * fresh clone with no `.env.local`). Once the site is connected, a failed
+ * query is logged and returns an empty result — demo content must never
+ * leak onto the live site just because one query errored.
  *
  * Shapes returned here match the original TypeScript interfaces exactly, so
  * the components that render them did not have to change.
  */
+
+/** Logs a failed read and hands back the empty value for that call. */
+function failed<T>(fn: string, error: { message: string }, empty: T): T {
+  console.error(`[content-repo] ${fn}: ${error.message}`);
+  return empty;
+}
 
 // ---------------------------------------------------------------- products
 
@@ -36,6 +41,13 @@ interface ProductRow {
   po_reserved: number | null;
   po_deadline: string | null;
   seo: Product["seo"] | null;
+  category?: string | null;
+  compare_at_price?: number | null;
+  is_featured?: boolean | null;
+  order_index?: number | null;
+  weight_grams?: number | null;
+  size_chart?: string | null;
+  max_per_order?: number | null;
   images?: {
     url: string;
     alt_text: string;
@@ -115,6 +127,13 @@ function toProduct(r: ProductRow): Product {
     po_filled: r.po_filled,
     po_reserved: r.po_reserved,
     po_deadline: r.po_deadline,
+    category: r.category ?? "",
+    compare_at_price: r.compare_at_price ?? null,
+    is_featured: r.is_featured ?? false,
+    order_index: r.order_index ?? 0,
+    weight_grams: r.weight_grams ?? null,
+    size_chart: r.size_chart ?? "",
+    max_per_order: r.max_per_order ?? null,
     seo: r.seo ?? undefined,
   };
 }
@@ -135,8 +154,8 @@ export async function getProducts(): Promise<Product[]> {
   // Only a failed query falls back to seed data — a real empty result (the
   // last product got unpublished or deleted) must render as an empty
   // catalogue, not resurrect the old demo seed content.
-  if (error) return seedProducts;
-  return (data as unknown as ProductRow[]).map(toProduct);
+  if (error) return failed("getProducts", error, []);
+  return sortCatalog((data as unknown as ProductRow[]).map(toProduct));
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -150,7 +169,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     .eq("is_active", true)
     .maybeSingle();
 
-  if (error) return seedProducts.find((p) => p.slug === slug) ?? null;
+  if (error) return failed("getProductBySlug", error, null);
   return data ? toProduct(data as unknown as ProductRow) : null;
 }
 
@@ -173,6 +192,7 @@ interface ArticleRow {
   published_at: string;
   cta_label: string | null;
   cta_url: string | null;
+  read_minutes?: number | null;
   seo: Article["seo"] | null;
 }
 
@@ -194,6 +214,7 @@ function toArticle(r: ArticleRow): Article {
     published_at: r.published_at,
     cta_label: r.cta_label ?? undefined,
     cta_url: r.cta_url ?? undefined,
+    read_minutes: r.read_minutes ?? readMinutes(r.content),
     seo: r.seo ?? undefined,
   };
 }
@@ -209,7 +230,7 @@ export async function getArticles(): Promise<Article[]> {
     .order("is_pinned", { ascending: false })
     .order("published_at", { ascending: false });
 
-  if (error) return seedArticles;
+  if (error) return failed("getArticles", error, []);
   return (data as ArticleRow[]).map(toArticle);
 }
 
@@ -224,7 +245,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
     .eq("is_published", true)
     .maybeSingle();
 
-  if (error) return seedArticles.find((a) => a.slug === slug) ?? null;
+  if (error) return failed("getArticleBySlug", error, null);
   return data ? toArticle(data as ArticleRow) : null;
 }
 
@@ -262,16 +283,10 @@ function toDepartment(r: DepartmentRow): Department {
     slug: r.slug,
     description: r.description,
     icon: r.icon,
-    periods: [...(r.periods ?? [])]
-      // Active period first, then most recent label.
-      .sort((a, b) =>
-        a.is_active === b.is_active
-          ? b.period_label.localeCompare(a.period_label)
-          : a.is_active
-            ? -1
-            : 1
-      )
-      .map((p) => ({
+    // dedupePeriods menggabungkan baris periode ganda dan mengurutkan:
+    // aktif dulu, lalu label terbaru.
+    periods: dedupePeriods(
+      (r.periods ?? []).map((p) => ({
         id: p.id,
         department_id: p.department_id,
         period_label: p.period_label,
@@ -288,7 +303,8 @@ function toDepartment(r: DepartmentRow): Department {
             contact: m.contact ?? undefined,
             order_index: m.order_index,
           })),
-      })),
+      }))
+    ),
   };
 }
 
@@ -304,7 +320,7 @@ export async function getDepartments(): Promise<Department[]> {
     .select(DEPARTMENT_SELECT)
     .order("order_index", { ascending: true });
 
-  if (error) return seedDepartments;
+  if (error) return failed("getDepartments", error, []);
   return (data as unknown as DepartmentRow[]).map(toDepartment);
 }
 
@@ -320,7 +336,7 @@ export async function getDepartmentBySlug(
     .eq("slug", slug)
     .maybeSingle();
 
-  if (error) return seedDepartments.find((d) => d.slug === slug) ?? null;
+  if (error) return failed("getDepartmentBySlug", error, null);
   return data ? toDepartment(data as unknown as DepartmentRow) : null;
 }
 
@@ -336,7 +352,7 @@ export async function getPartners(): Promise<Partner[]> {
     .eq("is_active", true)
     .order("order_index", { ascending: true });
 
-  if (error) return seedPartners;
+  if (error) return failed("getPartners", error, []);
   return data.map((r) => ({
     id: r.id as string,
     name: r.name as string,
@@ -344,30 +360,6 @@ export async function getPartners(): Promise<Partner[]> {
     description: r.description as string,
     website: (r.website as string) ?? null,
     type: r.type as Partner["type"],
-  }));
-}
-
-// -------------------------------------------------------------------- ads
-
-export async function getActiveAds(): Promise<Ad[]> {
-  const supabase = getServerSupabase();
-  if (!supabase) return seedAds.filter((a) => a.active);
-
-  const { data, error } = await supabase
-    .from("ads")
-    .select("*")
-    .eq("active", true)
-    .order("order_index", { ascending: true });
-
-  if (error) return seedAds.filter((a) => a.active);
-  return data.map((r) => ({
-    id: r.id as string,
-    name: r.name as string,
-    blurb: (r.blurb as string) ?? "",
-    logo: (r.logo as string) ?? "",
-    website: r.website as string,
-    active: r.active as boolean,
-    order: r.order_index as number,
   }));
 }
 

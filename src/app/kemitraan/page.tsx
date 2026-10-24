@@ -1,6 +1,9 @@
+/* eslint-disable @next/next/no-img-element */
 import { Metadata } from "next";
 import { getPartners, getSiteMeta } from "@/lib/content-repo";
-import { Building2, Mail } from "lucide-react";
+import type { Partner } from "@/data/partners";
+import { SITE, waLink } from "@/lib/site";
+import { ArrowUpRight, Mail, MessageCircle } from "lucide-react";
 
 // Editable in /admin/seo — falls back to the previous hardcoded values.
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,82 +20,155 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-
-// Read fresh at most once a minute so stock and new content appear
-// without a redeploy.
+// Read fresh at most once a minute so new partners appear without a redeploy.
 export const revalidate = 60;
+
+/** Logo mitra selalu lingkaran — logo persegi/lebar di-`contain` di dalamnya. */
+function PartnerLogo({ partner }: { partner: Partner }) {
+  return (
+    <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border border-[rgba(32,30,29,.14)] bg-white sm:h-20 sm:w-20">
+      <img
+        src={partner.logo || SITE.logo}
+        alt={partner.logo ? `Logo ${partner.name}` : ""}
+        loading="lazy"
+        className={`h-[74%] w-[74%] object-contain ${partner.logo ? "" : "opacity-40"}`}
+      />
+    </span>
+  );
+}
+
+function PartnerCard({ partner }: { partner: Partner }) {
+  const body = (
+    <>
+      <PartnerLogo partner={partner} />
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-base font-semibold leading-snug text-[#201e1d] [overflow-wrap:anywhere] sm:text-lg">
+            {partner.name}
+          </span>
+          <span
+            className={`rounded-sm px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-[.12em] ${
+              partner.type === "sponsor"
+                ? "bg-[#ffd985] text-[#201e1d]"
+                : "bg-[#626b3f] text-white"
+            }`}
+          >
+            {partner.type === "sponsor" ? "Sponsor" : "Mitra"}
+          </span>
+        </span>
+        {partner.description && (
+          <span className="mt-1.5 block text-sm leading-relaxed text-[#605d5d]">
+            {partner.description}
+          </span>
+        )}
+        {partner.website && (
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[.14em] text-[#626b3f]">
+            Kunjungi situs
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </span>
+        )}
+      </span>
+    </>
+  );
+
+  const cls =
+    "flex items-start gap-4 rounded-sm border border-[rgba(32,30,29,.14)] bg-white p-4 transition-colors sm:gap-5 sm:p-6";
+
+  return partner.website ? (
+    <a
+      href={partner.website}
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      className={`${cls} hover:border-[#7a8450]`}
+    >
+      {body}
+    </a>
+  ) : (
+    <div className={cls}>{body}</div>
+  );
+}
+
+function Group({ title, items }: { title: string; items: Partner[] }) {
+  if (items.length === 0) return null;
+  return (
+    <section className="mb-10 sm:mb-14">
+      <div className="mb-4 flex items-center gap-4 sm:mb-6">
+        <h2 className="shrink-0 text-[11px] uppercase tracking-[.22em] text-[#626b3f]">
+          {title} · {items.length}
+        </h2>
+        <span className="h-px flex-1 bg-[rgba(32,30,29,.14)]" />
+      </div>
+      <div className="grid gap-3 sm:gap-5 md:grid-cols-2">
+        {items.map((p) => (
+          <PartnerCard key={p.id} partner={p} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default async function KemitraanPage() {
   const partners = await getPartners();
+  const mitra = partners.filter((p) => p.type !== "sponsor");
+  const sponsor = partners.filter((p) => p.type === "sponsor");
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
-      <div className="max-w-2xl mb-5 sm:mb-10">
-        <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Kemitraan</h1>
-        <p className="text-gray-500 mt-1 sm:mt-3 text-sm sm:text-lg">
-          Kerja sama dengan berbagai instansi dan organisasi untuk mendukung kegiatan mahasiswa.
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+      <header className="mb-8 max-w-2xl sm:mb-12">
+        <p className="mb-2 text-[11px] uppercase tracking-[.22em] text-[#626b3f]">
+          Mitra &amp; Sponsor
         </p>
-      </div>
+        <h1 className="text-[28px] font-bold leading-tight text-[#201e1d] sm:text-4xl">
+          Kemitraan
+        </h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-[#605d5d] sm:text-lg">
+          Instansi, organisasi, dan pelaku usaha yang bekerja sama dengan HMTL UNTAN
+          dalam program lingkungan, kegiatan mahasiswa, dan pengembangan anggota.
+        </p>
+      </header>
 
       {partners.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 p-8 sm:p-12 text-center text-gray-400 mb-8 sm:mb-16">
-          Belum ada mitra atau sponsor yang ditambahkan.
-        </div>
+        <p className="mb-10 rounded-sm border border-dashed border-[rgba(32,30,29,.3)] p-6 text-sm leading-relaxed text-[#605d5d] sm:mb-14 sm:p-8">
+          Daftar mitra dan sponsor sedang diperbarui. Untuk menjajaki kerja sama,
+          hubungi kami melalui kontak di bawah.
+        </p>
       ) : (
-        <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-6 mb-8 sm:mb-16">
-          {partners.map((partner) => (
-            <div
-              key={partner.id}
-              className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start gap-3 sm:gap-4">
-                {partner.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- logo diunggah dengan rasio & ukuran apa pun dari admin panel.
-                  <img
-                    src={partner.logo}
-                    alt={partner.name}
-                    className="w-11 h-11 sm:w-16 sm:h-16 rounded-xl bg-gray-50 object-contain flex-shrink-0 border border-gray-100"
-                  />
-                ) : (
-                  <div className="w-11 h-11 sm:w-16 sm:h-16 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-5 h-5 sm:w-8 sm:h-8 text-gray-400" />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{partner.name}</h3>
-                    <span
-                      className={`text-[9px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 rounded flex-shrink-0 ${
-                        partner.type === "sponsor"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-blue-100 text-blue-800"
-                      }`}
-                    >
-                      {partner.type === "sponsor" ? "Sponsor" : "Mitra"}
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-2 line-clamp-2">{partner.description}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <>
+          <Group title="Mitra" items={mitra} />
+          <Group title="Sponsor" items={sponsor} />
+        </>
       )}
 
-      <div className="bg-emerald-50 rounded-xl sm:rounded-2xl p-5 sm:p-8 lg:p-12">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-4">Tertarik Bermitra?</h2>
-          <p className="text-xs sm:text-base text-gray-600 mb-4 sm:mb-8">
-            Kami terbuka untuk sponsorship, kolaborasi program, atau dukungan lainnya.
+      <section className="rounded-sm bg-[#201e1d] px-5 py-8 text-white sm:px-10 sm:py-12">
+        <div className="max-w-2xl">
+          <h2 className="text-xl font-bold leading-snug sm:text-2xl">
+            Tertarik bermitra dengan HMTL UNTAN?
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-white/75 sm:text-base">
+            Kami terbuka untuk sponsorship acara, kolaborasi program lingkungan,
+            pengabdian masyarakat, dan publikasi bersama. Kirim proposal atau
+            ajukan pertemuan melalui email maupun WhatsApp.
           </p>
-          <a
-            href="mailto:himatl@teknik.untan.ac.id"
-            className="inline-flex items-center gap-2 bg-emerald-600 text-white font-semibold px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-sm active:bg-emerald-700 transition-colors"
-          >
-            <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
-            Ajukan Kerja Sama
-          </a>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <a
+              href={`mailto:${SITE.email}?subject=${encodeURIComponent("Pengajuan Kerja Sama — HMTL UNTAN")}`}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-[#ffd985] px-5 text-sm font-semibold text-[#201e1d] transition-colors hover:bg-white [overflow-wrap:anywhere]"
+            >
+              <Mail className="h-4 w-4 shrink-0" />
+              Kirim email
+            </a>
+            <a
+              href={waLink("Halo HMTL UNTAN, saya ingin menjajaki kerja sama.")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-white/40 px-5 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-[#201e1d]"
+            >
+              <MessageCircle className="h-4 w-4 shrink-0" />
+              WhatsApp {SITE.whatsappLabel}
+            </a>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

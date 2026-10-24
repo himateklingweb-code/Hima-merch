@@ -24,7 +24,45 @@ export interface Department {
   description: string;
   /** Lucide component name; resolve with iconFromName(). */
   icon: string;
+  /** Urutan tampil (kecil = lebih dulu). Opsional untuk data contoh. */
+  order_index?: number;
   periods: DepartmentPeriod[];
+}
+
+/** Label periode dianggap sama tanpa peduli huruf besar/kecil & spasi. */
+export function samePeriodLabel(a: string, b: string): boolean {
+  const n = (s: string) => s.trim().replace(/\s+/g, "").toLowerCase();
+  return n(a) === n(b);
+}
+
+/**
+ * Satu departemen idealnya punya satu baris per label periode. Bila
+ * database berisi baris ganda (bug lama "Tambah Periode" dengan label yang
+ * sama), baris-baris itu digabung: dipakai baris yang punya anggota paling
+ * banyak sebagai acuan, anggotanya disatukan (unik per id), dan status
+ * aktif ikut bila salah satunya aktif. Hasil diurutkan: aktif dulu, lalu
+ * label terbaru.
+ */
+export function dedupePeriods<P extends DepartmentPeriod>(periods: P[]): P[] {
+  const groups = new Map<string, P[]>();
+  for (const p of periods) {
+    const key = p.period_label.trim().replace(/\s+/g, "").toLowerCase();
+    groups.set(key, [...(groups.get(key) ?? []), p]);
+  }
+  const merged = Array.from(groups.values()).map((rows) => {
+    const base = [...rows].sort(
+      (a, b) => b.members.length - a.members.length || Number(b.is_active) - Number(a.is_active)
+    )[0];
+    const seen = new Set<string>();
+    const members = rows
+      .flatMap((r) => r.members)
+      .filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)))
+      .sort((a, b) => a.order_index - b.order_index);
+    return { ...base, is_active: rows.some((r) => r.is_active), members };
+  });
+  return merged.sort((a, b) =>
+    a.is_active === b.is_active ? b.period_label.localeCompare(a.period_label) : a.is_active ? -1 : 1
+  );
 }
 
 export const departments: Department[] = [

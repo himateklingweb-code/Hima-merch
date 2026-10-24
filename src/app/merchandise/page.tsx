@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Metadata } from "next";
-import { getProductBadge } from "@/data/products";
+import { discountPercent, getProductBadge, priceRange, totalAvailable } from "@/data/products";
 import { getProducts, getSiteMeta } from "@/lib/content-repo";
 import ProductBrowser, { type ProductCard, type BadgeColor } from "./ProductBrowser";
 
@@ -31,34 +31,39 @@ export default async function MerchandisePage() {
   const cards: ProductCard[] = products.map((product) => {
     const badge = getProductBadge(product);
     const cover = product.images.find((i) => i.url) ?? null;
+    const range = priceRange(product);
+    // Nilai pilihan yang benar-benar dijual (mis. S, M, L), bukan nama
+    // atributnya — pembeli mencari "XL", bukan "Ukuran".
+    const optionValues = product.variantList.length
+      ? Array.from(new Set(product.variantList.flatMap((v) => Object.values(v.options ?? {}))))
+      : product.variants?.options ?? [];
     return {
       id: product.id,
       slug: product.slug,
       name: product.name,
       description: product.description,
-      price: product.price,
+      category: product.category ?? "",
+      price: range.min,
+      priceMax: range.max,
+      compareAt: discountPercent({ price: range.min, compare_at_price: product.compare_at_price }) ? product.compare_at_price ?? null : null,
+      discount: discountPercent({ price: range.min, compare_at_price: product.compare_at_price }),
+      featured: !!product.is_featured,
       image: cover?.url ?? null,
       imageWidth: cover?.width ?? null,
       imageHeight: cover?.height ?? null,
-      variants:
-        product.attributes.length > 0
-          ? product.attributes.map((a) => a.name)
-          : product.variants?.options ?? [],
+      variants: optionValues,
       badgeLabel: badge.label,
       badgeColor: badge.color as BadgeColor,
-      readyLeft:
-        product.stock_type === "ready_stock"
-          ? product.stock - product.stock_reserved
-          : null,
+      readyLeft: product.stock_type === "ready_stock" ? totalAvailable(product) : null,
     };
   });
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 lg:py-16">
       <div className="max-w-2xl mb-5 sm:mb-10">
         <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">Merchandise</h1>
-        <p className="text-gray-500 mt-1 sm:mt-3 text-sm sm:text-lg">
-          Koleksi merchandise resmi HMTL UNTAN. Masukkan ke keranjang,
-          checkout dikonfirmasi lewat WhatsApp pengurus KWU.
+        <p className="mt-1 text-sm leading-relaxed text-gray-600 sm:mt-3 sm:text-lg">
+          Merchandise resmi HMTL UNTAN. Pilih produk, masukkan ke keranjang,
+          lalu pesanan dikonfirmasi lewat WhatsApp pengurus Kewirausahaan.
         </p>
       </div>
 

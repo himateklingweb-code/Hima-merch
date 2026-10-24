@@ -7,6 +7,8 @@ import {
   departments as seedDepts,
   Department,
   DepartmentMember,
+  dedupePeriods,
+  samePeriodLabel,
 } from "@/data/departments";
 import { getSupabase } from "@/lib/supabase";
 import { revalidatePublicPaths } from "@/lib/revalidate";
@@ -82,16 +84,20 @@ export default function AdminDepartemenPage() {
     string | null
   >(null);
 
+  // Satu entri per label periode. deptCount = jumlah departemen BERBEDA
+  // yang punya label itu — dulu dihitung per baris, sehingga baris ganda
+  // di database tampil sebagai "21/7 departemen tercatat".
   const globalPeriods = useMemo<GlobalPeriod[]>(() => {
     const map = new Map<string, GlobalPeriod>();
     for (const d of depts) {
       for (const p of d.periods) {
-        const existing = map.get(p.period_label);
+        const key = p.period_label.trim().replace(/\s+/g, "").toLowerCase();
+        const existing = map.get(key);
         if (existing) {
           existing.deptCount += 1;
           if (p.is_active) existing.is_active = true;
         } else {
-          map.set(p.period_label, {
+          map.set(key, {
             label: p.period_label,
             start_date: p.start_date,
             end_date: p.end_date,
@@ -121,8 +127,11 @@ export default function AdminDepartemenPage() {
       .order("order_index", { ascending: true });
 
     if (readError || !data) {
-      setDepts(seedDepts);
+      // Jangan tampilkan data contoh saat database terhubung tapi gagal
+      // dibaca — pengurus bisa mengira itu data asli.
+      setDepts([]);
       setLive(false);
+      setError(readError?.message ?? "Gagal memuat departemen.");
       setLoading(false);
       return;
     }
@@ -134,7 +143,8 @@ export default function AdminDepartemenPage() {
         slug: d.slug as string,
         description: d.description as string,
         icon: d.icon as string,
-        periods: ((d.periods ?? []) as Record<string, unknown>[])
+        order_index: (d.order_index as number) ?? 0,
+        periods: dedupePeriods(((d.periods ?? []) as Record<string, unknown>[])
           .map((p) => ({
             id: p.id as string,
             department_id: p.department_id as string,
@@ -152,8 +162,7 @@ export default function AdminDepartemenPage() {
                 order_index: m.order_index as number,
               }))
               .sort((a, b) => a.order_index - b.order_index),
-          }))
-          .sort((a, b) => Number(b.is_active) - Number(a.is_active)),
+          }))),
       }))
     );
     setLive(true);
@@ -240,13 +249,16 @@ export default function AdminDepartemenPage() {
     setSaving(true);
     setError(null);
 
+    // Departemen yang diedit mempertahankan urutannya; dulu setiap simpan
+    // memindahkannya ke posisi terakhir (order_index = jumlah departemen).
+    const nextOrder = Math.max(0, ...depts.map((d) => d.order_index ?? 0)) + 1;
     const { error: writeError } = await supabase.from("departments").upsert({
       id: dept.id,
-      name: dept.name,
+      name: dept.name.trim(),
       slug: dept.slug,
       description: dept.description,
       icon: dept.icon,
-      order_index: depts.length,
+      order_index: creating ? nextOrder : dept.order_index ?? nextOrder,
     });
 
     if (!writeError && creating) {
@@ -256,7 +268,7 @@ export default function AdminDepartemenPage() {
       const activeGlobal = globalPeriods.find((p) => p.is_active);
       const year = new Date().getFullYear();
       await supabase.from("department_periods").insert({
-        id: `period-${dept.id}-${Date.now()}`,
+        id: `period-${dept.id}-${Date.now().toString(36)}`,
         department_id: dept.id,
         period_label: activeGlobal?.label ?? `${year}/${year + 1}`,
         is_active: true,
@@ -349,14 +361,14 @@ export default function AdminDepartemenPage() {
     if (activateError) return activateError.message;
 
     const missing = depts.filter(
-      (d) => !d.periods.some((p) => p.period_label === label)
+      (d) => !d.periods.some((p) => samePeriodLabel(p.period_label, label))
     );
     if (missing.length > 0) {
       const { error: insertError } = await supabase
         .from("department_periods")
         .insert(
           missing.map((d) => ({
-            id: `period-${d.id}-${Date.now()}`,
+            id: `period-${d.id}-${Date.now().toString(36)}`,
             department_id: d.id,
             period_label: label,
             is_active: true,
@@ -403,16 +415,34 @@ export default function AdminDepartemenPage() {
       return;
     }
 
+    const label = updated.label.trim().replace(/\s+/g, "");
+    if (!label) {
+      setError("Label periode wajib diisi, mis. 2026/2027.");
+      return;
+    }
+    if (updated.start_date && updated.end_date && updated.end_date < updated.start_date) {
+      setError("Tanggal berakhir tidak boleh sebelum tanggal mulai.");
+      return;
+    }
+    // Akar bug "3 periode tercatat": menambah periode dengan label yang
+    // sudah ada dulu tetap disimpan, sehingga tiap departemen dapat baris
+    // ganda. Sekarang label kembar ditolak sebelum menyentuh database.
+    const clash = globalPeriods.find(
+      (p) => samePeriodLabel(p.label, label) && !(original && samePeriodLabel(p.label, original.label))
+    );
+    if (clash) {
+      setError(`Periode ${clash.label} sudah ada. Edit periode itu, jangan menambah baru.`);
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     if (original) {
-      // Renaming/redating an existing label updates every department's row
-      // for it in one shot.
       const { error: updateError } = await supabase
         .from("department_periods")
         .update({
-          period_label: updated.label,
+          period_label: label,
           start_date: updated.start_date || null,
           end_date: updated.end_date || null,
         })
@@ -422,51 +452,41 @@ export default function AdminDepartemenPage() {
         setError(updateError.message);
         return;
       }
-
-      if (updated.is_active) {
-        const err = await activateLabelAcrossOrg(
-          updated.label,
-          updated.start_date,
-          updated.end_date
-        );
-        if (err) {
-          setSaving(false);
-          setError(err);
-          return;
-        }
-      }
     } else {
-      // New period: every department gets a row for it (empty of members
-      // until staff fills them in) so the whole org is covered from the
-      // start.
+      // Disimpan nonaktif dulu; pengaktifan di bawah mematikan periode lain
+      // lebih dulu, supaya tiap departemen tidak pernah punya dua periode
+      // aktif sekaligus.
+      const stamp = Date.now().toString(36);
       const { error: insertError } = await supabase
         .from("department_periods")
         .insert(
           depts.map((d) => ({
-            id: `period-${d.id}-${Date.now()}`,
+            id: `period-${d.id}-${stamp}`,
             department_id: d.id,
-            period_label: updated.label,
-            is_active: updated.is_active,
+            period_label: label,
+            is_active: false,
             start_date: updated.start_date || null,
             end_date: updated.end_date || null,
           }))
         );
       if (insertError) {
         setSaving(false);
-        setError(insertError.message);
+        setError(
+          /duplicate key/i.test(insertError.message)
+            ? `Periode ${label} sudah ada.`
+            : insertError.message
+        );
         return;
       }
+    }
 
-      if (updated.is_active) {
-        const { error: clearError } = await supabase
-          .from("department_periods")
-          .update({ is_active: false })
-          .neq("period_label", updated.label);
-        if (clearError) {
-          setSaving(false);
-          setError(clearError.message);
-          return;
-        }
+    if (updated.is_active) {
+      const err = await activateLabelAcrossOrg(label, updated.start_date, updated.end_date);
+      if (err) {
+        setSaving(false);
+        setError(err);
+        await reload();
+        return;
       }
     }
 
@@ -479,6 +499,11 @@ export default function AdminDepartemenPage() {
   const handleDeleteGlobalPeriod = async (label: string) => {
     const supabase = getSupabase();
     if (!supabase) return;
+    if (globalPeriods.find((p) => samePeriodLabel(p.label, label))?.is_active) {
+      setError("Periode aktif tidak bisa dihapus. Aktifkan periode lain dulu.");
+      setDeleteGlobalPeriodLabel(null);
+      return;
+    }
     setSaving(true);
     setError(null);
     const { error: delError } = await supabase
@@ -736,6 +761,11 @@ export default function AdminDepartemenPage() {
 
               <div className="mt-3 text-xs text-gray-400">
                 {dept.periods.length} periode tercatat
+                {dept.periods.length > 1 &&
+                  ` · ${dept.periods
+                    .filter((p) => !p.is_active)
+                    .map((p) => p.period_label)
+                    .join(", ")} (arsip)`}
               </div>
             </div>
           );
@@ -813,7 +843,7 @@ export default function AdminDepartemenPage() {
                       )}
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5">
-                      {p.deptCount}/{depts.length} departemen tercatat
+                      {Math.min(p.deptCount, depts.length)}/{depts.length} departemen tercatat
                       {p.start_date && ` · ${p.start_date} – ${p.end_date || "?"}`}
                     </div>
                   </div>

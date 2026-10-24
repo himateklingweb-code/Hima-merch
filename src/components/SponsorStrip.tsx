@@ -2,59 +2,73 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Carousel from "./Carousel";
-import { gdriveThumbnail } from "@/data/news";
 import type { Partner } from "@/data/partners";
+import { SITE } from "@/lib/site";
 
 /**
- * The logo wall that closes the homepage — a slow, self-advancing strip of
- * every mitra and sponsor. Partners without artwork fall back to a wordmark
- * so they can be listed before a logo file exists.
+ * "Didukung oleh" — logo mitra & sponsor dipotong lingkaran seragam, apa pun
+ * bentuk file aslinya (persegi, lebar, potret). Gambar di-`contain` di dalam
+ * lingkaran putih supaya logo tidak terpotong. Mitra tanpa logo memakai logo
+ * HMTL agar barisnya tetap rapi.
+ *
+ * Sampai 6 logo tampil sebagai baris statis; lebih dari itu berjalan sebagai
+ * carousel otomatis yang tetap bisa digeser.
  */
+function Badge({ partner }: { partner: Partner }) {
+  const inner = (
+    <>
+      <span className="sponsor-circle">
+        <img
+          src={partner.logo || SITE.logo}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
+      </span>
+      <span className="sponsor-name">{partner.name}</span>
+    </>
+  );
+
+  return partner.website ? (
+    <a
+      href={partner.website}
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      className="sponsor-logo"
+      title={partner.name}
+    >
+      {inner}
+    </a>
+  ) : (
+    <div className="sponsor-logo" title={partner.name}>
+      {inner}
+    </div>
+  );
+}
+
 export default function SponsorStrip({ items }: { items: Partner[] }) {
   if (items.length === 0) return null;
+
+  if (items.length <= 6) {
+    return (
+      <div className="sponsor-row">
+        {items.map((p) => (
+          <Badge key={p.id} partner={p} />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <Carousel
       options={{ align: "start", loop: true, dragFree: true }}
-      slideClassName="basis-1/2 sm:basis-1/3 lg:basis-1/5"
+      slideClassName="basis-1/3 sm:basis-1/5 lg:basis-[12.5%]"
       autoplay={2800}
       showDots={false}
     >
-      {items.map((partner) => {
-        const inner = partner.logo ? (
-          <img src={gdriveThumbnail(partner.logo, 320)} alt={partner.name} />
-        ) : (
-          <span
-            style={{
-              textAlign: "center",
-              fontSize: "11.5px",
-              fontWeight: 600,
-              letterSpacing: ".04em",
-              lineHeight: 1.35,
-              color: "#605d5d",
-            }}
-          >
-            {partner.name}
-          </span>
-        );
-
-        return partner.website ? (
-          <a
-            key={partner.id}
-            href={partner.website}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className="sponsor-logo"
-            title={partner.name}
-          >
-            {inner}
-          </a>
-        ) : (
-          <div key={partner.id} className="sponsor-logo" title={partner.name}>
-            {inner}
-          </div>
-        );
-      })}
+      {items.map((p) => (
+        <Badge key={p.id} partner={p} />
+      ))}
     </Carousel>
   );
 }

@@ -69,8 +69,11 @@ export function useCollection<T extends { id: string }>(
       .order(orderBy, { ascending });
 
     if (readError) {
-      setItems(seed);
+      // Jangan tampilkan data contoh saat database terhubung tapi query
+      // gagal — editor bisa mengira itu data asli lalu menimpanya.
+      setItems([]);
       setLive(false);
+      setError(readError.message);
     } else {
       setItems((data ?? []) as unknown as T[]);
       setLive(true);
@@ -99,9 +102,16 @@ export function useCollection<T extends { id: string }>(
 
     setSaving(true);
     setError(null);
-    const { error: writeError } = await supabase
-      .from(table)
-      .upsert(row as Record<string, unknown>);
+    // Kolom yang belum ada di database (migrasi belum dijalankan) dibuang
+    // lalu disimpan ulang, supaya form baru tetap bisa dipakai di skema lama.
+    const payload: Record<string, unknown> = { ...(row as Record<string, unknown>) };
+    let { error: writeError } = await supabase.from(table).upsert(payload);
+    for (let i = 0; writeError && writeError.code === "PGRST204" && i < 12; i++) {
+      const col = /'([^']+)' column/.exec(writeError.message)?.[1];
+      if (!col || !(col in payload)) break;
+      delete payload[col];
+      ({ error: writeError } = await supabase.from(table).upsert(payload));
+    }
     setSaving(false);
 
     if (writeError) {

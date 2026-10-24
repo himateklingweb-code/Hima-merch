@@ -6,6 +6,7 @@ import Carousel from "./Carousel";
 import { getProductBadge, formatPrice, type Product } from "@/data/products";
 import type { Department } from "@/data/departments";
 import type { Article } from "@/data/news";
+import { SITE, imageRatio } from "@/lib/site";
 
 interface Props {
   type: "departments" | "products" | "news";
@@ -16,7 +17,6 @@ interface Props {
 }
 
 const LINE = "1px solid rgba(32,30,29,.14)";
-const PLATES = ["#c2c4ad", "#dfe3d0", "#e0dede", "#626b3f"];
 
 const BADGE_STYLE: Record<string, { bg: string; fg: string; short: string }> = {
   green: { bg: "#7a8450", fg: "#ffffff", short: "Tersedia" },
@@ -108,121 +108,37 @@ export default function HomeCarousels({
 
   if (type === "products") {
     return (
-      <Carousel options={{ align: "start", dragFree: true }} slideClassName="basis-[76%] pr-3">
-        {products.slice(0, 4).map((product, i) => {
+      <Carousel
+        options={{ align: "start", dragFree: true, containScroll: "trimSnaps" }}
+        slideClassName="home-slide-product"
+        showArrows
+        showDots={false}
+      >
+        {products.slice(0, 10).map((product) => {
           const badge = getProductBadge(product);
-          const BadgeIcon = badge.icon;
           const bs = BADGE_STYLE[badge.color] ?? BADGE_STYLE.gray;
+          const cover = product.images.find((im) => im.url)?.url;
           return (
             <Link
               key={product.id}
               href={`/merchandise/${product.slug}`}
-              style={{
-                display: "block",
-                height: "100%",
-                border: LINE,
-                borderRadius: 2,
-                overflow: "hidden",
-                background: "#ffffff",
-              }}
+              className="home-card home-product-card"
             >
-              <span
-                style={{
-                  position: "relative",
-                  display: "grid",
-                  placeItems: "center",
-                  aspectRatio: "4/3",
-                  background: PLATES[i] ?? "#c2c4ad",
-                  borderBottom: LINE,
-                  overflow: "hidden",
-                }}
-              >
-                {product.images.find((im) => im.url) ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- rasio asli bervariasi per produk.
-                  <img
-                    src={product.images.find((im) => im.url)!.url}
-                    alt={product.name}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
+              <span className="home-product-media">
+                {cover ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- gambar Supabase, rasio bebas.
+                  <img src={cover} alt={product.name} loading="lazy" decoding="async" />
                 ) : (
-                  <>
-                    <span
-                      style={{
-                        fontSize: 60,
-                        fontWeight: 700,
-                        color: "rgba(32,30,29,.14)",
-                        letterSpacing: "-.04em",
-                      }}
-                    >
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        backgroundImage:
-                          "radial-gradient(circle,rgba(0,0,0,.22) 30%,transparent 32%)",
-                        backgroundSize: "3px 3px",
-                        mixBlendMode: "multiply",
-                      }}
-                    />
-                  </>
+                  // eslint-disable-next-line @next/next/no-img-element -- logo situs sebagai pengganti foto.
+                  <img src={SITE.logo} alt="" className="home-media-fallback" />
                 )}
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 10,
-                    top: 10,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    fontSize: "9.5px",
-                    letterSpacing: ".12em",
-                    textTransform: "uppercase",
-                    background: bs.bg,
-                    color: bs.fg,
-                    padding: "4px 8px",
-                    borderRadius: 2,
-                  }}
-                >
-                  <BadgeIcon size={11} strokeWidth={2.25} />
+                <span className="home-badge" style={{ background: bs.bg, color: bs.fg }}>
                   {bs.short}
                 </span>
               </span>
-              <span style={{ display: "block", padding: "15px 16px 17px" }}>
-                <span
-                  style={{
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                    fontSize: 15.5,
-                    fontWeight: 600,
-                    lineHeight: 1.25,
-                  }}
-                >
-                  {product.name}
-                </span>
-                <span
-                  style={{
-                    display: "block",
-                    marginTop: 12,
-                    borderTop: LINE,
-                    paddingTop: 11,
-                    fontSize: 18,
-                    fontWeight: 700,
-                    letterSpacing: "-.02em",
-                    fontFeatureSettings: "'tnum'",
-                  }}
-                >
-                  {formatPrice(product.price)}
-                </span>
+              <span className="home-card-body">
+                <span className="home-card-title">{product.name}</span>
+                <span className="home-product-price">{formatPrice(product.price)}</span>
               </span>
             </Link>
           );
@@ -233,123 +149,45 @@ export default function HomeCarousels({
 
   if (type === "news") {
     return (
-      <Carousel options={{ align: "start", dragFree: true }} slideClassName="basis-[82%] pr-3">
-        {articles.slice(0, 4).map((article) => (
-          <Link
-            key={article.id}
-            href={`/berita/${article.slug}`}
-            style={{
-              display: "block",
-              height: "100%",
-              border: LINE,
-              borderRadius: 2,
-              background: "#ffffff",
-              overflow: "hidden",
-            }}
-          >
+      <Carousel
+        options={{ align: "start", dragFree: true, containScroll: "trimSnaps" }}
+        slideClassName="home-slide-news"
+        showArrows
+        showDots={false}
+      >
+        {articles.map((article) => (
+          <Link key={article.id} href={`/berita/${article.slug}`} className="home-card">
             <span
+              className="home-news-media"
               style={{
-                position: "relative",
-                display: "block",
-                aspectRatio:
-                  article.image_width && article.image_height
-                    ? `${article.image_width}/${article.image_height}`
-                    : "16/10",
-                background: "#e0dede",
-                overflow: "hidden",
-                borderBottom: LINE,
+                aspectRatio: imageRatio(article.image_width, article.image_height, "16/10", 1.2, 1.9),
               }}
             >
               {article.image ? (
                 // eslint-disable-next-line @next/next/no-img-element -- rasio asli bervariasi per unggahan.
-                <img
-                  src={article.image}
-                  alt={article.image_alt || article.title}
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                  }}
-                />
+                <img src={article.image} alt={article.image_alt || article.title} loading="lazy" decoding="async" />
               ) : (
-                <span
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 32,
-                    fontWeight: 700,
-                    color: "rgba(32,30,29,.14)",
-                  }}
-                >
-                  TL
-                </span>
+                // eslint-disable-next-line @next/next/no-img-element -- logo situs sebagai pengganti foto.
+                <img src={SITE.logo} alt="" className="home-media-fallback" />
               )}
               {article.is_pinned && (
-                <span
-                  style={{
-                    position: "absolute",
-                    left: 10,
-                    top: 10,
-                    fontSize: "9px",
-                    letterSpacing: ".14em",
-                    textTransform: "uppercase",
-                    background: "#7a8450",
-                    color: "#ffffff",
-                    padding: "4px 8px",
-                    borderRadius: 2,
-                  }}
-                >
+                <span className="home-badge" style={{ background: "#7a8450", color: "#fff" }}>
                   Disorot
                 </span>
               )}
             </span>
-            <span style={{ display: "block", padding: "16px 18px 20px" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <span
-                  style={{
-                    fontSize: "9.5px",
-                    letterSpacing: ".14em",
-                    textTransform: "uppercase",
-                    border: "1px solid rgba(32,30,29,.3)",
-                    padding: "4px 8px",
-                    borderRadius: 2,
-                    color: "#201e1d",
-                  }}
-                >
-                  {article.category}
-                </span>
-                <span
-                  style={{
-                    fontSize: "10.5px",
-                    letterSpacing: ".1em",
-                    textTransform: "uppercase",
-                    color: "#605d5d",
-                  }}
-                >
+            <span className="home-card-body">
+              <span className="home-news-meta">
+                <span className="home-news-cat">{article.category}</span>
+                <span>
                   {new Date(article.published_at).toLocaleDateString("id-ID", {
                     day: "numeric",
                     month: "short",
+                    year: "numeric",
                   })}
                 </span>
               </span>
-              <span
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  fontSize: 17,
-                  fontWeight: 600,
-                  lineHeight: 1.3,
-                  letterSpacing: "-.01em",
-                }}
-              >
-                {article.title}
-              </span>
+              <span className="home-card-title home-card-title-3">{article.title}</span>
             </span>
           </Link>
         ))}

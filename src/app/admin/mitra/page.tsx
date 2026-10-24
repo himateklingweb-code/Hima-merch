@@ -8,12 +8,13 @@ import DbStatus from "@/components/admin/DbStatus";
 import AdminSearch from "@/components/admin/AdminSearch";
 import { matchesQuery } from "@/lib/search";
 import ImageUpload from "@/components/admin/ImageUpload";
+import { removeContentImage } from "@/lib/content-images";
+import { SITE } from "@/lib/site";
 import {
   Plus,
   Pencil,
   Trash2,
   X,
-  Building2,
   ExternalLink,
 } from "lucide-react";
 
@@ -84,7 +85,13 @@ export default function AdminMitraPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (await remove(id)) setDeleteId(null);
+    const logo = items.find((p) => p.id === id)?.logo;
+    if (!(await remove(id))) return;
+    setDeleteId(null);
+    // Logo unggahan ikut dibersihkan dari Storage, kecuali masih dipakai mitra lain.
+    if (logo && !items.some((p) => p.id !== id && p.logo === logo)) {
+      void removeContentImage(logo);
+    }
   };
 
   const toggleActive = async (id: string) => {
@@ -122,7 +129,7 @@ export default function AdminMitraPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mitra &amp; Sponsor</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Kartu kemitraan yang tampil di halaman /kemitraan
+            Tampil di halaman Kemitraan dan baris &quot;Didukung oleh&quot; di beranda
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -188,17 +195,7 @@ export default function AdminMitraPage() {
               {sorted.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3">
-                    {p.logo ? (
-                      <img
-                        src={p.logo}
-                        alt=""
-                        className="w-14 h-10 rounded object-contain bg-gray-50 border border-gray-200"
-                      />
-                    ) : (
-                      <div className="w-14 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-300">
-                        <Building2 className="w-4 h-4" />
-                      </div>
-                    )}
+                    <LogoCircle src={p.logo} size="h-11 w-11" />
                   </td>
                   <td className="px-5 py-3">
                     <div className="font-medium text-gray-900 max-w-xs truncate">
@@ -420,12 +417,19 @@ function PartnerModal({
             />
           </div>
 
-          <ImageUpload
-            label="Logo"
-            value={form.logo}
-            onChange={(url) => set("logo", url)}
-            hint="Kosongkan untuk memakai nama mitra sebagai teks."
-          />
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+            <ImageUpload
+              label="Logo"
+              value={form.logo}
+              onChange={(url) => set("logo", url)}
+              aspect="square"
+              hint="Bentuk apa pun boleh — logo otomatis ditampilkan dalam lingkaran. Kosongkan untuk memakai logo HMTL."
+            />
+            <div className="flex flex-col items-center gap-2 sm:pt-7">
+              <LogoCircle src={form.logo} size="h-20 w-20" />
+              <span className="text-xs text-gray-400">Pratinjau</span>
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -488,5 +492,20 @@ function PartnerModal({
         </div>
       </form>
     </div>
+  );
+}
+
+/** Logo mitra persis seperti tampil di situs: lingkaran putih, logo di-contain. */
+function LogoCircle({ src, size }: { src: string; size: string }) {
+  return (
+    <span
+      className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-full border border-gray-200 bg-white`}
+    >
+      <img
+        src={src || SITE.logo}
+        alt=""
+        className={`h-[74%] w-[74%] object-contain ${src ? "" : "opacity-40"}`}
+      />
+    </span>
   );
 }
