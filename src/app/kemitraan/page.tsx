@@ -1,9 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
 import { Metadata } from "next";
 import { getPartners, getSiteMeta } from "@/lib/content-repo";
 import type { Partner } from "@/data/partners";
 import { SITE, waLink } from "@/lib/site";
 import { ArrowUpRight, Mail, MessageCircle } from "lucide-react";
+import PartnerLogoImg from "@/components/PartnerLogoImg";
 
 // Editable in /admin/seo — falls back to the previous hardcoded values.
 export async function generateMetadata(): Promise<Metadata> {
@@ -23,16 +23,11 @@ export async function generateMetadata(): Promise<Metadata> {
 // Read fresh at most once a minute so new partners appear without a redeploy.
 export const revalidate = 60;
 
-/** Logo mitra selalu lingkaran — logo persegi/lebar di-`contain` di dalamnya. */
+/** Logo mitra selalu lingkaran; logo persegi memenuhi lingkaran (lihat PartnerLogoImg). */
 function PartnerLogo({ partner }: { partner: Partner }) {
   return (
     <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border border-[rgba(32,30,29,.14)] bg-white sm:h-20 sm:w-20">
-      <img
-        src={partner.logo || SITE.logo}
-        alt={partner.logo ? `Logo ${partner.name}` : ""}
-        loading="lazy"
-        className={`h-[74%] w-[74%] object-contain ${partner.logo ? "" : "opacity-40"}`}
-      />
+      <PartnerLogoImg src={partner.logo} alt={partner.logo ? `Logo ${partner.name}` : ""} />
     </span>
   );
 }

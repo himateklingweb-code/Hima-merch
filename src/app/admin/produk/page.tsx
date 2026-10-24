@@ -116,6 +116,8 @@ interface VariantRow {
   is_active: boolean;
   order_index: number;
   options: Record<string, string>;
+  /** true = harga diketik khusus untuk varian ini; false = harga jual + biaya tambahan. */
+  manual?: boolean;
 }
 
 /** The products table as stored, which is what the form edits. The
@@ -136,6 +138,8 @@ interface ProductRow {
   po_filled: number | null;
   po_reserved: number | null;
   po_deadline: string | null;
+  /** Pre-order bervarian: "shared" = satu kuota total, "per_variant" = kuota tiap varian. */
+  quota_mode?: "per_variant" | "shared";
   is_active: boolean;
   category?: string;
   compare_at_price?: number | null;
@@ -145,14 +149,16 @@ interface ProductRow {
   size_chart?: string;
   max_per_order?: number | null;
   images?: ImageRow[];
-  attributes?: { name: string; order_index: number }[];
+  attributes?: { name: string; order_index: number; price_adjustments?: Record<string, number> | null }[];
   variants?: (VariantRow & { options?: { attribute_name: string; value: string }[] | Record<string, string> })[];
 }
 
-/** Satu baris atribut di form: nama + daftar nilai dipisah koma. */
+/** Satu baris atribut di form: nama + daftar nilai dipisah koma +
+ *  biaya tambahan per nilai (teks supaya input boleh kosong). */
 interface AttrDraft {
   name: string;
   values: string;
+  adjustments: Record<string, string>;
 }
 
 const uid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -173,6 +179,7 @@ function blankProduct(): ProductRow {
     po_filled: 0,
     po_reserved: 0,
     po_deadline: null,
+    quota_mode: "per_variant",
     is_active: true,
     category: "",
     compare_at_price: null,
@@ -188,7 +195,7 @@ function blankProduct(): ProductRow {
 }
 
 const PRODUCT_SELECT =
-  "*, images:product_images(id, url, alt_text, width, height, order_index), attributes:product_attributes(name, order_index), variants:product_variants(*, options:product_variant_options(attribute_name, value))";
+  "*, images:product_images(id, url, alt_text, width, height, order_index), attributes:product_attributes(name, order_index, price_adjustments), variants:product_variants(*, options:product_variant_options(attribute_name, value))";
 
 /** Opsi varian dari baris DB (array) atau dari salinan form (objek). */
 function optionsOf(v: NonNullable<ProductRow["variants"]>[number]): Record<string, string> {
@@ -204,6 +211,10 @@ function availableOf(p: ProductRow): number {
   const left = (stock: number, reserved: number, quota: number | null, filled: number | null, poRes: number | null) =>
     pre ? (quota ?? 0) - (filled ?? 0) - (poRes ?? 0) : stock - reserved;
   const vs = (p.variants ?? []).filter((v) => v.is_active);
+  if (pre && p.quota_mode === "shared" && (p.variants ?? []).length > 0) {
+    const used = (p.variants ?? []).reduce((n, v) => n + (v.po_filled ?? 0) + (v.po_reserved ?? 0), 0);
+    return Math.max(0, (p.po_quota ?? 0) - used);
+  }
   if ((p.variants ?? []).length > 0) {
     return vs.reduce((n, v) => n + Math.max(0, left(v.stock, v.stock_reserved, v.po_quota, v.po_filled, v.po_reserved)), 0);
   }
@@ -304,7 +315,7 @@ export default function AdminProdukPage() {
   const handleSave = async (
     row: ProductRow,
     images: ImageRow[],
-    attributes: { name: string }[],
+    attributes: { name: string; adjustments: Record<string, number> }[],
     variants: VariantRow[]
   ): Promise<string | null> => {
     if (!(await save(stripJoined(row)))) return null; // galat tampil di DbStatus
@@ -773,14 +784,41 @@ function cartesian(attrs: { name: string; values: string[] }[]): Record<string, 
   );
 }
 
-function parseAttrs(rows: AttrDraft[]): { name: string; values: string[] }[] {
+function splitValues(raw: string): string[] {
+  return Array.from(new Set(raw.split(",").map((v) => v.trim()).filter(Boolean)));
+}
+
+function parseAttrs(
+  rows: AttrDraft[]
+): { name: string; values: string[]; adjustments: Record<string, number> }[] {
   return rows
-    .map((r) => ({
-      name: r.name.trim(),
-      values: Array.from(new Set(r.values.split(",").map((v) => v.trim()).filter(Boolean))),
-    }))
+    .map((r) => {
+      const values = splitValues(r.values);
+      const adjustments: Record<string, number> = {};
+      for (const v of values) {
+        const n = Math.round(Number(r.adjustments[v]));
+        if (r.adjustments[v] && Number.isFinite(n) && n !== 0) adjustments[v] = n;
+      }
+      return { name: r.name.trim(), values, adjustments };
+    })
     .filter((r) => r.name && r.values.length);
 }
+
+/** Harga otomatis satu kombinasi: harga jual + biaya tambahan tiap pilihan. */
+function autoPrice(
+  base: number,
+  attrs: { name: string; adjustments: Record<string, number> }[],
+  options: Record<string, string>
+): number {
+  return attrs.reduce((n, a) => n + (a.adjustments[options[a.name]] ?? 0), base);
+}
+
+/** Pilihan cepat saat menambah atribut. */
+const ATTR_PRESETS: { name: string; values: string; adjustments?: Record<string, string> }[] = [
+  { name: "Ukuran", values: "S, M, L, XL, XXL", adjustments: { XXL: "5000" } },
+  { name: "Warna", values: "Hitam, Putih" },
+  { name: "Lengan", values: "Pendek, Panjang", adjustments: { Panjang: "10000" } },
+];
 
 const comboKey = (names: string[], options: Record<string, string>) =>
   names.map((n) => (options[n] ?? "").trim().toLowerCase()).join("\u0001");
@@ -800,7 +838,7 @@ function ProductModal({
   onSave: (
     p: ProductRow,
     images: ImageRow[],
-    attributes: { name: string }[],
+    attributes: { name: string; adjustments: Record<string, number> }[],
     variants: VariantRow[]
   ) => Promise<string | null>;
   onClose: () => void;
@@ -814,6 +852,17 @@ function ProductModal({
     [...(product.images ?? [])]
       .sort((a, b) => a.order_index - b.order_index)
       .map((i, idx) => ({ ...i, order_index: idx }))
+  );
+
+  const initialAdj = useMemo(
+    () =>
+      (product.attributes ?? []).map((a) => ({
+        name: a.name,
+        adjustments: Object.fromEntries(
+          Object.entries(a.price_adjustments ?? {}).filter(([, n]) => typeof n === "number")
+        ) as Record<string, number>,
+      })),
+    [product]
   );
 
   const initialVariants = useMemo<VariantRow[]>(
@@ -834,8 +883,10 @@ function ProductModal({
           is_active: v.is_active,
           order_index: v.order_index,
           options: optionsOf(v),
+          // Harga yang berbeda dari hitungan otomatis = harga khusus (dikunci).
+          manual: v.price != null && v.price !== autoPrice(product.price, initialAdj, optionsOf(v)),
         })),
-    [product]
+    [product, initialAdj]
   );
 
   // Produk lama dengan "pilihan sederhana" (variant_options) dialihkan ke
@@ -845,7 +896,9 @@ function ProductModal({
 
   const [attrRows, setAttrRows] = useState<AttrDraft[]>(() => {
     if (legacy) {
-      return [{ name: product.variant_name || "Ukuran", values: (product.variant_options ?? []).join(", ") }];
+      return [
+        { name: product.variant_name || "Ukuran", values: (product.variant_options ?? []).join(", "), adjustments: {} },
+      ];
     }
     return [...(product.attributes ?? [])]
       .sort((a, b) => a.order_index - b.order_index)
@@ -854,11 +907,16 @@ function ProductModal({
         values: Array.from(
           new Set(initialVariants.map((v) => v.options[a.name]).filter(Boolean))
         ).join(", "),
+        adjustments: Object.fromEntries(
+          Object.entries(a.price_adjustments ?? {}).map(([k, n]) => [k, String(n)])
+        ),
       }));
   });
   const [variants, setVariants] = useState<VariantRow[]>(initialVariants);
   const [bulkPrice, setBulkPrice] = useState("");
   const [bulkStock, setBulkStock] = useState("");
+  /** "" = semua varian, atau `${atribut}\u0001${nilai}` untuk satu pilihan. */
+  const [bulkScope, setBulkScope] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showMore, setShowMore] = useState(
@@ -906,6 +964,9 @@ function ProductModal({
   const parsed = parseAttrs(attrRows);
   const attrNames = parsed.map((a) => a.name);
   const usesVariants = parsed.length > 0;
+  /** Pre-order bervarian dengan satu kuota total untuk semua varian. */
+  const shared = pre && usesVariants && form.quota_mode === "shared";
+  const priceOf = (v: VariantRow) => (v.manual && v.price != null ? v.price : autoPrice(form.price, parsed, v.options));
 
   /** Susun ulang daftar varian dari atribut, mempertahankan stok/harga lama. */
   const buildVariants = (current: VariantRow[]): VariantRow[] => {
@@ -929,6 +990,7 @@ function ProductModal({
         is_active: true,
         order_index: idx,
         options,
+        manual: false,
       };
     });
   };
@@ -942,21 +1004,45 @@ function ProductModal({
   const updateVariant = <K extends keyof VariantRow>(id: string, key: K, value: VariantRow[K]) =>
     setVariants((p) => p.map((v) => (v.id === id ? { ...v, [key]: value } : v)));
 
+  const inScope = (v: VariantRow) => {
+    if (!bulkScope) return true;
+    const [name, value] = bulkScope.split("\u0001");
+    return v.options[name] === value;
+  };
+  const scopeCount = variants.filter(inScope).length;
+
   const applyBulk = () => {
     setVariants((p) =>
-      p.map((v) => ({
-        ...v,
-        ...(bulkPrice !== "" ? { price: Number(bulkPrice) || null } : {}),
-        ...(bulkStock !== ""
-          ? pre
-            ? { po_quota: Math.max(0, Number(bulkStock) || 0) }
-            : { stock: Math.max(0, Number(bulkStock) || 0) }
-          : {}),
-      }))
+      p.map((v) =>
+        inScope(v)
+          ? {
+              ...v,
+              ...(bulkPrice !== ""
+                ? Number(bulkPrice) > 0
+                  ? { price: Math.round(Number(bulkPrice)), manual: true }
+                  : { price: null, manual: false }
+                : {}),
+              ...(bulkStock !== ""
+                ? pre
+                  ? { po_quota: Math.max(0, Number(bulkStock) || 0) }
+                  : { stock: Math.max(0, Number(bulkStock) || 0) }
+                : {}),
+            }
+          : v
+      )
     );
     setBulkPrice("");
     setBulkStock("");
   };
+
+  const setAdj = (idx: number, value: string, raw: string) =>
+    setAttrRows((p) =>
+      p.map((r, i) => (i === idx ? { ...r, adjustments: { ...r.adjustments, [value]: raw } } : r))
+    );
+
+  const activeVariants = variants.filter((v) => v.is_active);
+  const totalPerVariant = activeVariants.reduce((n, v) => n + (pre ? v.po_quota ?? 0 : v.stock), 0);
+  const sharedUsed = variants.reduce((n, v) => n + (v.po_filled ?? 0) + (v.po_reserved ?? 0), 0);
 
   const moveImage = (idx: number, dir: -1 | 1) =>
     setImages((p) => {
@@ -989,8 +1075,14 @@ function ProductModal({
       problems.push("Harga coret harus lebih besar dari harga jual, atau kosongkan.");
     }
     if (pre && !form.po_deadline) problems.push("Pre-order butuh tanggal tenggat.");
-    if (pre && !usesVariants && !(form.po_quota && form.po_quota > 0)) {
-      problems.push("Kuota pre-order harus lebih dari 0.");
+    if (pre && (!usesVariants || shared) && !(form.po_quota && form.po_quota > 0)) {
+      problems.push(shared ? "Isi kuota total pre-order (lebih dari 0)." : "Kuota pre-order harus lebih dari 0.");
+    }
+    if (shared && form.po_quota != null && form.po_quota < sharedUsed) {
+      problems.push(`Kuota total tidak boleh kurang dari yang sudah dipesan (${sharedUsed} pcs).`);
+    }
+    if (pre && usesVariants && !shared && totalPerVariant <= 0) {
+      problems.push("Isi kuota tiap varian, atau pilih mode kuota total.");
     }
     if (attrRows.some((r) => r.name.trim() && !r.values.trim())) {
       problems.push("Setiap atribut varian butuh minimal satu nilai (pisahkan dengan koma).");
@@ -1023,12 +1115,19 @@ function ProductModal({
         // Pilihan sederhana lama selalu dikosongkan: semua pilihan kini lewat varian.
         variant_options: null,
         variant_name: null,
-        po_quota: pre ? (usesVariants ? null : form.po_quota) : null,
+        po_quota: pre ? (usesVariants && !shared ? null : form.po_quota) : null,
         po_deadline: pre ? form.po_deadline : null,
+        quota_mode: shared ? "shared" : "per_variant",
       },
       images.map((img, idx) => ({ ...img, order_index: idx })),
-      parsed.map((a) => ({ name: a.name })),
-      finalVariants
+      parsed.map((a) => ({ name: a.name, adjustments: a.adjustments })),
+      // Harga otomatis disimpan sebagai harga varian, karena server memakai
+      // harga varian (bukan menghitung biaya tambahan) saat pesanan dibuat.
+      finalVariants.map((v) => {
+        const auto = autoPrice(form.price, parsed, v.options);
+        const price = v.manual && v.price != null ? v.price : auto;
+        return { ...v, price: price === form.price && !v.manual ? null : price };
+      })
     );
     setSaving(false);
     if (err) setFormError(err);
@@ -1286,9 +1385,11 @@ function ProductModal({
                   />
                 </div>
               )}
-              {!usesVariants && (
+              {(!usesVariants || shared) && (
                 <div>
-                  <label htmlFor="pm-stock" className={labelCls}>{pre ? "Kuota pre-order" : "Jumlah stok"}</label>
+                  <label htmlFor="pm-stock" className={labelCls}>
+                    {shared ? "Kuota total (semua varian)" : pre ? "Kuota pre-order" : "Jumlah stok"}
+                  </label>
                   <input
                     id="pm-stock"
                     type="number"
@@ -1303,19 +1404,51 @@ function ProductModal({
                     className={field}
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    {pre
-                      ? `${form.po_filled ?? 0} terisi, ${form.po_reserved ?? 0} ditahan pesanan baru.`
-                      : `${form.stock_reserved} sedang ditahan pesanan yang belum dikonfirmasi.`}
+                    {shared
+                      ? `${sharedUsed} pcs sudah dipesan dari semua varian, sisa ${Math.max(0, (form.po_quota ?? 0) - sharedUsed)}.`
+                      : pre
+                        ? `${form.po_filled ?? 0} terisi, ${form.po_reserved ?? 0} ditahan pesanan baru.`
+                        : `${form.stock_reserved} sedang ditahan pesanan yang belum dikonfirmasi.`}
                   </p>
                 </div>
               )}
             </div>
+
+            {pre && usesVariants && (
+              <div>
+                <span className={labelCls}>Cara menghitung kuota</span>
+                <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Cara menghitung kuota">
+                  {(
+                    [
+                      ["shared", "Kuota total", "Satu angka untuk semua varian. Mis. 100 kaos, ukuran apa pun."],
+                      ["per_variant", "Kuota per varian", "Tiap kombinasi punya batas sendiri. Mis. XL maks 20."],
+                    ] as const
+                  ).map(([val, title, desc]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      role="radio"
+                      aria-checked={(form.quota_mode ?? "per_variant") === val}
+                      onClick={() => set("quota_mode", val)}
+                      className={`rounded-lg border p-3 text-left transition-colors ${
+                        (form.quota_mode ?? "per_variant") === val
+                          ? "border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="text-sm font-semibold text-gray-900">{title}</div>
+                      <div className="mt-0.5 text-xs leading-snug text-gray-500">{desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </Section>
 
           {/* 4. Varian */}
           <Section
             title="Varian"
-            hint="Kosongkan bila produk tidak punya pilihan. Contoh: Ukuran = S, M, L, XL; Warna = Hitam, Putih. Kombinasi dibuat otomatis, masing-masing punya stok sendiri."
+            hint="Kosongkan bila produk tidak punya pilihan. Isi atribut (Ukuran, Warna, Lengan), pisahkan nilai dengan koma. Kombinasi dibuat otomatis. Biaya tambahan per pilihan langsung menambah harga varian."
           >
             {legacy && (
               <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
@@ -1327,54 +1460,100 @@ function ProductModal({
               </div>
             )}
 
-            <div className="space-y-2">
-              {attrRows.map((row, idx) => (
-                <div key={idx} className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    value={row.name}
-                    onChange={(e) =>
-                      setAttrRows((p) => p.map((r, i) => (i === idx ? { ...r, name: e.target.value } : r)))
-                    }
-                    placeholder="Nama, mis. Ukuran"
-                    aria-label={`Nama atribut ${idx + 1}`}
-                    maxLength={40}
-                    className={`${field} sm:w-40`}
-                  />
-                  <div className="flex flex-1 gap-2">
-                    <input
-                      value={row.values}
-                      onChange={(e) =>
-                        setAttrRows((p) => p.map((r, i) => (i === idx ? { ...r, values: e.target.value } : r)))
-                      }
-                      placeholder="Nilai, pisahkan dengan koma: S, M, L, XL"
-                      aria-label={`Nilai atribut ${idx + 1}`}
-                      className={field}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setAttrRows((p) => p.filter((_, i) => i !== idx))}
-                      aria-label="Hapus atribut"
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+            <div className="space-y-3">
+              {attrRows.map((row, idx) => {
+                const values = splitValues(row.values);
+                return (
+                  <div key={idx} className="rounded-lg border border-gray-200 p-3">
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        value={row.name}
+                        onChange={(e) =>
+                          setAttrRows((p) => p.map((r, i) => (i === idx ? { ...r, name: e.target.value } : r)))
+                        }
+                        placeholder="Nama, mis. Ukuran"
+                        aria-label={`Nama atribut ${idx + 1}`}
+                        maxLength={40}
+                        className={`${field} sm:w-40`}
+                      />
+                      <div className="flex flex-1 gap-2">
+                        <input
+                          value={row.values}
+                          onChange={(e) =>
+                            setAttrRows((p) => p.map((r, i) => (i === idx ? { ...r, values: e.target.value } : r)))
+                          }
+                          placeholder="Nilai, pisahkan dengan koma: S, M, L, XL"
+                          aria-label={`Nilai atribut ${idx + 1}`}
+                          className={field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setAttrRows((p) => p.filter((_, i) => i !== idx))}
+                          aria-label="Hapus atribut"
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {values.length > 0 && (
+                      <div className="mt-3">
+                        <div className="mb-1.5 text-xs font-medium text-gray-600">
+                          Biaya tambahan <span className="font-normal text-gray-400">· kosongkan bila sama dengan harga jual</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {values.map((val) => (
+                            <label
+                              key={val}
+                              className="flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 pl-2.5 pr-1 text-sm"
+                            >
+                              <span className="max-w-[9rem] truncate font-medium text-gray-800">{val}</span>
+                              <span className="text-gray-400">+Rp</span>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                step={1000}
+                                value={row.adjustments[val] ?? ""}
+                                onChange={(e) => setAdj(idx, val, e.target.value)}
+                                placeholder="0"
+                                aria-label={`Biaya tambahan ${row.name || "atribut"} ${val}`}
+                                className="h-8 w-20 rounded border border-gray-200 bg-white px-2 text-sm outline-none focus:border-emerald-500"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
+
               <div className="flex flex-wrap gap-2">
+                {attrRows.length < 3 &&
+                  ATTR_PRESETS.filter(
+                    (pr) => !attrRows.some((r) => r.name.trim().toLowerCase() === pr.name.toLowerCase())
+                  ).map((pr) => (
+                    <button
+                      key={pr.name}
+                      type="button"
+                      onClick={() =>
+                        setAttrRows((p) => [...p, { name: pr.name, values: pr.values, adjustments: { ...(pr.adjustments ?? {}) } }])
+                      }
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 text-sm font-medium text-gray-700 hover:border-emerald-500 hover:text-emerald-700"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {pr.name}
+                    </button>
+                  ))}
                 {attrRows.length < 3 && (
                   <button
                     type="button"
-                    onClick={() =>
-                      setAttrRows((p) => [
-                        ...p,
-                        p.length === 0 ? { name: "Ukuran", values: "S, M, L, XL" } : { name: "", values: "" },
-                      ])
-                    }
+                    onClick={() => setAttrRows((p) => [...p, { name: "", values: "", adjustments: {} }])}
                     className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 text-sm font-medium text-gray-700 hover:border-emerald-500 hover:text-emerald-700"
                   >
                     <Plus className="h-4 w-4" />
-                    {attrRows.length === 0 ? "Tambah varian" : "Tambah atribut"}
+                    Atribut lain
                   </button>
                 )}
                 {outOfSync && (
@@ -1384,44 +1563,73 @@ function ProductModal({
                     className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-medium text-white hover:bg-emerald-700"
                   >
                     <WandSparkles className="h-4 w-4" />
-                    Perbarui kombinasi ({synced.length})
+                    Buat kombinasi ({synced.length})
                   </button>
                 )}
               </div>
+              {outOfSync && (
+                <p className="text-xs text-amber-700">
+                  Atribut berubah. Klik &quot;Buat kombinasi&quot; untuk memperbarui tabel (stok varian lama dipertahankan).
+                </p>
+              )}
             </div>
 
             {usesVariants && variants.length > 0 && (
               <>
-                <div className="flex flex-wrap items-end gap-2 rounded-lg bg-gray-50 p-3">
-                  <div className="text-xs font-medium text-gray-600 basis-full">Isi cepat semua varian</div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={bulkPrice}
-                    onChange={(e) => setBulkPrice(e.target.value)}
-                    placeholder="Harga"
-                    aria-label="Harga untuk semua varian"
-                    className="min-h-10 w-28 rounded-lg border border-gray-200 bg-white px-2 text-sm outline-none focus:border-emerald-500"
-                  />
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={bulkStock}
-                    onChange={(e) => setBulkStock(e.target.value)}
-                    placeholder={pre ? "Kuota" : "Stok"}
-                    aria-label={pre ? "Kuota untuk semua varian" : "Stok untuk semua varian"}
-                    className="min-h-10 w-24 rounded-lg border border-gray-200 bg-white px-2 text-sm outline-none focus:border-emerald-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={applyBulk}
-                    disabled={bulkPrice === "" && bulkStock === ""}
-                    className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    Terapkan
-                  </button>
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <div className="mb-2 text-xs font-medium text-gray-600">Isi cepat</div>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <select
+                      value={bulkScope}
+                      onChange={(e) => setBulkScope(e.target.value)}
+                      aria-label="Varian yang diisi"
+                      className="min-h-10 rounded-lg border border-gray-200 bg-white px-2 text-sm outline-none focus:border-emerald-500"
+                    >
+                      <option value="">Semua varian ({variants.length})</option>
+                      {parsed.map((a) => (
+                        <optgroup key={a.name} label={a.name}>
+                          {a.values.map((val) => (
+                            <option key={val} value={`${a.name}\u0001${val}`}>
+                              {a.name}: {val}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      value={bulkPrice}
+                      onChange={(e) => setBulkPrice(e.target.value)}
+                      placeholder="Harga khusus"
+                      aria-label="Harga khusus"
+                      className="min-h-10 w-32 rounded-lg border border-gray-200 bg-white px-2 text-sm outline-none focus:border-emerald-500"
+                    />
+                    {!shared && (
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        value={bulkStock}
+                        onChange={(e) => setBulkStock(e.target.value)}
+                        placeholder={pre ? "Kuota" : "Stok"}
+                        aria-label={pre ? "Kuota" : "Stok"}
+                        className="min-h-10 w-24 rounded-lg border border-gray-200 bg-white px-2 text-sm outline-none focus:border-emerald-500"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={applyBulk}
+                      disabled={bulkPrice === "" && bulkStock === ""}
+                      className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 hover:bg-gray-100 disabled:opacity-50"
+                    >
+                      Terapkan ke {scopeCount}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Harga khusus mengunci harga varian (mengabaikan biaya tambahan). Isi 0 untuk kembali ke harga otomatis.
+                  </p>
                 </div>
 
                 <div className="overflow-hidden rounded-lg border border-gray-200">
@@ -1431,72 +1639,127 @@ function ProductModal({
                         <tr className="border-b border-gray-200 bg-gray-50 text-left text-xs text-gray-500">
                           <th className="px-3 py-2 font-medium">Varian</th>
                           <th className="px-2 py-2 font-medium">Harga</th>
-                          <th className="px-2 py-2 font-medium">{pre ? "Kuota" : "Stok"}</th>
+                          {!shared && <th className="px-2 py-2 font-medium">{pre ? "Kuota" : "Stok"}</th>}
+                          {pre && <th className="px-2 py-2 font-medium">Dipesan</th>}
                           <th className="px-2 py-2 font-medium">SKU</th>
                           <th className="px-2 py-2 text-center font-medium">Aktif</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {variants.map((v) => (
-                          <tr key={v.id} className={v.is_active ? "" : "bg-gray-50 text-gray-400"}>
-                            <td className="whitespace-nowrap px-3 py-1.5 font-medium">{v.label}</td>
-                            <td className="px-2 py-1.5">
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                min={0}
-                                value={v.price ?? ""}
-                                placeholder={String(form.price || "")}
-                                onChange={(e) =>
-                                  updateVariant(v.id, "price", e.target.value ? Math.max(0, Number(e.target.value)) : null)
-                                }
-                                aria-label={`Harga ${v.label}`}
-                                className="min-h-9 w-24 rounded border border-gray-200 px-2 outline-none focus:border-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-1.5">
-                              <input
-                                type="number"
-                                inputMode="numeric"
-                                min={0}
-                                value={pre ? v.po_quota ?? 0 : v.stock}
-                                onChange={(e) =>
-                                  updateVariant(
-                                    v.id,
-                                    pre ? "po_quota" : "stock",
-                                    Math.max(0, Number(e.target.value) || 0)
-                                  )
-                                }
-                                aria-label={`${pre ? "Kuota" : "Stok"} ${v.label}`}
-                                className="min-h-9 w-20 rounded border border-gray-200 px-2 outline-none focus:border-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-1.5">
-                              <input
-                                value={v.sku ?? ""}
-                                onChange={(e) => updateVariant(v.id, "sku", e.target.value || null)}
-                                aria-label={`SKU ${v.label}`}
-                                className="min-h-9 w-24 rounded border border-gray-200 px-2 font-mono text-xs outline-none focus:border-emerald-500"
-                              />
-                            </td>
-                            <td className="px-2 py-1.5 text-center">
-                              <input
-                                type="checkbox"
-                                checked={v.is_active}
-                                onChange={(e) => updateVariant(v.id, "is_active", e.target.checked)}
-                                aria-label={`Varian ${v.label} aktif`}
-                                className="h-4 w-4 rounded border-gray-300 accent-emerald-600"
-                              />
-                            </td>
-                          </tr>
-                        ))}
+                        {variants.map((v) => {
+                          const price = priceOf(v);
+                          const extra = price - form.price;
+                          return (
+                            <tr key={v.id} className={v.is_active ? "" : "bg-gray-50 text-gray-400"}>
+                              <td className="whitespace-nowrap px-3 py-1.5 font-medium">{v.label}</td>
+                              <td className="px-2 py-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    value={price || ""}
+                                    onChange={(e) => {
+                                      const n = e.target.value ? Math.max(0, Number(e.target.value)) : 0;
+                                      setVariants((p) =>
+                                        p.map((x) =>
+                                          x.id === v.id
+                                            ? n > 0
+                                              ? { ...x, price: n, manual: n !== autoPrice(form.price, parsed, x.options) }
+                                              : { ...x, price: null, manual: false }
+                                            : x
+                                        )
+                                      );
+                                    }}
+                                    aria-label={`Harga ${v.label}`}
+                                    className={`min-h-9 w-24 rounded border px-2 outline-none focus:border-emerald-500 ${
+                                      v.manual ? "border-amber-300 bg-amber-50" : "border-gray-200"
+                                    }`}
+                                  />
+                                  {v.manual ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setVariants((p) => p.map((x) => (x.id === v.id ? { ...x, price: null, manual: false } : x)))
+                                      }
+                                      title="Kembali ke harga otomatis"
+                                      className="whitespace-nowrap text-[11px] font-medium text-amber-700 hover:underline"
+                                    >
+                                      Khusus · reset
+                                    </button>
+                                  ) : (
+                                    extra !== 0 && (
+                                      <span className="whitespace-nowrap text-[11px] text-gray-500">
+                                        {extra > 0 ? "+" : "−"}
+                                        {formatPrice(Math.abs(extra))}
+                                      </span>
+                                    )
+                                  )}
+                                </div>
+                              </td>
+                              {!shared && (
+                                <td className="px-2 py-1.5">
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    value={pre ? v.po_quota ?? 0 : v.stock}
+                                    onChange={(e) =>
+                                      updateVariant(
+                                        v.id,
+                                        pre ? "po_quota" : "stock",
+                                        Math.max(0, Number(e.target.value) || 0)
+                                      )
+                                    }
+                                    aria-label={`${pre ? "Kuota" : "Stok"} ${v.label}`}
+                                    className="min-h-9 w-20 rounded border border-gray-200 px-2 outline-none focus:border-emerald-500"
+                                  />
+                                </td>
+                              )}
+                              {pre && (
+                                <td className="whitespace-nowrap px-2 py-1.5 text-xs text-gray-600">
+                                  {(v.po_filled ?? 0) + (v.po_reserved ?? 0)} pcs
+                                </td>
+                              )}
+                              <td className="px-2 py-1.5">
+                                <input
+                                  value={v.sku ?? ""}
+                                  onChange={(e) => updateVariant(v.id, "sku", e.target.value || null)}
+                                  aria-label={`SKU ${v.label}`}
+                                  className="min-h-9 w-24 rounded border border-gray-200 px-2 font-mono text-xs outline-none focus:border-emerald-500"
+                                />
+                              </td>
+                              <td className="px-2 py-1.5 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={v.is_active}
+                                  onChange={(e) => updateVariant(v.id, "is_active", e.target.checked)}
+                                  aria-label={`Varian ${v.label} aktif`}
+                                  className="h-4 w-4 rounded border-gray-300 accent-emerald-600"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
                 </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                  <span>{activeVariants.length} varian aktif</span>
+                  {shared ? (
+                    <span>
+                      Kuota total <strong>{form.po_quota ?? 0} pcs</strong> dibagi bebas ke semua varian
+                    </span>
+                  ) : (
+                    <span>
+                      Total {pre ? "kuota" : "stok"} <strong>{totalPerVariant} pcs</strong> (jumlah semua varian aktif)
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500">
-                  Harga kosong = ikut harga jual. Matikan &quot;Aktif&quot; untuk kombinasi yang tidak dijual,
-                  tanpa menghapus riwayat pesanannya.
+                  Harga otomatis = harga jual + biaya tambahan pilihannya. Matikan &quot;Aktif&quot; untuk kombinasi yang
+                  tidak dijual, tanpa menghapus riwayat pesanannya.
                 </p>
               </>
             )}

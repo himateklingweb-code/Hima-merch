@@ -887,11 +887,7 @@ body::before {
   overflow: hidden;
   transition: border-color .25s, transform .25s;
 }
-.sponsor-circle img {
-  width: 74%;
-  height: 74%;
-  object-fit: contain;
-}
+/* Ukuran <img> diatur PartnerLogoImg (cover untuk logo persegi, contain untuk logo lebar). */
 .sponsor-logo:hover .sponsor-circle { border-color: var(--olive); transform: translateY(-2px); }
 .sponsor-name {
   font-size: 12px;

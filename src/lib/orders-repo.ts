@@ -8,10 +8,13 @@ export interface OrderItemRecord {
   product_name: string;
   product_slug?: string | null;
   variant: string | null;
+  variant_id?: string | null;
   stock_type_snapshot: "ready_stock" | "pre_order";
   qty: number;
   unit_price: number;
   subtotal: number;
+  /** Foto produk/varian saat dipesan (tetap ada walau produk diubah). */
+  image?: string | null;
 }
 
 /** Full order, as staff see it in the dashboard. */
@@ -28,17 +31,31 @@ export interface OrderRecord {
   notes?: string | null;
   total_amount: number;
   item_count: number;
+  /** Nominal yang sudah masuk (DP atau lunas). */
+  amount_paid?: number;
   payment_status: PaymentStatus;
   order_status: OrderStatus;
   payment_proof_url?: string | null;
   verified_by?: string | null;
   verified_at?: string | null;
   created_at: string;
+  /** Batas bayar; lewat dari ini pesanan dibatalkan otomatis. */
+  pay_deadline?: string | null;
+  received_at?: string | null;
+  received_by?: string | null;
+  cancel_requested_at?: string | null;
+  cancel_request_reason?: string | null;
+  cancel_reject_note?: string | null;
+  cancelled_at?: string | null;
+  cancelled_by?: string | null;
+  cancel_reason?: string | null;
+  admin_note?: string | null;
+  hidden_by_buyer?: boolean;
   items: OrderItemRecord[];
 }
 
 /**
- * The trimmed receipt a buyer gets from a code lookup.
+ * The trimmed receipt a buyer gets from a code lookup or their history.
  *
  * Deliberately not an OrderRecord: `get_order_by_code` masks the name and
  * phone and omits the address entirely, so a leaked code cannot be turned
@@ -50,12 +67,24 @@ export interface PublicOrderReceipt {
   buyer_wa_masked: string;
   total_amount: number;
   item_count: number;
+  amount_paid?: number;
   payment_status: PaymentStatus;
   order_status: OrderStatus;
   /** Boolean only — the tracker never receives the storage path. */
   has_payment_proof?: boolean;
   verified_at?: string | null;
   created_at: string;
+  pay_deadline?: string | null;
+  received_at?: string | null;
+  cancel_requested_at?: string | null;
+  cancel_request_reason?: string | null;
+  cancel_reject_note?: string | null;
+  cancelled_at?: string | null;
+  cancelled_by?: string | null;
+  cancel_reason?: string | null;
+  /** Server menentukan aksi yang boleh — klien tidak menebak. */
+  can_request_cancel?: boolean;
+  can_hide?: boolean;
   items: OrderItemRecord[];
 }
 
@@ -86,14 +115,22 @@ export interface CreateOrderResult {
   persisted: boolean;
   /**
    * True when the database actively refused the order — sold out, closed
-   * pre-order, bad input. The basket must be kept and nothing sent to the
-   * cashier. Distinct from `persisted: false`, which also covers "no
-   * database configured", where carrying on is the right call.
+   * pre-order, bad input, spam guard. The basket must be kept and nothing
+   * sent to the cashier.
    */
   rejected: boolean;
+  /** True when the refusal came from the anti-spam guard / an active ban. */
+  blocked?: boolean;
   totalAmount?: number;
   itemCount?: number;
   error?: string;
+}
+
+/** Hasil aksi RPC yang mengembalikan `{ok}` atau `{error}`. */
+export interface ActionResult {
+  ok: boolean;
+  error?: string;
+  blocked?: boolean;
 }
 
 /** Seeded orders reshaped as baskets, for when Supabase is unconfigured. */
@@ -109,12 +146,14 @@ function demoRecords(): OrderRecord[] {
     notes: null,
     total_amount: 0,
     item_count: o.qty,
+    amount_paid: 0,
     payment_status: o.payment_status,
     order_status: o.order_status,
     payment_proof_url: o.payment_proof_url,
     verified_by: o.verified_by,
     verified_at: o.verified_at,
     created_at: o.created_at,
+    pay_deadline: o.reserved_until,
     items: [
       {
         product_id: o.product_id,
@@ -136,6 +175,14 @@ function localOrderCode(): string {
   return `ORD-${year}-LOCAL-${rand}`;
 }
 
+/** RPC yang mengembalikan `{ok:true}` / `{error, blocked?}` atau melempar galat. */
+function toAction(data: unknown, error: { message: string } | null): ActionResult {
+  if (error) return { ok: false, error: error.message };
+  const d = (data ?? {}) as { ok?: boolean; error?: string; blocked?: boolean };
+  if (d.error) return { ok: false, error: d.error, blocked: !!d.blocked };
+  return { ok: true };
+}
+
 /**
  * Place an order.
  *
@@ -144,9 +191,8 @@ function localOrderCode(): string {
  * checks stock and the pre-order window, holds the stock, and allocates the
  * code. A tampered payload cannot set its own price or oversell.
  *
- * A failure here must never cost the student their order — checkout still
- * hands off to WhatsApp with a locally generated code, and `persisted`
- * tells the UI to say so plainly.
+ * Refusals come back as `{error}` (not a thrown error) so the anti-spam
+ * counter survives — a thrown error would roll it back.
  */
 export async function createOrder(
   input: NewOrderInput
@@ -154,8 +200,6 @@ export async function createOrder(
   const supabase = getSupabase();
 
   if (!supabase) {
-    // No database wired up: let the order through on a local code rather
-    // than blocking a student who did nothing wrong.
     return {
       orderCode: localOrderCode(),
       persisted: false,
@@ -181,22 +225,26 @@ export async function createOrder(
     });
 
     if (error) {
-      // The database said no — sold out, closed pre-order, bad input. It
-      // raises these with readable Indonesian messages, so they are safe
-      // and useful to show the buyer directly.
+      return { orderCode: "", persisted: false, rejected: true, error: error.message };
+    }
+
+    const result = (data ?? {}) as {
+      order_code?: string;
+      total_amount?: number;
+      item_count?: number;
+      error?: string;
+      blocked?: boolean;
+    };
+
+    if (result.error || !result.order_code) {
       return {
         orderCode: "",
         persisted: false,
         rejected: true,
-        error: error.message,
+        blocked: !!result.blocked,
+        error: result.error ?? "Pesanan ditolak.",
       };
     }
-
-    const result = data as {
-      order_code: string;
-      total_amount: number;
-      item_count: number;
-    };
 
     return {
       orderCode: result.order_code,
@@ -206,8 +254,6 @@ export async function createOrder(
       itemCount: result.item_count,
     };
   } catch (err) {
-    // Network or transport failure rather than a refusal — treat it like a
-    // missing database and let the WhatsApp handoff still happen.
     return {
       orderCode: localOrderCode(),
       persisted: false,
@@ -220,13 +266,14 @@ export async function createOrder(
 /**
  * Every order, newest first — staff only.
  *
- * RLS returns nothing unless the caller is signed in and has a `staff` row,
- * so an unauthenticated visitor simply gets an empty list rather than an
- * error. Falls back to demo rows when Supabase is unconfigured.
+ * RLS returns nothing unless the caller is signed in and has a `staff` row.
+ * Falls back to demo rows only when Supabase is unconfigured; a failed query
+ * returns an error instead of fake rows.
  */
 export async function fetchOrders(): Promise<{
   orders: OrderRecord[];
   live: boolean;
+  error?: string;
 }> {
   const supabase = getSupabase();
   if (!supabase) return { orders: demoRecords(), live: false };
@@ -236,31 +283,68 @@ export async function fetchOrders(): Promise<{
     .select("*, items:order_items(*)")
     .order("created_at", { ascending: false });
 
-  if (error) return { orders: demoRecords(), live: false };
+  if (error) return { orders: [], live: false, error: error.message };
   return { orders: (data ?? []) as unknown as OrderRecord[], live: true };
 }
 
-/**
- * Change an order's status — what the Verifikasi button calls.
- *
- * The database does the stock movement: confirming a sale takes the
- * quantity out of stock, cancelling puts it back. Staff-only, enforced
- * inside the RPC rather than trusted from here.
- */
-export async function setOrderStatus(
+/** Semua aksi pengurus atas satu pesanan. Aturan ditegakkan di database. */
+export type AdminOrderAction =
+  | "confirm_paid"
+  | "confirm_dp"
+  | "mark_unpaid"
+  | "undo_confirm"
+  | "received"
+  | "unreceived"
+  | "extend"
+  | "cancel"
+  | "approve_cancel"
+  | "reject_cancel"
+  | "note"
+  | "delete";
+
+export async function adminOrderAction(
   orderCode: string,
-  next: { orderStatus?: OrderStatus; paymentStatus?: PaymentStatus }
-): Promise<{ ok: boolean; error?: string }> {
+  action: AdminOrderAction,
+  opts: { note?: string | null; amount?: number | null } = {}
+): Promise<ActionResult> {
   const supabase = getSupabase();
   if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
 
-  const { error } = await supabase.rpc("set_order_status", {
-    p_order_code: orderCode,
-    p_order_status: next.orderStatus ?? null,
-    p_payment_status: next.paymentStatus ?? null,
+  const { data, error } = await supabase.rpc("admin_order_action", {
+    p_code: orderCode,
+    p_action: action,
+    p_note: opts.note ?? null,
+    p_amount: opts.amount ?? null,
   });
+  if (error) return { ok: false, error: error.message };
 
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const proof = (data as { proof?: string | null } | null)?.proof ?? null;
+  if (action === "delete" && proof) await removeProof(proof);
+  return { ok: true };
+}
+
+/** Hapus semua pesanan batal/kedaluwarsa. Mengembalikan jumlah yang dihapus. */
+export async function purgeCancelledOrders(): Promise<ActionResult & { count?: number }> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
+
+  const { data, error } = await supabase.rpc("admin_purge_cancelled_orders");
+  if (error) return { ok: false, error: error.message };
+  const d = (data ?? {}) as { count?: number; proofs?: string[] };
+  for (const p of d.proofs ?? []) await removeProof(p);
+  return { ok: true, count: d.count ?? 0 };
+}
+
+/** Best-effort: bukti bayar milik pesanan yang dihapus ikut dibersihkan. */
+async function removeProof(storedPath: string) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  const path = storedPath.replace(/^payment-proofs\//, "");
+  try {
+    await supabase.storage.from("payment-proofs").remove([path]);
+  } catch {
+    // Biarkan: file yatim tidak merusak apa pun.
+  }
 }
 
 /** Short-lived link so staff can view a receipt from the private bucket. */
@@ -282,9 +366,8 @@ export async function signedProofUrl(
  * The signed-in customer's own orders, newest first.
  *
  * Goes through the `list_my_orders` RPC, which filters by `auth.uid()` inside
- * the database, so a buyer only ever gets their own rows and the order tables
- * stay closed to them otherwise. Returns an empty list when signed out or
- * when Supabase is unconfigured.
+ * the database, so a buyer only ever gets their own rows. Orders the buyer
+ * removed from their history are left out.
  */
 export async function fetchMyOrders(): Promise<PublicOrderReceipt[]> {
   const supabase = getSupabase();
@@ -295,10 +378,45 @@ export async function fetchMyOrders(): Promise<PublicOrderReceipt[]> {
   return data as unknown as PublicOrderReceipt[];
 }
 
+/** Pembeli mengajukan pembatalan (pengurus yang memutuskan). */
+export async function requestOrderCancel(code: string, reason: string): Promise<ActionResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
+  const { data, error } = await supabase.rpc("request_order_cancel", {
+    p_code: code,
+    p_reason: reason || null,
+    p_withdraw: false,
+  });
+  return toAction(data, error);
+}
+
+/** Pembeli menarik kembali pengajuan pembatalannya. */
+export async function withdrawOrderCancel(code: string): Promise<ActionResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
+  const { data, error } = await supabase.rpc("request_order_cancel", {
+    p_code: code,
+    p_reason: null,
+    p_withdraw: true,
+  });
+  return toAction(data, error);
+}
+
+/** Pembeli menghapus pesanan batal dari riwayatnya (data pengurus tetap ada). */
+export async function hideMyOrder(code: string): Promise<ActionResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
+  const { data, error } = await supabase.rpc("hide_my_order", { p_code: code });
+  return toAction(data, error);
+}
+
+export type OrderLookup =
+  | { status: "found"; order: PublicOrderReceipt }
+  | { status: "not_found" }
+  | { status: "blocked"; error: string };
+
 /** Look up one order by the code on the buyer's receipt. */
-export async function fetchOrderByCode(
-  code: string
-): Promise<PublicOrderReceipt | null> {
+export async function fetchOrderByCode(code: string): Promise<OrderLookup> {
   const trimmed = code.trim().toUpperCase();
   const supabase = getSupabase();
 
@@ -306,26 +424,92 @@ export async function fetchOrderByCode(
     const demo = demoRecords().find((o) => o.order_code === trimmed);
     return demo
       ? {
-          order_code: demo.order_code,
-          buyer_name: demo.buyer_name,
-          buyer_wa_masked: `•••• ${demo.buyer_wa.slice(-4)}`,
-          total_amount: demo.total_amount,
-          item_count: demo.item_count,
-          payment_status: demo.payment_status,
-          order_status: demo.order_status,
-          verified_at: demo.verified_at,
-          created_at: demo.created_at,
-          items: demo.items,
+          status: "found",
+          order: {
+            order_code: demo.order_code,
+            buyer_name: demo.buyer_name,
+            buyer_wa_masked: `•••• ${demo.buyer_wa.slice(-4)}`,
+            total_amount: demo.total_amount,
+            item_count: demo.item_count,
+            payment_status: demo.payment_status,
+            order_status: demo.order_status,
+            verified_at: demo.verified_at,
+            created_at: demo.created_at,
+            items: demo.items,
+          },
         }
-      : null;
+      : { status: "not_found" };
   }
 
-  const { data, error } = await supabase.rpc("get_order_by_code", {
-    p_code: trimmed,
-  });
+  const { data, error } = await supabase.rpc("get_order_by_code", { p_code: trimmed });
+  if (error) return { status: "blocked", error: error.message };
+  if (!data) return { status: "not_found" };
+  const d = data as PublicOrderReceipt & { error?: string };
+  if (d.error) return { status: "blocked", error: d.error };
+  return { status: "found", order: d };
+}
 
-  if (error || !data) return null;
-  return data as unknown as PublicOrderReceipt;
+// ------------------------------------------------------------------ blokir
+
+export interface BanRecord {
+  id: string;
+  label: string | null;
+  kind: "akun" | "jaringan";
+  email: string | null;
+  reason: string;
+  banned_until: string;
+  created_at: string;
+  created_by: string;
+  lifted_at: string | null;
+  lifted_by: string | null;
+  active: boolean;
+}
+
+/** Daftar blokir anti-spam (admin saja). */
+export async function fetchBans(): Promise<{ bans: BanRecord[]; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { bans: [], error: "Supabase belum dikonfigurasi." };
+  const { data, error } = await supabase.rpc("admin_list_bans");
+  if (error) return { bans: [], error: error.message };
+  return { bans: (data ?? []) as BanRecord[] };
+}
+
+export async function unban(id: string): Promise<ActionResult> {
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, error: "Supabase belum dikonfigurasi." };
+  const { error } = await supabase.rpc("admin_unban", { p_id: id });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// ------------------------------------------------------------ format waktu
+
+/** "24 Okt 2026, 14.05 WIB" — dipakai di riwayat & panel pesanan. */
+export function formatOrderTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return (
+    d.toLocaleString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Jakarta",
+    }) + " WIB"
+  );
+}
+
+/** Sisa waktu bayar, mis. "23 jam 10 menit". Null bila sudah lewat. */
+export function payTimeLeft(deadline: string | null | undefined, now = Date.now()): string | null {
+  if (!deadline) return null;
+  const ms = new Date(deadline).getTime() - now;
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h <= 0) return `${m} menit`;
+  return m > 0 ? `${h} jam ${m} menit` : `${h} jam`;
 }
 
 export { isSupabaseConfigured };

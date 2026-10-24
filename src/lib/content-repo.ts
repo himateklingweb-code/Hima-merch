@@ -55,7 +55,8 @@ interface ProductRow {
     height: number | null;
     order_index: number;
   }[];
-  attributes?: { name: string; order_index: number }[];
+  attributes?: { name: string; order_index: number; price_adjustments?: Record<string, number> | null }[];
+  quota_mode?: "per_variant" | "shared" | null;
   variants?: {
     id: string;
     label: string;
@@ -121,7 +122,10 @@ function toProduct(r: ProductRow): Product {
       r.variant_name && r.variant_options?.length
         ? { name: r.variant_name, options: r.variant_options }
         : null,
-    attributes: [...(r.attributes ?? [])].sort((a, b) => a.order_index - b.order_index),
+    attributes: [...(r.attributes ?? [])]
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((a) => ({ name: a.name, order_index: a.order_index, price_adjustments: a.price_adjustments ?? {} })),
+    quota_mode: r.quota_mode === "shared" ? "shared" : "per_variant",
     variantList,
     po_quota: r.po_quota,
     po_filled: r.po_filled,
@@ -139,7 +143,7 @@ function toProduct(r: ProductRow): Product {
 }
 
 const PRODUCT_SELECT =
-  "*, images:product_images(url, alt_text, width, height, order_index), attributes:product_attributes(name, order_index), variants:product_variants(*, options:product_variant_options(attribute_name, value))";
+  "*, images:product_images(url, alt_text, width, height, order_index), attributes:product_attributes(name, order_index, price_adjustments), variants:product_variants(*, options:product_variant_options(attribute_name, value))";
 
 export async function getProducts(): Promise<Product[]> {
   const supabase = getServerSupabase();

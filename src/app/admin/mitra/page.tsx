@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
 import { partners as seedPartners, Partner } from "@/data/partners";
 import { useCollection } from "@/lib/use-collection";
@@ -9,7 +8,6 @@ import AdminSearch from "@/components/admin/AdminSearch";
 import { matchesQuery } from "@/lib/search";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { removeContentImage } from "@/lib/content-images";
-import { SITE } from "@/lib/site";
 import {
   Plus,
   Pencil,
@@ -17,6 +15,7 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import PartnerLogoImg from "@/components/PartnerLogoImg";
 
 /** Database shape — adds the ordering/visibility columns the public Partner type doesn't need. */
 interface PartnerRow {
@@ -495,17 +494,13 @@ function PartnerModal({
   );
 }
 
-/** Logo mitra persis seperti tampil di situs: lingkaran putih, logo di-contain. */
+/** Logo mitra persis seperti tampil di situs (komponen yang sama). */
 function LogoCircle({ src, size }: { src: string; size: string }) {
   return (
     <span
       className={`${size} grid shrink-0 place-items-center overflow-hidden rounded-full border border-gray-200 bg-white`}
     >
-      <img
-        src={src || SITE.logo}
-        alt=""
-        className={`h-[74%] w-[74%] object-contain ${src ? "" : "opacity-40"}`}
-      />
+      <PartnerLogoImg src={src} />
     </span>
   );
 }

@@ -35,7 +35,14 @@ export interface ProductVariant {
 export interface ProductAttribute {
   name: string;
   order_index: number;
+  /** Biaya tambahan per nilai, mis. { "XXL": 5000, "Panjang": 10000 }.
+   *  Hanya informasi tampilan; harga final tetap `variant.price`. */
+  price_adjustments?: Record<string, number>;
 }
+
+/** "per_variant": tiap varian punya kuota sendiri.
+ *  "shared": satu kuota total untuk semua varian (hanya pre-order). */
+export type QuotaMode = "per_variant" | "shared";
 
 export interface Product {
   id: string;
@@ -56,6 +63,8 @@ export interface Product {
   po_filled: number | null;
   po_reserved: number | null;
   po_deadline: string | null;
+  /** Cara menghitung kuota pre-order bervarian. Default per varian. */
+  quota_mode?: QuotaMode;
   /** Kategori etalase, mis. "Kaos" atau "Aksesoris". Kosong = tanpa kategori. */
   category?: string;
   /** Harga coret sebelum diskon. Hanya tampil bila lebih besar dari `price`. */
@@ -94,12 +103,25 @@ export function hasVariants(product: Product): boolean {
   return product.variantList.length > 0;
 }
 
+/** True bila produk pre-order bervarian memakai satu kuota total. */
+export function usesSharedQuota(product: Pick<Product, "stock_type" | "quota_mode" | "variantList">): boolean {
+  return product.stock_type === "pre_order" && product.quota_mode === "shared" && product.variantList.length > 0;
+}
+
+/** Sisa kuota gabungan: kuota total dikurangi semua yang terisi/ditahan. */
+function sharedLeft(product: Product): number {
+  const used = product.variantList.reduce((n, v) => n + (v.po_filled ?? 0) + (v.po_reserved ?? 0), 0);
+  return (product.po_quota ?? 0) - used;
+}
+
 /** Stock remaining for one variant (or the product itself when it has no
- *  variants), accounting for whatever is currently reserved by open orders. */
+ *  variants), accounting for whatever is currently reserved by open orders.
+ *  Kuota gabungan: semua varian berbagi satu sisa yang sama. */
 export function availableStock(
   product: Product,
   variant?: ProductVariant | null
 ): number {
+  if (usesSharedQuota(product)) return sharedLeft(product);
   if (variant) {
     return product.stock_type === "ready_stock"
       ? variant.stock - variant.stock_reserved
@@ -113,6 +135,7 @@ export function availableStock(
 /** Sisa total produk: jumlah sisa semua varian aktif, atau sisa produk itu
  *  sendiri bila tidak bervarian. Dipakai badge etalase. */
 export function totalAvailable(product: Product): number {
+  if (usesSharedQuota(product)) return Math.max(0, sharedLeft(product));
   if (product.variantList.length > 0) {
     return product.variantList.reduce(
       (n, v) => n + Math.max(0, availableStock(product, v)),
@@ -137,6 +160,12 @@ export function priceRange(product: Product): { min: number; max: number } {
     ? product.variantList.map((v) => v.price ?? product.price)
     : [product.price];
   return { min: Math.min(...prices), max: Math.max(...prices) };
+}
+
+/** Biaya tambahan satu nilai atribut (0 bila tidak ada). */
+export function priceAdjustment(attr: ProductAttribute | undefined, value: string): number {
+  const n = attr?.price_adjustments?.[value];
+  return typeof n === "number" && Number.isFinite(n) ? n : 0;
 }
 
 /** Effective price for a given variant, falling back to the product price. */

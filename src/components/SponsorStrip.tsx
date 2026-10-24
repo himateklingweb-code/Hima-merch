@@ -1,14 +1,13 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import Carousel from "./Carousel";
 import type { Partner } from "@/data/partners";
-import { SITE } from "@/lib/site";
+import PartnerLogoImg from "./PartnerLogoImg";
 
 /**
  * "Didukung oleh" — logo mitra & sponsor dipotong lingkaran seragam, apa pun
- * bentuk file aslinya (persegi, lebar, potret). Gambar di-`contain` di dalam
- * lingkaran putih supaya logo tidak terpotong. Mitra tanpa logo memakai logo
+ * bentuk file aslinya. Logo persegi memenuhi lingkaran; logo lebar/tinggi
+ * di-`contain` supaya tulisannya tidak terpotong (lihat PartnerLogoImg). Mitra tanpa logo memakai logo
  * HMTL agar barisnya tetap rapi.
  *
  * Sampai 6 logo tampil sebagai baris statis; lebih dari itu berjalan sebagai
@@ -18,12 +17,7 @@ function Badge({ partner }: { partner: Partner }) {
   const inner = (
     <>
       <span className="sponsor-circle">
-        <img
-          src={partner.logo || SITE.logo}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
+        <PartnerLogoImg src={partner.logo} />
       </span>
       <span className="sponsor-name">{partner.name}</span>
     </>

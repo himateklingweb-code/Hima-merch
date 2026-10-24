@@ -11,6 +11,8 @@ import {
   hasVariants,
   discountPercent,
   maxOrderQty,
+  priceAdjustment,
+  usesSharedQuota,
   type Product,
   type ProductVariant,
 } from "@/data/products";
@@ -59,6 +61,7 @@ export default function ProductDetail({ product }: { product: Product }) {
   const badge = getProductBadge(product);
   const BadgeIcon = badge.icon;
   const isPreOrder = product.stock_type === "pre_order";
+  const sharedQuota = usesSharedQuota(product);
   const poOpen = !!product.po_deadline && new Date(product.po_deadline) > new Date();
   const available = usesAttrs
     ? selectedVariant
@@ -209,14 +212,16 @@ export default function ProductDetail({ product }: { product: Product }) {
             {isPreOrder ? (
               <>
                 <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-500">Kuota PO</span>
+                  <span className="text-gray-500">
+                    {sharedQuota ? "Kuota PO (semua varian)" : usesAttrs ? "Kuota PO varian ini" : "Kuota PO"}
+                  </span>
                   <span className="font-medium">
-                    {usesAttrs ? selectedVariant?.po_quota ?? 0 : product.po_quota} pcs
+                    {sharedQuota || !usesAttrs ? product.po_quota ?? 0 : selectedVariant?.po_quota ?? 0} pcs
                   </span>
                 </div>
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-gray-500">Sisa slot</span>
-                  <span className="font-medium text-emerald-700">{available} pcs</span>
+                  <span className="font-medium text-emerald-700">{Math.max(0, available)} pcs</span>
                 </div>
                 {product.po_deadline && (
                   <div className="flex items-center gap-1.5 text-xs sm:text-sm text-amber-600 pt-1">
@@ -266,6 +271,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                       )
                     );
                     const soldOut = !!match && availableStock(product, match) <= 0;
+                    const extra = priceAdjustment(attr, opt);
                     return (
                       <button
                         key={opt}
@@ -285,6 +291,12 @@ export default function ProductDetail({ product }: { product: Product }) {
                         }`}
                       >
                         {opt}
+                        {extra !== 0 && (
+                          <span className="ml-1 text-[11px] font-normal text-gray-500">
+                            {extra > 0 ? "+" : "−"}
+                            {formatPrice(Math.abs(extra))}
+                          </span>
+                        )}
                       </button>
                     );
                   })}

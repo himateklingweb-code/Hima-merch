@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, AlertTriangle, MessageCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, MessageCircle, Clock } from "lucide-react";
 
 export interface PlacedOrder {
   orderCode: string;
@@ -33,6 +33,16 @@ export default function OrderConfirmation({ order }: { order: PlacedOrder }) {
         </div>
       </div>
 
+      {order.persisted && (
+        <div className="mb-5 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-xs text-amber-900">
+          <Clock className="h-4 w-4 shrink-0" />
+          <span>
+            Selesaikan pembayaran dalam <strong>24 jam</strong>. Bila belum dibayar, pesanan dibatalkan otomatis dan
+            stok dilepas untuk pembeli lain.
+          </span>
+        </div>
+      )}
+
       {!order.persisted && (
         <div className="mb-5 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-xs text-amber-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -59,6 +69,9 @@ export default function OrderConfirmation({ order }: { order: PlacedOrder }) {
       </p>
 
       <div className="mt-6 flex flex-wrap justify-center gap-4 border-t border-gray-100 pt-5 text-sm">
+        <Link href="/akun" className="text-emerald-700 hover:underline">
+          Riwayat pesanan
+        </Link>
         <Link href="/pesanan/cek" className="text-emerald-700 hover:underline">
           Lacak pesanan
         </Link>
